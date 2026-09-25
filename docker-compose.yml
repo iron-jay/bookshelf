@@ -1,0 +1,66 @@
+# bookshelf — database and app
+#
+# Dev (WSL2):  docker compose up -d db                 # Postgres only; app runs via npm run dev
+# Prod (VM):   docker compose pull && docker compose up -d
+#
+# The image is built by GitHub Actions and pulled from ghcr.io; the container
+# applies migrations itself on start. Ports default off gameshelf's (3000/5432)
+# so both can run on the same dev box and the same VM.
+
+# A crash loop with unbounded json-file logs filled gameshelf's disk, and
+# Postgres failing to write looks like everything breaking at once.
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    <<: *logging
+    environment:
+      POSTGRES_USER: bookshelf
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: bookshelf
+    volumes:
+      # Bind mount outside the repo: Proxmox backups pick it up, and the bundler
+      # does not trip over root-owned Postgres files while tracing ./data.
+      - ../bookshelf-data/pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_BIND:-127.0.0.1}:${DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookshelf"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: ${BOOKSHELF_IMAGE:-ghcr.io/iron-jay/bookshelf}:${BOOKSHELF_TAG:-latest}
+    restart: unless-stopped
+    <<: *logging
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://bookshelf:${POSTGRES_PASSWORD}@db:5432/bookshelf
+      SESSION_SECRET: ${SESSION_SECRET:?}
+      # Only used to create the very first user; ignored afterwards.
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?}
+      # Set true only where the port is genuinely private: it removes the
+      # password for everything, including editing and deleting.
+      AUTH_DISABLED: ${AUTH_DISABLED:-false}
+      # Sent in the User-Agent to Open Library, which asks clients to identify.
+      OPENLIBRARY_CONTACT: ${OPENLIBRARY_CONTACT:-}
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      COVERS_DIR: /data/covers
+      # The session cookie's Secure flag is derived from this.
+      ORIGIN: ${ORIGIN:-http://localhost:3001}
+    volumes:
+      # The container runs as uid 1001; the host directory must match.
+      - ../bookshelf-data/covers:/data/covers
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3001}:3000"

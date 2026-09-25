@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/*
+ * Section 5b. gameshelf's ground, so the two apps read as a pair. There is no
+ * light mode — the ground is part of the design, not a user preference.
+ */
+@theme inline {
+  --color-ground: #2e3439;
+  --color-panel: #373e44;
+  --color-line: #464e55;
+  --color-ink: #e8e6e1;
+  --color-ink-dim: #98a1a8;
+
+  /* The only chromatic value in the app, and it means exactly one thing: this
+     edition is unofficial. Never for buttons, links, focus or emphasis.
+     Verdigris rather than gameshelf's ochre, so a screenshot of either app is
+     identifiable at a glance. */
+  --color-label: #6f9a8d;
+
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-narrow: var(--font-archivo-narrow), var(--font-archivo), ui-sans-serif,
+    system-ui, sans-serif;
+  /* Reviews, summaries and the typeset placeholder covers. Nothing else. */
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  /* Literal codes only: ISBNs, Open Library keys. */
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/*
+ * The one orchestrated moment in the app: the shelf grid resolving as covers
+ * load. Everything else moves only in answer to an action.
+ */
+@keyframes shelf-tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.shelf-tile {
+  animation: shelf-tile-in 320ms ease-out backwards;
+  animation-delay: calc(var(--tile-index) * 18ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-tile {
+    animation: none;
+  }
+}

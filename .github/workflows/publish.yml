@@ -1,0 +1,84 @@
+name: Publish images
+
+# Builds the image and pushes it to ghcr.io, so the server pulls instead of
+# building — `next build` does not fit comfortably in the 2 GB the deployment
+# target has.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runner
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # A green build only proves an image was produced. This proves it starts,
+      # that the migrate bundle resolves everything it needs, and that the dev
+      # dependencies really did stay out.
+      - name: Smoke-test what was published
+        run: |
+          APP=ghcr.io/${{ github.repository }}:${{ github.sha }}
+          docker pull -q "$APP"
+
+          docker run --rm --entrypoint sh "$APP" -c '
+            test -f server.js   || { echo "  server.js missing";  exit 1; }
+            test -f migrate.mjs || { echo "  migrate.mjs missing"; exit 1; }
+            echo "  server.js and migrate.mjs present"
+            echo "  migrations bundled: $(ls drizzle/*.sql | wc -l)"
+            echo "  runs as uid $(id -u)"
+            echo "  node $(node --version)"
+
+            test -d node_modules/drizzle-kit && { echo "  dev deps leaked in"; exit 1; }
+            echo "  no dev dependencies"
+
+            # Imports are hoisted, so reaching the DATABASE_URL check means every
+            # import the bundle kept external resolved from the standalone output.
+            out=$(node migrate.mjs 2>&1 || true)
+            case "$out" in
+              *"DATABASE_URL is not set"*) echo "  migrate bundle loads and resolves" ;;
+              *) echo "  migrate bundle is broken: $out"; exit 1 ;;
+            esac
+          '
+
+      - name: Summary
+        run: |
+          {
+            echo "### Published"
+            echo
+            echo '```'
+            echo "ghcr.io/${{ github.repository }}:latest"
+            echo '```'
+            echo
+            echo "Deploy with \`docker compose pull && docker compose up -d\`."
+          } >> "$GITHUB_STEP_SUMMARY"
