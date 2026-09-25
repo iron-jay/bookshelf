@@ -135,7 +135,8 @@ actions for everything; client components only where interaction demands it.
 
 - No key. Every request sends an identifying `User-Agent`:
   `bookshelf/<version> (<OPENLIBRARY_CONTACT>)`. Open Library asks for this and
-  gives identified clients more headroom.
+  gives identified clients more headroom. With `OPENLIBRARY_CONTACT` unset the
+  repository URL stands in, so requests are never anonymous.
 - Serialise requests and stay around 1/second. One user will never hit a limit
   doing normal things, but an import of 800 Goodreads rows will — the importer
   must queue, not fan out.
@@ -144,6 +145,12 @@ actions for everything; client components only where interaction demands it.
 - Endpoints: `search.json` for search, `/works/{key}.json` and
   `/works/{key}/editions.json` on add, `/isbn/{isbn}.json` for ISBN lookup and
   import, `/authors/{key}.json` only to resolve names.
+  - After `/isbn/`, the work comes from `search.json?q=key:/works/{key}`, not
+    `/works/{key}.json`: search carries author *names*, the works endpoint only
+    author keys, so it is one queued request instead of two or more.
+  - `/isbn/` redirects to `/books/{key}.json`. An unknown ISBN is a 404 with an
+    HTML body. Placeholder ISBNs (`9780000000002`) resolve to junk records —
+    that is the data, not a bug to filter.
 - On search: show results, write nothing. A `works` row appears only when the
   user adds something. Do not cache misses.
 - Store the raw response in `works.ol_payload` so fields can be re-derived later

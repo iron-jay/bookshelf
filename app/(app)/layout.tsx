@@ -15,12 +15,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <>
-      {/* Search, Add and Settings join the nav as their build steps land, so it
-          never links to a page that does not exist yet. */}
+      {/* Add and Settings join the nav as their build steps land, so it never
+          links to a page that does not exist yet. */}
       <header className="flex items-center justify-between border-b border-line px-4 py-3">
         <nav className="flex items-center gap-5">
           <Link href="/" className="font-medium">
             bookshelf
+          </Link>
+          <Link href="/search" className="font-narrow text-ink-dim hover:text-ink">
+            Search
           </Link>
         </nav>
 

@@ -123,3 +123,70 @@ clean. After moving `app/page.tsx` into `(app)`, `tsc` failed on stale
 **Next:** step 3, the Open Library client (`lib/openlibrary/`, serialised at
 ~1/s with the identifying User-Agent) and the search page, ISBN included.
 Nothing persists yet.
+
+---
+
+## 2026-09-25 — Step 3: Open Library client and search
+
+**`lib/openlibrary/`** is the only code that reaches openlibrary.org (grepped).
+`client.ts` runs every request through one queue spaced 1s apart
+(`lib/rate-limit.ts`, from gameshelf), sends `bookshelf/<version> (<contact>)`,
+times out at 15s, returns `null` for 404 and throws `OpenLibraryError` for
+everything else — so "the network is down" can never read as "no such ISBN".
+`normalise.ts` holds the field rules; `index.ts` exposes `searchWorks` and
+`lookupIsbn`. Nothing in it writes to the database.
+
+- **Languages:** Open Library's MARC codes (`ger`, `fre`, `chi`) go through
+  `Intl.getCanonicalLocales`, which already maps them to `de`, `fr`, `zh`. No
+  table. `mul` and `und` are null.
+- **Format:** "audio" anywhere in `physical_format` → audiobook, else book,
+  missing included — the brief's rule, and `format` is never null.
+- **Years:** `publish_date` is free text; the year is pulled out with digit
+  lookarounds so `c1991` and `[1991?]` work. The first version used `\b` and
+  missed `c1991`; my own test expected the wrong answer and passed. Fixed.
+- **ISBN lookup:** `/isbn/` then `search.json?q=key:/works/…` for the work, which
+  carries author names where `/works/` has only keys. Brief §4 updated.
+
+**`lib/isbn.ts`** parses what people paste (hyphens, spaces, "ISBN:", lowercase
+x), checks the check digit, and gives both forms (978 only for ISBN-10). A
+well-formed ISBN with a wrong check digit is searched as text with a notice
+saying it looks like a typo.
+
+**`/search`**, now in the nav:
+
+- One list, not two blocks. An Open Library result already on this server is
+  shown once, as the local row with your shelf state. Everything is then
+  ranked in three coarse tiers (exact title, title prefix, every word in title
+  or authors) with Open Library's order kept within a tier. That is what gets
+  a local fic up among 20 remote results.
+- Marked "Open Library", "Open Library · saved here" or "Local work", plus
+  "On your shelf". Plain `--ink-dim` text: `--label` means community edition
+  and nothing else.
+- Local works are searched first, with every word required across title and
+  authors, `%` and `_` escaped. Offline, local results still come back with a
+  notice.
+- An ISBN checks local editions (`isbn13` or `isbn10`) before Open Library,
+  so a book on this server is found by ISBN with no network.
+- Links go to `/edition/{id}` (exactly one entry) or `/work/{slug}`. Neither
+  page exists yet — steps 4 and 7 — so those links 404 for now. Open Library
+  results have no link or Add until step 4.
+
+**Verified.** Stubbed-fetch tests of the client: three concurrent calls ran
+1028ms and 1001ms apart; UA with and without a contact; 404 → null; 429, network
+failure, timeout and non-JSON each throw with the right message; a failure does
+not jam the queue. 12 ISBN parse cases, 9 year cases. Against the live API and
+the dev database (with two `zz-test-` works inserted by hand, since nothing can
+add yet): "guards" shows the saved Guards! Guards! once, linked to its entry,
+and the local fic interleaved; "pratchett guards" finds it across author and
+title; the Corgi ISBN, hyphenated or as ISBN-10, is found locally in 0.1s;
+9780141439518 comes from Open Library as Book · Paperback · Penguin Books · 2003
+· English · 435 pages in 1.6s; an unknown ISBN says so; a typo'd one says so and
+then "Nothing found". With openlibrary.org made unreachable by a preload,
+local and cached-ISBN results still work and each failure is a notice. `%` and
+`_uards` match nothing. Row counts unchanged by any search; test rows deleted.
+
+Not verified: an audiobook ISBN end to end (the format rule is unit-tested
+only); how the page looks, since it was read as HTML rather than in a browser.
+
+**Next:** step 4, add to shelf — work, edition and entry in one transaction,
+cover downloaded, `tbr` unless another shelf is picked.
