@@ -287,3 +287,58 @@ variables unset (`env -u AI_AGENT -u CLAUDECODE -u CLAUDE_CODE
 
 The two gameshelf auth bugs noted in step 2 are fixed there too (uncommitted in
 that repo, logged in its PROGRESS.md). bookshelf already had both fixes.
+
+---
+
+## 2026-09-25 — Step 5: the shelf
+
+`/` is the shelf: tabs per shelf with counts, the "N finished in 2026" line (the
+entire stats feature; rereads count, other years do not), sort (recently added,
+title, author, rating, last finished), group (author, year, book or audiobook —
+series joins in step 8), grid or list, and filter-by-title-or-author on the
+client per keystroke. Sort, group and layout are remembered in the
+`bookshelf-view` cookie and restored on a bare `/`; which shelf you were on is
+not (gameshelf's rule). The nav's "bookshelf" link restores the view. Copied
+from gameshelf: `shelf-view.ts`, `filter-form.tsx`, `shelf-link.tsx`,
+`remember-shelf-view.tsx`.
+
+**`cover.tsx`** is every cover in the app: a 2:3 cell with `object-cover`, the
+typeset placeholder when there is no art, and the label band for community
+editions. The placeholder is set in container-query units, so the same
+component is a 128px tile and a 48px list thumbnail without the title
+overflowing. Newsreader for the title, one `--line` rule, Archivo Narrow author.
+In list rows the band keeps its colour but drops its text, which is unreadable
+at 48px; the row states the credit instead.
+
+**Headlines** (`shelf-card.ts`): official editions lead with the work and
+author; fan translations, podfic and fan edits lead with their own name and the
+source work beneath (§5b); a fic leads with its own title — it is a work, and
+its edition is only "AO3" — then "author · of {source}".
+
+**Verified** against a shelf of five books added through the real form (Corgi
+paperback, eAudiobook, Pride and Prejudice, A Wizard of Earthsea, a play script
+with no cover) and four community editions inserted by SQL, since step 6 is not
+built: a fic of Guards! Guards!, a podfic of it, a Japanese-titled fan
+translation, and a fan translation hung on Pride and Prejudice. From the served
+HTML: counts 9/3/2/3/1 and "3 finished in 2026" (today ×2 plus a March reread,
+not the 2025 finish); every community edition has placeholder + band with name
+and credit, official ones no band; the P&P fan translation does not inherit
+the work's cover; hover text in the right order for all three kinds; each sort
+and grouping in the expected order (year groups the eAudiobook under 2023 and
+the local works under "Year unknown"); list rows; the reading filter; junk
+params fall back; a cookie with `status=dnf` restores layout but not the
+filter.
+
+Known effect: the Corgi paperback is named "…1990" but groups under 1989. Step 4
+stores `published_on` only for full dates, so year-only editions fall back to the
+work's year. Right for a reprint; for a translation it would be the original's
+year. Revisit if grouping by year matters with real data.
+
+**Not verified — no browser on this machine** (no Chromium or Playwright;
+installing one needs a ~150 MB download and likely `sudo apt`). Nobody has
+*looked* at it: placeholder proportions, the band's height, the 4px gaps, the
+hover overlay, the grid resolving animation. The filter box is client-side and
+was never typed into. Tiles link to `/edition/{id}`, which is step 7.
+
+**Next:** step 6, the unified add form — fan translation, podfic, fan edit and
+fanfic through the same `AddForm`, Door A and Door B.
