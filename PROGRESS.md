@@ -378,3 +378,76 @@ through the form after the migration.
 
 **Next:** step 6 — now just fan translations and manual works through the one
 `AddForm`, Door A and Door B.
+
+---
+
+## 2026-09-25 — Step 6: the unified add form, and a work page
+
+**One form for typed-in editions** (`app/(app)/add/edition-form.tsx`, action
+`addEditionAction`, logic `lib/books/add-edition.ts`). Door A is `/add`
+("Add book" in the nav): Book | Fan translation. Door B is `/add?work={id}`
+("Add edition" on a work page): the same component with the work fixed and a
+Kind select. Both post to the same action; there is no second path.
+
+- **Door A, Book** is a search box first — a book Open Library has is better
+  added from Open Library — with "Create it manually" (title, comma-separated
+  authors) for zines, ARCs and out-of-print things. Search offers the same way
+  out after every text search, with the typed title carried across.
+- **Door A, Fan translation**: name, then "Translation of" (inline search via
+  the `findSourceWorks` server action: works here first with their editions,
+  then Open Library, deduplicated; still answers offline), then details. "Not
+  listed" turns the search into title and author fields and the same submit
+  creates the source as a local work.
+- **Details**: Book | Audiobook; one credit field labelled by kind and format
+  ("Translated by" for any translation, else "Read by" for audiobooks — a
+  translated audiobook names its translator); length for audiobooks; base
+  edition from the work's editions on this server; language from a list of 27
+  (codes stored, names shown); link (http/https only); notes; shelf.
+- A fan translation never gets a cover looked up: own art or the placeholder.
+  A work created on the way still gets its own (Open Library, or Google by
+  title for a local one, flagged for review).
+- Typed-in editions are always new rows — two fan translations of one book
+  are two editions — unlike the Open Library path's shared "any edition".
+
+**Refactor**: work creation (`lib/books/works.ts`: fetch and insert Open Library
+works, insert local ones) and shelving (`lib/books/shelving.ts`: entry plus the
+read for Reading or Finished) moved out of `add.ts`, which now uses them too.
+`AudiobookFields` split into `CreditField` and `LengthField`.
+
+**`/work/[slug]`**: cover, title, authors, year, source and Open Library key,
+summary in Newsreader, and every edition with kind, language, credit and your
+shelf state; fan translations show the band and never the work's cover. "Add
+edition" (Door B) and, for Open Library works, "Add one of Open Library's".
+Series position waits for step 8.
+
+**Verified** by posting the real form for each path against the dev database:
+
+- Door A fan TL with an uncached Open Library source (a Bookworm light novel):
+  work cached with payload and its cover, fan TL edition with credit, language
+  and URL and no cover, read started.
+- Door A fan TL on Guards! Guards! (already here), translated from the Corgi
+  paperback; Door A fan TL whose source is not on Open Library → "Lord of the
+  Mysteries" created as a local work, the TL as a 40-hour audiobook.
+- Door A manual book: "Zine #3" with two authors, plain Book edition, read
+  started.
+- Door B fan TL on Guards! Guards! — same action as the Door A one — shelved
+  Finished with a read today; Door B plain audiobook on the zine with the name
+  left blank → "Audiobook", 90 minutes.
+- Eight bad inputs (fan TL without a name, `javascript:` link, unknown
+  language, base edition from another work, the dropped `fanfic` kind, a
+  missing work, 90 minutes, an empty manual title): an error each, row counts
+  unchanged.
+- `findSourceWorks` called through Next's action endpoint: local first with
+  editions, Open Library deduplicated, CJK queries work, one-character queries
+  return nothing.
+- The shelf draws all four new fan translations with band and placeholder; the
+  work page lists Guards! Guards!'s four editions correctly.
+
+**Limits:** a base edition can only be one already on this server, so a source
+work fetched from Open Library on the way has none to offer yet (settable once
+editing exists). Author sort misreads pen names ("Diving, Cuttlefish That
+Loves"). Not clicked in a browser: the Door A tabs, the debounced source search
+and "Not listed" are client state.
+
+**Next:** step 7, the edition page — rating out of ten, review, reads. Ship
+after it.

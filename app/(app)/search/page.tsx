@@ -230,6 +230,26 @@ export default async function SearchPage({
           ))}
         </ul>
       ) : null}
+
+      {/* The way out for what Open Library does not have (§4). Offered after
+          every text search, not only an empty one: the right book is often
+          missing from a page of near-misses. */}
+      {term && isbn.kind !== "isbn" ? (
+        <p className="mt-6 font-narrow text-ink-dim">
+          Not here?{" "}
+          <Link
+            href={`/add?type=manual&title=${encodeURIComponent(term)}`}
+            className="underline hover:text-ink"
+          >
+            Create it manually
+          </Link>{" "}
+          or{" "}
+          <Link href="/add?type=fan_translation" className="underline hover:text-ink">
+            add a fan translation
+          </Link>
+          .
+        </p>
+      ) : null}
     </main>
   );
 }

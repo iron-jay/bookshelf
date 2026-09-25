@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { addBook, type AddState } from "./actions";
-import { AudiobookFields } from "./audiobook-fields";
+import { CreditField, LengthField } from "./credit-fields";
 import { EditionPicker, type PickerEdition } from "./edition-picker";
 import { FormatToggle } from "./format-toggle";
 import type { Format } from "./format";
@@ -64,13 +64,17 @@ export function AddForm({
       <FormatToggle value={format} onChange={changeFormat} />
 
       {format === "audiobook" ? (
-        <AudiobookFields
-          credit={credit}
-          onCreditChange={(value) => {
-            setCredit(value);
-            setCreditTouched(true);
-          }}
-        />
+        <div className="flex flex-wrap gap-4">
+          <CreditField
+            label="Read by"
+            value={credit}
+            onChange={(value) => {
+              setCredit(value);
+              setCreditTouched(true);
+            }}
+          />
+          <LengthField />
+        </div>
       ) : null}
 
       <EditionPicker

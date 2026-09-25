@@ -1,24 +1,23 @@
 import { and, eq, isNull } from "drizzle-orm";
 
-import { authorSortFor } from "@/lib/authors";
 import { db } from "@/lib/db";
-import { editions, entries, reads, works } from "@/lib/db/schema";
+import { editions, works } from "@/lib/db/schema";
 import { parseIsbn, type Isbn } from "@/lib/isbn";
-import {
-  getEdition,
-  getWorkRecord,
-  getWorkSummary,
-  type OlEditionSummary,
-  type OlWorkRecord,
-  type OlWorkSummary,
-} from "@/lib/openlibrary";
+import { getEdition, type OlEditionSummary } from "@/lib/openlibrary";
 import type { Shelf } from "@/lib/shelves";
-import { slugify } from "@/lib/slug";
 
-import { editionNameFor, plainEditionName } from "./edition-name";
 import { lookUpCoversOnAdd } from "./covers-on-add";
+import { editionNameFor, plainEditionName } from "./edition-name";
+import { shelveEdition } from "./shelving";
+import {
+  AddBookError,
+  fetchOpenLibraryWork,
+  insertOpenLibraryWork,
+  type Tx,
+  type WorkFetch,
+} from "./works";
 
-export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export { AddBookError };
 
 export type AddBookInput = {
   userId: string;
@@ -41,15 +40,6 @@ export type AddBookResult = {
   /** False when this edition was already on the shelf; nothing was changed. */
   added: boolean;
 };
-
-export class AddBookError extends Error {}
-
-type WorkFetch = { record: OlWorkRecord; summary: OlWorkSummary };
-
-/** Today where the server is. The date is editable afterwards (brief §5). */
-function today(): string {
-  return new Date().toLocaleDateString("en-CA");
-}
 
 /**
  * Adds an Open Library book to someone's shelf: the work, the edition and the
@@ -77,13 +67,7 @@ export async function addOpenLibraryBook(input: AddBookInput): Promise<AddBookRe
   // Only fetch what is not already here: once a work is cached, adding another
   // of its editions — or the same book on a second account — costs one request
   // or none.
-  let workFetch: WorkFetch | null = null;
-  if (!knownWork) {
-    const record = await getWorkRecord(input.olWorkKey);
-    const summary = record ? await getWorkSummary(input.olWorkKey) : null;
-    if (!record || !summary) throw new AddBookError("Open Library no longer has that work.");
-    workFetch = { record, summary };
-  }
+  const workFetch: WorkFetch | null = knownWork ? null : await fetchOpenLibraryWork(input.olWorkKey);
 
   let editionFetch: OlEditionSummary | null = null;
   if (input.olEditionKey && !knownEdition) {
@@ -103,7 +87,7 @@ export async function addOpenLibraryBook(input: AddBookInput): Promise<AddBookRe
 
   const outcome = await db.transaction(async (tx) => {
     const work = workFetch
-      ? await insertWork(tx, input, workFetch)
+      ? await insertOpenLibraryWork(tx, workFetch, input.userId)
       : { id: knownWork.id, created: false };
 
     const edition = knownEdition
@@ -112,26 +96,8 @@ export async function addOpenLibraryBook(input: AddBookInput): Promise<AddBookRe
         ? await insertOpenLibraryEdition(tx, input, work.id, editionFetch)
         : await ensurePlainEdition(tx, input, work.id);
 
-    const [inserted] = await tx
-      .insert(entries)
-      .values({ userId: input.userId, editionId: edition.id, status: input.shelf })
-      .onConflictDoNothing()
-      .returning({ id: entries.id });
-
-    let entryId = inserted?.id;
-    if (!entryId) {
-      const [existing] = await tx
-        .select({ id: entries.id })
-        .from(entries)
-        .where(and(eq(entries.userId, input.userId), eq(entries.editionId, edition.id)));
-      entryId = existing.id;
-    } else if (input.shelf === "reading") {
-      await tx.insert(reads).values({ entryId, startedOn: today() });
-    } else if (input.shelf === "finished") {
-      await tx.insert(reads).values({ entryId, finishedOn: today() });
-    }
-
-    return { work, edition, entryId, added: Boolean(inserted) };
+    const { entryId, added } = await shelveEdition(tx, input.userId, edition.id, input.shelf);
+    return { work, edition, entryId, added };
   });
 
   // Auto-lookup runs once, on add, for rows this add created. It never re-runs
@@ -164,47 +130,6 @@ export async function addOpenLibraryBook(input: AddBookInput): Promise<AddBookRe
     entryId: outcome.entryId,
     added: outcome.added,
   };
-}
-
-async function insertWork(
-  tx: Tx,
-  input: AddBookInput,
-  fetched: WorkFetch,
-): Promise<{ id: string; created: boolean }> {
-  const { record, summary } = fetched;
-  const base = slugify(summary.title);
-  const [clash] = await tx.select({ id: works.id }).from(works).where(eq(works.slug, base));
-
-  const [created] = await tx
-    .insert(works)
-    .values({
-      olWorkKey: input.olWorkKey,
-      // Titles repeat across books far more than game titles do. The Open
-      // Library key is the tiebreak that cannot collide.
-      slug: clash ? `${base}-${input.olWorkKey.toLowerCase()}` : base,
-      title: summary.title,
-      subtitle: summary.subtitle,
-      authors: summary.authors,
-      authorSort: authorSortFor(summary.authors[0]),
-      olAuthorKeys: record.authorKeys,
-      summary: record.summary,
-      firstPublishedYear: summary.firstPublishedYear,
-      olPayload: record.payload,
-      olSyncedAt: new Date(),
-      source: "openlibrary",
-      createdBy: input.userId,
-    })
-    // Two adds of the same new work at once: the second finds the first's row.
-    .onConflictDoNothing({ target: works.olWorkKey })
-    .returning({ id: works.id });
-
-  if (created) return { id: created.id, created: true };
-
-  const [existing] = await tx
-    .select({ id: works.id })
-    .from(works)
-    .where(eq(works.olWorkKey, input.olWorkKey));
-  return { id: existing.id, created: false };
 }
 
 type EnsuredEdition = { id: string; created: boolean; isbn13: string | null };
