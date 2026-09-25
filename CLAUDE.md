@@ -298,6 +298,26 @@ automatically afterwards — gameshelf tried that and reverted it within a day.
     idempotent.
   - The file picker is an obvious button, and a missing or malformed file is a
     form error, not a 500. (gameshelf shipped both of those bugs.)
+  - As built (2026-09-25): the upload is parsed once and the page imports the
+    rows in batches of five, as gameshelf's Grouvee import does — no server-side
+    job. The tab stays open for the run (≈2 requests a second per new book, so
+    800 books is about half an hour); re-running the same file resumes, because
+    `goodreads_book_id` makes finished rows instant no-ops.
+  - Next caps server-action bodies at 1 MB and answers past it with a 500, so
+    `experimental.serverActions.bodySizeLimit` is 21 MB (the import's own limit
+    is 20 MB, also checked in the browser). Anything new that uploads through a
+    server action inherits this; gameshelf still has the 1 MB cap.
+  - A row that fails because Open Library is unreachable **fails**; it is not
+    filed as a local work. Only a genuine no-match becomes one.
+  - Title and author matching is strict (same title or a subtitle extension,
+    and a shared surname): a wrong match looks right, a local work is listed.
+  - Custom exclusive shelves named `dnf`, `did-not-finish`, `abandoned`,
+    `gave-up` or `dropped` map to did-not-finish; any other becomes to-read
+    plus a tag of its name.
+  - Series come from Goodreads titles ("Guards! Guards! (Discworld, #8)"),
+    never over a series already set.
+  - Undated reads have neither date. An **open** read is one with a start and
+    no finish, so an undated past read is never closed with today's date.
 
 ---
 

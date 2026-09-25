@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { entries, reads } from "@/lib/db/schema";
 import type { Shelf } from "@/lib/shelves";
@@ -56,6 +56,10 @@ export async function shelveEdition(
  * - To read and Did not finish touch no reads. An abandoned read stays open
  *   with no finish date, which is exactly what did-not-finish means.
  *
+ * "Open" means started and not finished. A read with neither date is an
+ * undated past read — Goodreads' Read Count imports as those — and must never
+ * be closed with today's date.
+ *
  * Shared by the edition page and, in step 9, the shelf's bulk change.
  */
 export async function changeShelf(tx: Tx, entryId: string, shelf: Shelf): Promise<void> {
@@ -73,7 +77,7 @@ export async function changeShelf(tx: Tx, entryId: string, shelf: Shelf): Promis
   const [open] = await tx
     .select({ id: reads.id })
     .from(reads)
-    .where(and(eq(reads.entryId, entryId), isNull(reads.finishedOn)))
+    .where(and(eq(reads.entryId, entryId), isNotNull(reads.startedOn), isNull(reads.finishedOn)))
     .orderBy(desc(reads.createdAt))
     .limit(1);
 

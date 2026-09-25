@@ -565,3 +565,69 @@ the FormData argument's fields sent as `_1_<name>` **before** the root part
 arrives first resolves to an empty FormData. The client does it in that order.
 
 Not clicked in a browser: select mode, the bulk bar, and its messages.
+
+---
+
+## 2026-09-25 — Step 10: Settings, export, Goodreads import
+
+**Settings** (`/settings`, now in the nav): account name and password (gameshelf's
+forms and actions, copied), the Goodreads import, the list of imported books
+that became local works, and export.
+
+**Export**: `/export/json` and `/export/csv` (route handler, login required).
+JSON is every entry with its edition, work, series, tags and reads; Open
+Library payloads left out. CSV is one row per entry, 21 columns, reads
+summarised, undated reads labelled "undated". Checked by parsing the CSV back
+with the importer's parser: multi-line reviews with quotes survive.
+
+**Goodreads import** (`lib/import/`): `csv.ts` (RFC 4180, BOM, CRLF, newlines
+in quotes), `goodreads.ts` (pure mapping, unit-tested), `run.ts` (per row:
+previous import by `goodreads_book_id` → ISBN here → ISBN on Open Library →
+strict title+author search → local work; entry, reads, tags and series in one
+transaction; covers after). The page drives batches of five
+(`importGoodreadsBatch`), as gameshelf does, rather than the server-side job
+proposed at the start of this step — no server state, and re-running resumes.
+Brief §5 records the decisions.
+
+**Bugs found and fixed on the way:**
+
+- Next's 1 MB server-action body limit made any larger upload a 500 before our
+  code ran — the exact bug class §5 warns about. Limit raised to 21 MB, and the
+  page checks size before sending. gameshelf has the same 1 MB cap and 20 MB
+  check; its Grouvee import would 500 on a big export. Not fixed there.
+- "Open read" meant "no finish date", so an undated past read (from Read Count)
+  would have been closed with today's date by the next move to Finished. Open
+  now means started and not finished (`changeShelf`).
+
+**A mistake of mine during testing.** I meant to run the import against a
+scratch database, but the old dev server survived my `kill` and kept port
+3001; the scratch server failed to bind, and the first test import went into
+the dev database. It added five test works (with entries, reads, tags, two new
+series, Colour of Magic into Discworld) and set a Goodreads id on the Corgi
+edition. All of it was removed — rows by the Goodreads ids it had set, the two
+empty series, four orphan tags, six cover files — and the dev database checked
+back to its prior state (8 works, series Discworld and Earthsea Cycle, tag
+Signed copy, no Goodreads ids). Every run after that checked the listening pid
+and the scratch server's own request log first.
+
+**Verified** on a scratch database (`importtest`, dropped afterwards) with a
+hand-built export using Goodreads' real header and quirks: six books added —
+three by ISBN, two by title, one local — each field as §5 maps it (4 stars → 8,
+0 → unrated, Audible Audio → audiobook, dated read plus undated ones for Read
+Count, shelves to tags, custom `did-not-finish` → dnf, `on-hold` → tbr + tag,
+series from titles incl. an omnibus with no number, HTML reviews to text, dates
+added kept, covers). Re-running: six "previous import", zero writes, and an
+edit made in between (rating 10, reading) kept. No file, a JSON file, a
+non-Goodreads CSV, a header-only file and a cut-off file: a message each. A
+5.3 MB export of 5,200 rows parses. With Open Library unreachable two new rows
+failed with the reason and created nothing; online again, the same file added
+them. Settings lists the local work. Rename and password change checked for
+each of their messages.
+
+Not verified: the import page clicked in a browser (progress bar, Stop), an
+export of a real Goodreads library — only the hand-built one — and the time a
+real 800-book import takes.
+
+**v1 build order is complete.** Owed before calling v1 done (IDEAS.md): cover
+upload / URL and `/art`, editing works and editions, a README, and a first
+deploy.

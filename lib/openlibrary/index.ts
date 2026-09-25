@@ -141,6 +141,15 @@ export async function lookupIsbn(isbn: Isbn): Promise<IsbnLookup | null> {
   return { edition, work: workKey ? await getWorkSummary(workKey) : null };
 }
 
+/**
+ * The edition an ISBN names, without its work's summary: for the Goodreads
+ * import, which already has the author names and so saves a queued request.
+ */
+export async function getEditionByIsbn(isbn13: string): Promise<OlEditionSummary | null> {
+  const raw = await getJson<OlEdition>(`/isbn/${isbn13}.json`);
+  return raw ? toEditionSummary(raw) : null;
+}
+
 /** Open Library's keys are OL, digits, and one letter for the record type. */
 export function isWorkKey(value: string): boolean {
   return /^OL\d+W$/.test(value);

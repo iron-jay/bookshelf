@@ -16,8 +16,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <>
-      {/* Settings joins the nav when its build step lands, so the nav never
-          links to a page that does not exist yet. */}
       <header className="flex items-center justify-between border-b border-line px-4 py-3">
         <nav className="flex items-center gap-5">
           <ShelfLink className="font-medium">bookshelf</ShelfLink>
@@ -26,6 +24,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </Link>
           <Link href="/add" className="font-narrow text-ink-dim hover:text-ink">
             Add book
+          </Link>
+          <Link href="/settings" className="font-narrow text-ink-dim hover:text-ink">
+            Settings
           </Link>
         </nav>
 

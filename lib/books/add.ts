@@ -134,9 +134,12 @@ export async function addOpenLibraryBook(input: AddBookInput): Promise<AddBookRe
 
 type EnsuredEdition = { id: string; created: boolean; isbn13: string | null };
 
-async function insertOpenLibraryEdition(
+/** What creating an edition needs from the add, shared with the Goodreads import. */
+export type EditionInput = Pick<AddBookInput, "userId" | "format" | "credit" | "durationMinutes" | "isbn">;
+
+export async function insertOpenLibraryEdition(
   tx: Tx,
-  input: AddBookInput,
+  input: EditionInput,
   workId: string,
   edition: OlEditionSummary,
 ): Promise<EnsuredEdition> {
@@ -185,9 +188,9 @@ async function insertOpenLibraryEdition(
  * "Any edition": one plain Book and one plain Audiobook per work, shared, so
  * adding the same work twice does not grow a pile of identical editions.
  */
-async function ensurePlainEdition(
+export async function ensurePlainEdition(
   tx: Tx,
-  input: AddBookInput,
+  input: EditionInput,
   workId: string,
 ): Promise<EnsuredEdition> {
   const name = plainEditionName(input.format);
