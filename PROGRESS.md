@@ -272,3 +272,18 @@ downloading; two adds of one new work at the same moment.
 
 **Next:** step 5, the shelf — grid, shelf filter, filter-by-title, typeset
 placeholders, label band.
+
+---
+
+## 2026-09-25 — The brief had a block in it nobody wrote
+
+`next dev` in Next 16 appends a `nextjs-agent-rules` block to `CLAUDE.md` when
+it detects an AI coding agent (`generate-agent-files.js`, keyed on `CLAUDECODE`,
+`AI_AGENT` and similar). Starting the dev server during step 1 wrote it, and
+that step's `git add -A` committed it unnoticed in `30d4003`. Removed. Run by a
+person, `next dev` writes nothing; run by an agent, start it with those
+variables unset (`env -u AI_AGENT -u CLAUDECODE -u CLAUDE_CODE
+-u CLAUDE_CODE_IS_COWORK npm run dev -- -p 3001`).
+
+The two gameshelf auth bugs noted in step 2 are fixed there too (uncommitted in
+that repo, logged in its PROGRESS.md). bookshelf already had both fixes.
