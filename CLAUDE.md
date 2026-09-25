@@ -370,6 +370,7 @@ skips everything that exists; running it here seeds `~/code/bookshelf`.
 cp .env.example .env      # then fill in; see below
 docker compose up -d db   # Postgres on 5433, so it coexists with gameshelf's
 npm run db:migrate        # builds the schema, view and trigger included
+npm run db:seed           # first user from ADMIN_USERNAME / ADMIN_PASSWORD
 npm run dev -- -p 3001    # http://localhost:3001
 ```
 

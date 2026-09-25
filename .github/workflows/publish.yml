@@ -63,7 +63,8 @@ jobs:
             echo "  no dev dependencies"
 
             # Imports are hoisted, so reaching the DATABASE_URL check means every
-            # import the bundle kept external resolved from the standalone output.
+            # import resolved — including @node-rs/argon2, which is deliberately
+            # left external and has to come from the standalone output.
             out=$(node migrate.mjs 2>&1 || true)
             case "$out" in
               *"DATABASE_URL is not set"*) echo "  migrate bundle loads and resolves" ;;

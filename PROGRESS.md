@@ -63,3 +63,63 @@ user seed in `migrate.ts` and `@node-rs/argon2` arrive with auth.
 
 **Next:** step 2, auth — copy `lib/auth` from gameshelf, seed the first user in
 `migrate.ts`, login page, session cookie, `AUTH_DISABLED`.
+
+---
+
+## 2026-09-25 — Step 2: auth
+
+gameshelf's auth, copied: Argon2id at OWASP's reference cost, a 32-byte random
+token in the cookie with only its SHA-256 in `sessions`, 30-day sliding expiry
+written once past halfway, a decoy verify so an unknown username costs the same
+as a wrong password, and the `(app)` route group guarded in its layout rather
+than middleware.
+
+**Three deliberate differences from gameshelf:**
+
+- **One first-user rule.** gameshelf's `seed.ts` checked for a user *named*
+  `ADMIN_USERNAME` while its `migrate.ts` checked for *anyone*, so after a
+  rename in Settings `db:seed` would have created a second account.
+  `lib/auth/first-user.ts` holds the "anyone at all" rule and both
+  `scripts/migrate.ts` (image start-up) and `scripts/seed.ts` (`npm run
+  db:seed`, dev) call it. Worth backporting to gameshelf.
+- **Cookie is `bookshelf_session`.** Cookies are scoped by host, not port, so on
+  the same box the two apps would have signed each other out.
+- **No redirect loop with sign-in off and nobody seeded.** The layout sent you
+  to `/login`, which saw `AUTH_DISABLED` and sent you back. The login page now
+  counts users first and shows the "no user yet" message instead. gameshelf
+  still has this loop.
+
+The nav holds only the shelf link and sign-out; Search, Add and Settings join it
+as their steps land, so it never links to a 404.
+
+`SESSION_SECRET` is required by compose but nothing reads it — true of
+gameshelf too, since sessions are random tokens looked up in the database rather
+than signed. Left in place for parity.
+
+**Verified** against the dev database, from empty:
+
+1. No user, sign-in on: `/` → 307 `/login`, which says no user exists.
+2. No user, `AUTH_DISABLED=true`: one redirect to `/login`, 200, same message.
+   No loop.
+3. The bundled `migrate.mjs` twice: "created admin", then "already exists".
+   Hash is `$argon2id$`.
+4. Sign-in off with a user: `/` is 200 showing "admin · sign-in off";
+   `/login` → `/`.
+5. Sign-in on, via the real form posted as a no-JS browser would: wrong password
+   and unknown user both "Username or password is incorrect", no session rows.
+6. Right password: 303 to `/`, `bookshelf_session` cookie is HttpOnly, one row
+   whose id is the token's SHA-256 (64 hex), expiring in 30 days. `/` shows
+   Sign out; `/login` bounces to `/`.
+7. Sign out: 303 to `/login`, row deleted, cookie cleared, `/` redirects again.
+8. Timing, five of each after warm-up: wrong password 51–57 ms, unknown user
+   49–56 ms.
+9. Renamed `admin` → `jay`, ran `db:seed` and `migrate.mjs`: both "jay already
+   exists", still exactly one user. Renamed back.
+
+`typecheck`, `lint`, `check:actions` (2 files), `build` and `build:migrate`
+clean. After moving `app/page.tsx` into `(app)`, `tsc` failed on stale
+`.next/types` until `.next` was cleared — a build artefact, not a code problem.
+
+**Next:** step 3, the Open Library client (`lib/openlibrary/`, serialised at
+~1/s with the identifying User-Agent) and the search page, ISBN included.
+Nothing persists yet.
