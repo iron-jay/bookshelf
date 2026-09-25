@@ -34,9 +34,9 @@ const ORDER_BY: Readonly<Record<Sort, SQL>> = {
   finished: sql`last_finished_on desc nulls last, added_at desc`,
 };
 
-// Series joins these in build step 8, once works can be put in one.
 const GROUPINGS = {
   none: "No grouping",
+  series: "Series",
   author: "Author",
   year: "Year",
   format: "Book or audiobook",
@@ -81,6 +81,11 @@ type Row = typeof entryCards.$inferSelect;
 /** The bucket a row belongs in, and how buckets order. Unknowns always last. */
 function bucketFor(row: Row, groupBy: GroupBy): { label: string; order: number | string } {
   switch (groupBy) {
+    case "series":
+      return {
+        label: row.seriesName ?? "Not in a series",
+        order: row.seriesName?.toLowerCase() ?? "\uffff",
+      };
     case "author": {
       // First credited author: a co-written book groups under whoever the
       // cover leads with, as a bookshop would shelve it.
@@ -169,8 +174,20 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   const year = new Date().getFullYear();
   const finished = await finishedThisYear(user.id, year);
 
+  // A series group reads in series order (§2), whatever the sort says: the
+  // point of grouping by series is seeing #1, #2, #3. Stable, so the chosen
+  // sort still orders books that share a position or have none.
+  const ordered =
+    groupBy === "series"
+      ? [...rows].sort(
+          (a, b) =>
+            (a.seriesPosition ?? Number.POSITIVE_INFINITY) -
+            (b.seriesPosition ?? Number.POSITIVE_INFINITY),
+        )
+      : rows;
+
   const groups = new Map<string, { order: number | string; cards: ShelfCard[] }>();
-  for (const row of rows) {
+  for (const row of ordered) {
     const { label, order } = bucketFor(row, groupBy);
     const group = groups.get(label) ?? { order, cards: [] };
     group.cards.push(toCard(row));

@@ -4,11 +4,12 @@ import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { COMMUNITY_EDITION_KINDS, editions, entries, works } from "@/lib/db/schema";
+import { COMMUNITY_EDITION_KINDS, editions, entries, series, works } from "@/lib/db/schema";
 import { SHELF_LABELS } from "@/lib/shelves";
 
 import { Cover } from "../../cover";
 import { ratingLabel } from "../../shelf-card";
+import { SeriesForm } from "./series-form";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,8 @@ function languageName(code: string | null): string | null {
 
 /**
  * The work: its cover, summary and every edition on this server, with your
- * shelf state beside each. "Add edition" is Door B of the add flow.
- * Series position joins in build step 8.
+ * shelf state beside each, and where it sits in a series. "Add edition" is
+ * Door B of the add flow.
  */
 export default async function WorkPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await requireUser();
@@ -67,6 +68,16 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
 
   const author = work.authors.join(", ") || null;
 
+  const [inSeries] = work.seriesId
+    ? await db
+        .select({ name: series.name, slug: series.slug })
+        .from(series)
+        .where(eq(series.id, work.seriesId))
+    : [];
+  const seriesNames = (
+    await db.select({ name: series.name }).from(series).orderBy(asc(series.name))
+  ).map((s) => s.name);
+
   return (
     <main className="flex-1 p-6">
       <div className="flex max-w-4xl flex-col gap-8 sm:flex-row">
@@ -79,6 +90,14 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             <h1 className="text-2xl font-medium">{work.title}</h1>
             {work.subtitle ? <p className="text-ink-dim">{work.subtitle}</p> : null}
             {author ? <p className="mt-1">{author}</p> : null}
+            {inSeries ? (
+              <p>
+                <Link href={`/series/${inSeries.slug}`} className="underline hover:text-ink">
+                  {inSeries.name}
+                </Link>
+                {work.seriesPosition !== null ? ` #${work.seriesPosition}` : null}
+              </p>
+            ) : null}
             <p className="font-narrow text-ink-dim">
               {[
                 work.firstPublishedYear,
@@ -94,6 +113,13 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               ) : null}
             </p>
           </div>
+
+          <SeriesForm
+            workId={work.id}
+            current={inSeries?.name ?? null}
+            position={work.seriesPosition}
+            seriesNames={seriesNames}
+          />
 
           {/* Long-form prose, so Newsreader (§5b). */}
           {work.summary ? (

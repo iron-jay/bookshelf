@@ -504,3 +504,30 @@ so no password change. The Goodreads import (step 10) is what makes it usable
 with a real library.
 
 **Next:** step 8, series.
+
+---
+
+## 2026-09-25 — Step 8: series
+
+- **Work page**: a Series field (existing names offered as you type) and a
+  Number; the header shows "Discworld #8" linking to the series. Series are
+  shared catalogue like works. Typing a name joins the series of that name
+  regardless of case, a new name creates one, a blank name takes the work out.
+  A series left with no works is deleted — they only come into being through a
+  work, and an empty one would keep being offered as a name. Numbers are
+  `numeric(6,2)`: "8", "2.5", "#9" (the # is dropped); "eight", "1.234" and
+  "-1" are refused with a message. Logic in `lib/books/series.ts`, which the
+  Goodreads import reuses.
+- **`/series/[slug]`**: works in order, unnumbered last, each with your shelf
+  state (and the edition name when more than one is shelved), plus
+  "3 books · 1 finished". That is the whole feature.
+- **Shelf**: Group by series, groups by name with "Not in a series" last, and
+  within a group series order wins over the chosen sort — the point is #1,
+  #2, #3.
+
+Verified by posting the work-page form: Discworld #8, "discworld" joining the
+same series, Earthsea Cycle #1, a temporary series removed (and deleted with
+its last work), the four bad numbers, the series page order and states, and
+grouping on the shelf with `sort=title`. Not done: suggesting a series from
+Open Library's own series data (it is thin, per the brief) — the Goodreads
+import fills it from titles instead.
