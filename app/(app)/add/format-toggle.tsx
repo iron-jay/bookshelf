@@ -9,18 +9,14 @@ const OPTIONS: { value: Format; label: string }[] = [
 
 /**
  * Two options, not a dropdown, on every path that creates an edition. Radio
- * inputs underneath, so it submits with scripting off. `locked` is for podfic,
- * which is always audio and shows the toggle rather than hiding it, so the
- * choice is visibly made rather than silently absent.
+ * inputs underneath, so it submits with scripting off.
  */
 export function FormatToggle({
   value,
   onChange,
-  locked = false,
 }: {
   value: Format;
   onChange: (format: Format) => void;
-  locked?: boolean;
 }) {
   return (
     <fieldset className="flex flex-col gap-1.5">
@@ -33,14 +29,13 @@ export function FormatToggle({
               key={option.value}
               className={`-ml-px border px-4 py-2 first:ml-0 ${
                 selected ? "relative border-ink text-ink" : "border-line text-ink-dim"
-              } ${locked ? "cursor-not-allowed" : "cursor-pointer hover:text-ink"}`}
+              } cursor-pointer hover:text-ink`}
             >
               <input
                 type="radio"
                 name="format"
                 value={option.value}
                 checked={selected}
-                disabled={locked && !selected}
                 onChange={() => onChange(option.value)}
                 className="sr-only"
               />

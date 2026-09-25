@@ -1,8 +1,8 @@
 # bookshelf — Project Brief
 
 Self-hosted book tracker. Goodreads' interaction model, Open Library's
-catalogue, and first-class support for the things neither of them handles well:
-fanfiction, fan translations, podfic and fan edits.
+catalogue, and first-class support for the thing neither of them handles well:
+fan translations.
 
 Sibling of **gameshelf** (`github.com/iron-jay/gameshelf`). Same stack, same
 deployment shape, same design language. Where this brief is silent, do what
@@ -17,10 +17,13 @@ server. No SaaS dependencies, and no API keys required to run.
 
 These shape every other decision. Do not quietly relax them.
 
-1. **Community editions are equal citizens.** A fan translation of a light
-   novel, a podfic, or a 400k-word AO3 fic must be as easy to create, shelve,
-   rate and review as a Penguin paperback. No second-class "custom book" flow
-   bolted on the side.
+1. **Fan translations are equal citizens.** A fan translation of a light novel
+   must be as easy to create, shelve, rate and review as a Penguin paperback.
+   No second-class "custom book" flow bolted on the side.
+   - Fanfic, podfic and fan edits were dropped on 2026-09-25, after the shelf
+     was built: not wanted. Migration `0001` removed their edition kinds and
+     `works.derived_from_work_id`. Do not reintroduce them; a book Open Library
+     lacks is a manually created work, not a fanwork.
 2. **Open Library data is cached, never mirrored wholesale.** We fetch on demand
    and store what we fetched. We never run a bulk import of their dumps, and the
    app must work fully offline once a work is cached.
@@ -49,35 +52,25 @@ series      Discworld
 
 work        Mushoku Tensei vol. 1                   (openlibrary)
  └ edition   Web novel (fan TL)        fan_translation  (local, base = JP edition)
-
-work        The Last Enemy                           (local, fanfic)
-  derived_from → Harry Potter and the Philosopher's Stone
- └ edition   AO3                        fanfic      (local)
- └ edition   Podfic by someone          podfic      (local, base = AO3)
 ```
 
 This is Open Library's own model — works and editions — so the mapping from
 their API is mechanical. That is deliberate; do not invent a third level.
 
-### Three relations, and they are not the same thing
+### Two relations, and they are not the same thing
 
-The easiest part of the model to get wrong. Each link means something different:
+Each link means something different:
 
 - `works.series_id` + `series_position` — **reading order**. Discworld #8.
   Positions are `numeric` because novellas are 2.5.
 - `editions.base_edition_id` — **the same text, differently**. Translations,
-  audiobooks of a specific text, fan translations, podfic, fan edits.
-- `works.derived_from_work_id` — **a different text in someone else's world**.
-  Fanfiction. A fic is never an edition of its source: it is its own work, with
-  its own editions (the AO3 posting, a podfic of it).
+  audiobooks of a specific text, fan translations.
 
-An edition never changes the story. A fic always does. If a proposed feature
-blurs these, the feature is wrong, not the model.
+An edition never changes the story. A different story is a different work. If a
+proposed feature blurs these, the feature is wrong, not the model.
 
 Consequences to honour in the UI:
 
-- Work pages list editions, then (for a source work) "Fanworks" beneath, never
-  mixed into the edition list.
 - A series page is an ordered list of works with your shelf state beside each.
   That is the whole feature.
 - Shelf grouping includes **series** (in order) and **author**.
@@ -86,10 +79,10 @@ Rules:
 
 - A **work** is the abstract book. `ol_work_key` (`OL45804W`) is unique and
   nullable. `source = 'local'` works exist for things Open Library has never
-  heard of — fics, web serials, zines.
+  heard of — web serials, zines, out-of-print things.
 - An **edition** is what you actually read or listened to. Every work has at
-  least one. Derived editions set `base_edition_id` to the text they translate,
-  narrate or cut.
+  least one. Derived editions set `base_edition_id` to the text they translate
+  or narrate.
 - An **entry** is unique per `(user_id, edition_id)`. Rating and review live
   here, so you can rate the fan translation differently from the official one.
 - A **read** is one pass through. Rereads are new reads, not edits.
@@ -179,7 +172,8 @@ Books have no SteamGridDB. Art comes from, in order:
 3. **Upload, or paste an image URL.** Always available. `cover_source = 'upload'`
    or `'url'`. The pasted URL is downloaded once, never hot-linked.
 4. **Typeset placeholder** — see §5b. Not an error state: a lot of books,
-   and nearly every fic, will live here permanently and should look deliberate.
+   and most fan translations, will live here permanently and should look
+   deliberate.
 
 Rules carried over from gameshelf, because they were learned the hard way:
 
@@ -192,13 +186,13 @@ Rules carried over from gameshelf, because they were learned the hard way:
   filter on the shelf.
 - Download on add, store under `COVERS_DIR`, serve locally.
 
-### Adding a community edition (the important flow)
+### Adding a fan translation (the important flow)
 
 From any work page: **Add edition** → kind, name, base edition, credit, URL,
 language, notes. That is it. No approval, no moderation. It is your server.
 
 From search: if nothing matches, **Create work manually** with the same minimal
-form. Used for fics, web serials, zines, ARCs, out-of-print things.
+form. Used for web serials, zines, ARCs, out-of-print things.
 
 ---
 
@@ -211,7 +205,7 @@ form. Used for fics, web serials, zines, ARCs, out-of-print things.
 2. **Search** — one box, Open Library results and local works interleaved,
    clearly marked. ISBN typed or pasted goes straight to the edition. A result
    already on your shelf links to its entry.
-3. **Work page** — cover, summary, series position, editions, fanworks.
+3. **Work page** — cover, summary, series position, editions.
 4. **Edition page** — your entry, shelf, rating out of ten, review, reads.
 5. **Series page** — ordered works, your shelf state for each.
 6. **Settings** — account name and password, export, import, cover art review.
@@ -239,15 +233,12 @@ There is **one** add flow. It always produces an edition attached to a work.
 
 ```
 Door A — "Add book" in the top bar
-  type selector: Book | Fanfic | Fan translation | Podfic | Fan edit
+  type selector: Book | Fan translation
   └ Book              → Open Library search (or ISBN) → pick work →
                         Book | Audiobook → pick edition from their list, or
                         "any edition" which creates a plain one named
                         "Book" or "Audiobook"
-  └ Fan translation,  → name first, then source work, then details
-    Podfic,
-    Fan edit
-  └ Fanfic            → creates a local WORK (see below)
+  └ Fan translation   → name first, then source work, then details
 
 Door B — "Add edition" on an existing work page
   work already known; straight to kind + details
@@ -257,12 +248,11 @@ Door B is Door A with the work pre-filled. Build the form once. Do not write two
 components.
 
 **Book or audiobook** is a two-option toggle on the form, not a dropdown, and it
-is on every path that creates an edition (Door A, Door B, fan translation, fan
-edit, fanfic). It defaults to whichever you picked last. It is the whole of
+is on every path that creates an edition (Door A, Door B, fan translation). It
+defaults to whichever you picked last. It is the whole of
 `editions.format` — there is no hardcover/paperback/ebook split. Choosing
 Audiobook reveals two optional fields, "Read by" (`credit`) and length
-(`duration_minutes`); Book hides them. Podfic is always Audiobook and shows the
-toggle locked.
+(`duration_minutes`); Book hides them.
 
 The same choice appears on the edition page as an edit, since Open Library's
 edition data often gets it wrong. Reading the book and then the audiobook is two
@@ -273,11 +263,11 @@ toggle (their `physical_format` containing "audio" → audiobook, anything else 
 book). Open Library works can have hundreds of editions; show publisher, year
 and language, filterable, not a raw dump.
 
-**Fanfic is a work, not an edition.** It is a different text. The Fanfic option
-creates a local work with `source = 'local'`, asks for an optional "fanfic of"
-(inline search → `derived_from_work_id`), author(s), URL, and creates its own
-`fanfic` edition. If the user picked Fan translation and the honest answer to
-"what is the source text?" is "there isn't one", offer to switch doors.
+**The source work for a fan translation** is picked by inline search: Open
+Library or a work already here. When it is neither — a web novel Open Library
+has never heard of — the same form creates it as a local work first. A fan
+translation always has a source text; if there isn't one, it is not a fan
+translation.
 
 **Default shelf on add:** `tbr`, including for books not yet published. The
 picker is visible on the add form. Nothing moves entries between shelves
@@ -352,12 +342,12 @@ A book with no art gets a generated cover, not a grey box: `--panel` ground, the
 title in Newsreader set large and left-aligned, the author beneath in Archivo
 Narrow `--ink-dim`, a single `--line` rule between them. Rendered as HTML in the
 cell, not a stored image, so it follows title edits. A good placeholder makes a
-shelf of AO3 fics look like a shelf rather than a gap.
+shelf of web-novel translations look like a shelf rather than a gap.
 
 ### The label band
 
-As gameshelf: community editions (`fanfic`, `fan_translation`, `podfic`,
-`fan_edit`) render a solid `--label` band across the lower portion of the cover,
+As gameshelf: community editions — here only `fan_translation` — render a solid
+`--label` band across the lower portion of the cover,
 carrying the edition's name and credit in Archivo Narrow. Official editions get
 no band, no badge, no marker. The absence is the signal. Do not extend it into a
 system — no band for audiobooks, no icon per format.
@@ -460,9 +450,9 @@ runs end to end.
 4. Add-to-shelf: creates work, edition and entry in one transaction; cover
    downloaded; lands on `tbr` unless another shelf is picked.
 5. Shelf page with shelf filtering, filter-by-title, typeset placeholders.
-6. The unified add form (§5) for community editions and fanfic works. Verify a
-   fan translation end to end through Door A, then another through Door B on an
-   existing work page. If the two paths need different code, stop and fix the
+6. The unified add form (§5) for fan translations and manually created works.
+   Verify a fan translation end to end through Door A, then another through
+   Door B on an existing work page. If the two paths need different code, stop and fix the
    form before continuing.
 7. Edition page: rating out of ten, review, reads.
 8. Series: assign on the work page, series page, group-by-series on the shelf.

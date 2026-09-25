@@ -342,3 +342,39 @@ was never typed into. Tiles link to `/edition/{id}`, which is step 7.
 
 **Next:** step 6, the unified add form — fan translation, podfic, fan edit and
 fanfic through the same `AddForm`, Door A and Door B.
+
+---
+
+## 2026-09-25 — Fanfic, podfic and fan edits are out
+
+Looked at the shelf and decided: fan translations are wanted, fanfic, podfic and
+fan edits are not. Manual works (for books Open Library lacks) stay — the
+Goodreads import needs them for unmatched rows.
+
+- **Migration `0001_drop_fanworks`**: rebuilds `edition_kind` without `fanfic`,
+  `podfic` and `fan_edit` (Postgres cannot drop enum values), drops
+  `works.derived_from_work_id` with its check and index, and drops the podfic
+  audio check. `entry_cards` depends on both, so the migration drops it first
+  and recreates it from `schema.sql`. A guard at the top refuses to run while
+  any rows of the dropped kinds exist, rather than failing on a cast; it is a
+  person's data and not a migration's call.
+- `schema.sql`, `lib/db/schema.ts`, the view (`derived_from_title` gone,
+  `is_community_edition` now means fan translation), the shelf's headlines and
+  the format toggle's podfic-only `locked` state all follow.
+- The brief: non-negotiable #1 is now about fan translations and records the
+  removal; the data-model tree, "two relations", the add flow (Door A is
+  Book | Fan translation), the label band and step 6 are rewritten. A fan
+  translation whose source is not on Open Library creates the source as a local
+  work in the same form.
+
+**Verified.** The guard, on a scratch database built from `0000` with a fic in
+it: the migration stopped with its message and rolled back — view present, fic
+present, one migration recorded. The dev database (test fic and podfic deleted
+first — they were `zz-test-` rows) migrated, and re-running is a no-op. A fresh
+database from both migrations matches `schema.sql` exactly apart from the known
+FK names, and the migrated dev database is identical to it. The shelf still
+draws both fan translations with band and placeholder; an audiobook added
+through the form after the migration.
+
+**Next:** step 6 — now just fan translations and manual works through the one
+`AddForm`, Door A and Door B.

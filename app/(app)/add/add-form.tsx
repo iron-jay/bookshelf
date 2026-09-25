@@ -12,10 +12,10 @@ import { ShelfPicker } from "./shelf-picker";
 const INITIAL: AddState = { error: null };
 
 /**
- * The Book path of the add flow: format, edition, shelf. Fan translations,
- * podfic, fan edits and fanfic join this form in build step 6 rather than
- * getting forms of their own — the brief's one rule about adding is that
- * there is one add flow.
+ * The Book path of the add flow: format, edition, shelf. Fan translations and
+ * manually created works join this form in build step 6 rather than getting
+ * forms of their own — the brief's one rule about adding is that there is one
+ * add flow.
  */
 export function AddForm({
   olWorkKey,

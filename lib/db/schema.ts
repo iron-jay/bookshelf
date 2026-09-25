@@ -44,10 +44,7 @@ export const editionKind = pgEnum("edition_kind", [
   "abridged",
   "annotated",
   "translation",
-  "fanfic",
   "fan_translation",
-  "podfic",
-  "fan_edit",
   "other",
 ]);
 
@@ -61,14 +58,10 @@ export const shelfStatus = pgEnum("shelf_status", ["tbr", "reading", "finished",
 /**
  * Edition kinds that are community releases: they get the label band and never
  * inherit the work's cover. The entry_cards view carries the same list; keep
- * the two in step.
+ * the two in step. Only fan translations since fanfic, podfic and fan edits
+ * were dropped (migration 0001).
  */
-export const COMMUNITY_EDITION_KINDS = [
-  "fanfic",
-  "fan_translation",
-  "podfic",
-  "fan_edit",
-] as const;
+export const COMMUNITY_EDITION_KINDS = ["fan_translation"] as const;
 
 // ---------------------------------------------------------------- users
 
@@ -127,10 +120,6 @@ export const works = pgTable(
     seriesId: uuid("series_id").references(() => series.id, { onDelete: "set null" }),
     seriesPosition: numeric("series_position", { precision: 6, scale: 2, mode: "number" }),
 
-    derivedFromWorkId: uuid("derived_from_work_id").references((): AnyPgColumn => works.id, {
-      onDelete: "set null",
-    }),
-
     summary: text("summary"),
     firstPublishedYear: smallint("first_published_year"),
     coverUrl: text("cover_url"),
@@ -147,9 +136,7 @@ export const works = pgTable(
     index("works_title_trgm_idx").using("gin", sql`${t.title} gin_trgm_ops`),
     index("works_source_idx").on(t.source),
     index("works_series_idx").on(t.seriesId, t.seriesPosition),
-    index("works_derived_idx").on(t.derivedFromWorkId),
     index("works_author_sort_idx").on(t.authorSort),
-    check("works_no_self_derive", sql`${t.id} <> ${t.derivedFromWorkId}`),
     check(
       "works_position_needs_series",
       sql`${t.seriesPosition} IS NULL OR ${t.seriesId} IS NOT NULL`,
@@ -207,7 +194,6 @@ export const editions = pgTable(
     check("editions_pages_check", sql`${t.pages} > 0`),
     check("editions_duration_minutes_check", sql`${t.durationMinutes} > 0`),
     check("editions_no_self_base", sql`${t.id} <> ${t.baseEditionId}`),
-    check("editions_podfic_is_audio", sql`${t.kind} <> 'podfic' OR ${t.format} = 'audiobook'`),
   ],
 );
 
@@ -331,7 +317,6 @@ export const entryCards = pgView("entry_cards", {
   seriesId: uuid("series_id"),
   seriesPosition: numeric("series_position", { precision: 6, scale: 2, mode: "number" }),
   seriesName: text("series_name"),
-  derivedFromTitle: text("derived_from_title"),
   /** The edition's own year where it has one, else the work's. */
   year: integer("year"),
   isCommunityEdition: boolean("is_community_edition"),

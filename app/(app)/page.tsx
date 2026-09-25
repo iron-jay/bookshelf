@@ -110,12 +110,10 @@ function toCard(row: Row): ShelfCard {
     editionName: row.editionName ?? "",
     editionCredit: row.editionCredit,
     format: row.format ?? "book",
-    editionKind: row.editionKind ?? "original",
     status: row.status ?? "tbr",
     rating: row.rating,
     coverUrl: row.coverUrl,
     isCommunityEdition: row.isCommunityEdition ?? false,
-    derivedFromTitle: row.derivedFromTitle,
     lastFinishedOn: row.lastFinishedOn,
   };
 }

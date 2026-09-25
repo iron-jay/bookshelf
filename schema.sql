@@ -1,6 +1,6 @@
 -- ============================================================
 -- bookshelf — Postgres schema
--- Goodreads-shaped book tracker with first-class fanwork support
+-- Goodreads-shaped book tracker with first-class fan translation support
 -- Target: PostgreSQL 16+
 -- ============================================================
 
@@ -15,23 +15,21 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- may be refreshed; 'local' rows are user-authored and never overwritten.
 CREATE TYPE source_kind AS ENUM ('openlibrary', 'local');
 
--- What an edition *is*, relative to its work. The last four are community
--- releases: they get the label band and never inherit the work's cover.
+-- What an edition *is*, relative to its work. fan_translation is the one
+-- community release: it gets the label band and never inherits the work's
+-- cover. Fanfic, podfic and fan edits were dropped on 2026-09-25 (0001).
 CREATE TYPE edition_kind AS ENUM (
   'original',         -- a published edition of the text, any format
   'revised',          -- author's revised / expanded text
   'abridged',
   'annotated',
   'translation',      -- official, published translation
-  'fanfic',           -- the posting of a fanwork (AO3, FFN, a blog)
   'fan_translation',  -- unofficial translation (light novels, web novels)
-  'podfic',           -- fan-recorded audio of a text
-  'fan_edit',         -- fan-cut or fan-restored text
   'other'
 );
 
 -- Read or listened to. Separate from kind: an official translation can be an
--- audiobook, and podfic always is. Deliberately two values: hardcover vs
+-- audiobook. Deliberately two values: hardcover vs
 -- paperback vs ebook is detail nobody asked to track. Open Library's own
 -- physical_format stays in ol_payload if it is ever wanted.
 CREATE TYPE book_format AS ENUM ('book', 'audiobook');
@@ -109,9 +107,6 @@ CREATE TABLE works (
   -- numeric because novellas sit between books: 2.5
   series_position       numeric(6,2),
 
-  -- Fanfiction: a different text set in this work's world. Never an edition.
-  derived_from_work_id  uuid REFERENCES works(id) ON DELETE SET NULL,
-
   summary               text,
   -- Open Library mostly knows a year, not a date.
   first_published_year  smallint,
@@ -128,7 +123,6 @@ CREATE TABLE works (
   created_at            timestamptz NOT NULL DEFAULT now(),
   updated_at            timestamptz NOT NULL DEFAULT now(),
 
-  CONSTRAINT works_no_self_derive CHECK (id <> derived_from_work_id),
   CONSTRAINT works_position_needs_series CHECK (
     series_position IS NULL OR series_id IS NOT NULL
   )
@@ -137,7 +131,6 @@ CREATE TABLE works (
 CREATE INDEX works_title_trgm_idx ON works USING gin (title gin_trgm_ops);
 CREATE INDEX works_source_idx ON works(source);
 CREATE INDEX works_series_idx ON works(series_id, series_position);
-CREATE INDEX works_derived_idx ON works(derived_from_work_id);
 CREATE INDEX works_author_sort_idx ON works(author_sort);
 
 -- ------------------------------------------------------------
@@ -152,12 +145,12 @@ CREATE INDEX works_author_sort_idx ON works(author_sort);
 CREATE TABLE editions (
   id                 uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   work_id            uuid NOT NULL REFERENCES works(id) ON DELETE CASCADE,
-  -- "Paperback", "Audiobook", "Wachen! Wachen!", "AO3", "Podfic"
+  -- "Paperback", "Audiobook", "Wachen! Wachen!", "Web novel (fan TL)"
   name               text NOT NULL,
   kind               edition_kind NOT NULL DEFAULT 'original',
   format             book_format NOT NULL DEFAULT 'book',
 
-  -- For derived editions: the text this translates, narrates or cuts.
+  -- For derived editions: the text this translates or narrates.
   base_edition_id    uuid REFERENCES editions(id) ON DELETE SET NULL,
 
   language           text,                 -- ISO 639, "en", "ja"
@@ -169,8 +162,7 @@ CREATE TABLE editions (
   isbn10             text,
 
   -- One free-text credit whose label the UI derives from kind and format:
-  -- "Translated by" for translations, "Read by" for audiobooks and podfic,
-  -- "Edited by" for fan edits. A fic's author is the work's author, not this.
+  -- "Translated by" for translations, "Read by" for audiobooks.
   credit             text,
   version_label      text,                 -- "v2", "Chapter 1–64", "Rev. 2019"
   url                text,                 -- AO3 link, TL site, publisher page
@@ -187,9 +179,7 @@ CREATE TABLE editions (
   created_by         uuid REFERENCES users(id) ON DELETE SET NULL,
   created_at         timestamptz NOT NULL DEFAULT now(),
 
-  CONSTRAINT editions_no_self_base CHECK (id <> base_edition_id),
-  -- Podfic is fan audio by definition; a podfic marked 'book' is a data error.
-  CONSTRAINT editions_podfic_is_audio CHECK (kind <> 'podfic' OR format = 'audiobook')
+  CONSTRAINT editions_no_self_base CHECK (id <> base_edition_id)
 );
 
 CREATE INDEX editions_work_idx ON editions(work_id);
@@ -293,14 +283,14 @@ SELECT
   -- cover on a fan translation looks correct and is wrong, which is worse than
   -- the typeset placeholder. Own art or nothing.
   CASE
-    WHEN ed.kind IN ('fanfic','fan_translation','podfic','fan_edit')
+    WHEN ed.kind = 'fan_translation'
       THEN ed.cover_url
     ELSE COALESCE(ed.cover_url, w.cover_url)
   END                 AS cover_url,
   -- The flag belongs to whichever cover is on screen. A placeholder needs no review.
   CASE
     WHEN ed.cover_url IS NOT NULL THEN ed.cover_needs_review
-    WHEN ed.kind IN ('fanfic','fan_translation','podfic','fan_edit') THEN false
+    WHEN ed.kind = 'fan_translation' THEN false
     ELSE w.cover_needs_review
   END                 AS cover_needs_review,
   w.id                AS work_id,
@@ -311,19 +301,17 @@ SELECT
   w.series_id,
   w.series_position,
   s.name              AS series_name,
-  dw.title            AS derived_from_title,
   -- The edition's own year when it has one, so a translation groups under the
   -- year it came out rather than the year the original did.
   COALESCE(extract(year FROM ed.published_on)::int, w.first_published_year::int)
                       AS year,
-  (ed.kind IN ('fanfic','fan_translation','podfic','fan_edit')) AS is_community_edition,
+  (ed.kind = 'fan_translation') AS is_community_edition,
   -- A reread is a new read, so the latest finish is the meaningful one.
   (SELECT max(r.finished_on) FROM reads r WHERE r.entry_id = e.id) AS last_finished_on
 FROM entries e
 JOIN editions ed ON ed.id = e.edition_id
 JOIN works w     ON w.id = ed.work_id
-LEFT JOIN series s ON s.id = w.series_id
-LEFT JOIN works dw ON dw.id = w.derived_from_work_id;
+LEFT JOIN series s ON s.id = w.series_id;
 
 -- ------------------------------------------------------------
 -- updated_at triggers
