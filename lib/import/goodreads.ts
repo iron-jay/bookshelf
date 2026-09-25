@@ -53,6 +53,14 @@ const EXCLUSIVE: Readonly<Record<string, Shelf>> = {
  */
 const DNF_NAMES = new Set(["dnf", "did-not-finish", "abandoned", "gave-up", "dropped"]);
 
+/**
+ * People who track audiobooks on Goodreads often make an exclusive shelf for
+ * them, since Goodreads has no way to say "read, as audio". A book there is
+ * finished, and it was an audiobook whatever edition Goodreads had selected —
+ * in the export that prompted this, 15 of 33 said Hardcover.
+ */
+const LISTENED_NAMES = new Set(["listened-to", "listened", "audiobooks-listened", "listened-audiobooks"]);
+
 /** Goodreads wraps ISBNs as ="0552134627" so spreadsheets keep the zeros. */
 function isbnCell(value: string): string {
   return value.replace(/^="?/, "").replace(/"$/, "").trim();
@@ -157,14 +165,17 @@ export function parseGoodreads(text: string): GoodreadsParse {
 
     const isbn = parseIsbn(isbnCell(col(cells, "ISBN13")) || isbnCell(col(cells, "ISBN")));
     const exclusive = col(cells, "Exclusive Shelf").toLowerCase();
-    const shelf: Shelf = EXCLUSIVE[exclusive] ?? (DNF_NAMES.has(exclusive) ? "dnf" : "tbr");
+    const listened = LISTENED_NAMES.has(exclusive);
+    const shelf: Shelf =
+      EXCLUSIVE[exclusive] ?? (DNF_NAMES.has(exclusive) ? "dnf" : listened ? "finished" : "tbr");
 
     const tags = col(cells, "Bookshelves")
       .split(",")
       .map((name) => name.trim())
       .filter((name) => name && !BUILT_IN.has(name.toLowerCase()) && name.toLowerCase() !== exclusive);
-    // A custom exclusive shelf that is not a did-not-finish name survives as a tag.
-    if (!EXCLUSIVE[exclusive] && !DNF_NAMES.has(exclusive) && exclusive) tags.unshift(exclusive);
+    // A custom exclusive shelf that is not a known name survives as a tag, so
+    // nothing is lost and nothing is guessed.
+    if (!EXCLUSIVE[exclusive] && !DNF_NAMES.has(exclusive) && !listened && exclusive) tags.unshift(exclusive);
 
     const stars = Number(col(cells, "My Rating"));
     const readCount = Number(col(cells, "Read Count"));
@@ -181,7 +192,7 @@ export function parseGoodreads(text: string): GoodreadsParse {
       authors: authorsOf(col(cells, "Author"), col(cells, "Additional Authors")),
       isbn13: isbn.kind === "isbn" ? isbn.isbn.isbn13 : null,
       isbn10: isbn.kind === "isbn" ? isbn.isbn.isbn10 : null,
-      format: /audio/i.test(col(cells, "Binding")) ? "audiobook" : "book",
+      format: listened || /audio/i.test(col(cells, "Binding")) ? "audiobook" : "book",
       shelf,
       tags: [...new Set(tags)],
       // Zero stars means unrated, not a zero (§5).

@@ -312,8 +312,10 @@ automatically afterwards — gameshelf tried that and reverted it within a day.
   - Title and author matching is strict (same title or a subtitle extension,
     and a shared surname): a wrong match looks right, a local work is listed.
   - Custom exclusive shelves named `dnf`, `did-not-finish`, `abandoned`,
-    `gave-up` or `dropped` map to did-not-finish; any other becomes to-read
-    plus a tag of its name.
+    `gave-up` or `dropped` map to did-not-finish; `listened-to` (and
+    `listened`, `audiobooks-listened`) map to finished **as audiobooks**,
+    whatever Binding says — Jay's export had 33, 15 of them "Hardcover". Any
+    other becomes to-read plus a tag of its name.
   - Series come from Goodreads titles ("Guards! Guards! (Discworld, #8)"),
     never over a series already set.
   - Undated reads have neither date. An **open** read is one with a start and
