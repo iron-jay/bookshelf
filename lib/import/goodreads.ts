@@ -110,11 +110,19 @@ export function reviewText(html: string): string | null {
 /**
  * "Guards! Guards! (Discworld, #8)" → the title and the series. Goodreads
  * puts the series in the title of every book in one, which is the best series
- * data an import will ever get. Omnibus ranges ("#1-3") keep the series but no
- * position; a title with brackets that are not a series is left alone.
+ * data an import will ever get. Kindle-sourced titles write it in words instead
+ * — "World War 3.3 (The Axis of Time Reloaded Book 3)" — and both are read.
+ * Omnibus ranges ("#1-3") keep the series but no position.
+ *
+ * A bracket with no number is left in the title: "(Star Wars: The High
+ * Republic)" is probably a series, but "(Deluxe Edition)" and "(Unabridged)"
+ * are not, and there is no telling them apart. The import's title search drops
+ * trailing brackets on its own (see titleQueries in run.ts).
  */
 export function splitSeries(raw: string): { title: string; series: GoodreadsRow["series"] } {
-  const match = raw.match(/^(.*\S)\s*\(([^()]+?),?\s+#([^()]*)\)\s*$/);
+  const hashed = raw.match(/^(.*\S)\s*\(([^()]+?),?\s+#([^()]*)\)\s*$/);
+  const worded = raw.match(/^(.*\S)\s*\(([^()]+?)[,:]?\s+Book\s+(\d{1,4}(?:\.\d{1,2})?)\)\s*$/i);
+  const match = hashed ?? worded;
   if (!match) return { title: raw.trim(), series: null };
   const position = /^\d{1,4}(\.\d{1,2})?$/.test(match[3].trim()) ? Number(match[3].trim()) : null;
   return { title: match[1].trim(), series: { name: match[2].trim(), position } };
@@ -122,7 +130,9 @@ export function splitSeries(raw: string): { title: string; series: GoodreadsRow[
 
 function authorsOf(author: string, additional: string): string[] {
   const names = [author, ...additional.split(",")].map((name) => name.trim().replace(/\s+/g, " "));
-  return [...new Set(names.filter(Boolean))];
+  // Capped where the import action's shape check is, so a row the parser makes
+  // is always a row the action accepts — an anthology in Jay's export credits 51.
+  return [...new Set(names.filter(Boolean))].slice(0, 100);
 }
 
 /** The four built-in shelf names are never tags; they are the shelf itself. */

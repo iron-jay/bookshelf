@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNotNull } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, isNull } from "drizzle-orm";
 import Link from "next/link";
 
 import { authDisabled, requireUser } from "@/lib/auth";
@@ -31,7 +31,16 @@ export default async function SettingsPage() {
     .from(entries)
     .innerJoin(editions, eq(editions.id, entries.editionId))
     .innerJoin(works, eq(works.id, editions.workId))
-    .where(and(eq(entries.userId, user.id), isNotNull(editions.goodreadsBookId), eq(works.source, "local")))
+    .where(
+      and(
+        eq(entries.userId, user.id),
+        isNotNull(editions.goodreadsBookId),
+        eq(works.source, "local"),
+        // Found by ISBN but given a work of its own (Open Library's was a
+        // catch-all): matched, so not listed.
+        isNull(editions.olEditionKey),
+      ),
+    )
     .orderBy(asc(works.title));
 
   return (

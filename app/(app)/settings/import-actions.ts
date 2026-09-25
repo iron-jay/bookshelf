@@ -57,7 +57,7 @@ function isRow(value: unknown): value is GoodreadsRow {
     Number.isInteger(row.line) &&
     Number.isInteger(row.bookId) && (row.bookId as number) > 0 &&
     str(row.rawTitle, 1000) && str(row.title, 1000) &&
-    Array.isArray(row.authors) && row.authors.length <= 50 && row.authors.every((a) => str(a, 300)) &&
+    Array.isArray(row.authors) && row.authors.length <= 100 && row.authors.every((a) => str(a, 300)) &&
     Array.isArray(row.tags) && row.tags.length <= 100 && row.tags.every((t) => str(t, 100)) &&
     strOrNull(row.isbn13, 13) && strOrNull(row.isbn10, 10) &&
     (row.format === "book" || row.format === "audiobook") &&

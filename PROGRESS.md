@@ -675,3 +675,54 @@ container, test book, cover and image removed.
 **Not done**: the real first deploy. There is no GitHub remote — pushing
 creates the repository's first public-facing state and triggers the GHCR build,
 so it waits for a yes. Then `docker compose pull` on the VM.
+
+---
+
+## 2026-09-25 — First deploy, and import matching fixed against Jay's real export
+
+**Deploy.** `iron-jay/bookshelf` is public; the first GHCR build failed because
+`public/` was empty and git does not track empty directories — the local
+rehearsal built from the working copy, where it existed. Fixed with
+`public/.gitkeep`, and rehearsals now build from a fresh `git clone`. The image
+publishes and pulls anonymously. VM steps given to Jay, including editing
+`.env` without nano (the Proxmox console garbles full-screen programs).
+
+**Real export** (410 books, parsed with no errors). Four full trial imports
+into scratch databases, each behind a script that refuses to run unless the
+server on 3001 is the one it just started (the lesson from step 10):
+
+| run | ISBN | title | local | wrong | notes |
+|---|---|---|---|---|---|
+| 1 | 260 | 51 | 97 | ~30 "Halo" tiles, 5 novels in one work, 1 row rejected | baseline |
+| 2 | 239 | 79 | 88 | 4 "already", 11 works holding 2–4 books | looser titles |
+| 3 | 239 | 71 | 100 | Edge of Balance Vol. 3 + 4 merged | segment rule |
+| 4 | 239 | 71 | 100 | none | tagline rule |
+
+What changed in `lib/import/`:
+
+- A `listened-to` exclusive shelf (and variants) is finished **as audiobook**:
+  33 books, all rated, 15 labelled Hardcover by Goodreads.
+- Series written as words, "(The Ember War Saga Book 34)", are parsed.
+- The author cap matched between parser and batch check (an anthology credits
+  51; the check allowed 50 and silently rejected the row).
+- Title search tries the title without a trailing bracket, the English title in
+  `[…]`, then the part before the last colon — the last as a search term only,
+  never a match target.
+- `sameTitle` decides matches by which side is longer and where the shorter
+  stops: Open Library's may be longer (subtitle, franchise prefix); it may be
+  shorter only when the rest of the Goodreads title is an "A…/An…" tagline.
+  Franchise names ("Halo", "The Sandman", "Star Wars : the High Republic")
+  never match a specific book.
+- The same check applies to ISBN matches: an edition whose Open Library work
+  disagrees keeps its edition data but gets a work of its own (115 in Jay's
+  library — Halo novels, comic volumes, manga). Costs nothing visible; a wrong
+  work merges books and loses one's reads.
+- Imported works are titled from Goodreads (less the series bracket), so tiles
+  read "Jedi Brave in Every Way", not "Star Wars".
+- Settings' "added as local works" list excludes own works that have an Open
+  Library edition — those matched by ISBN.
+
+Run 4: 410 imported, no failures, one work holding two books (the same volume
+from IDW and Dark Horse — legitimate), 55 series, 233 covers. The 100 local
+works are mostly self-published Kindle series and Japanese/Spanish manga Open
+Library does not have.

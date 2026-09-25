@@ -13,3 +13,11 @@ are not quietly built.
 All paid on 2026-09-25 (covers, `/art`, editing, README, a local deploy
 rehearsal), except the first real deploy: pushing to GitHub so the workflow
 builds the image on GHCR, and pulling it on the VM.
+
+## Noticed, not done
+
+- Open Library search results show the work's own title, which for some
+  franchises is a catch-all ("Halo", "Star Wars" with the book in the
+  subtitle). Adding from search keeps that title; the Goodreads import
+  shelves under the Goodreads title instead. Showing subtitles in search, or
+  preferring the edition's title, would help the manual path.
