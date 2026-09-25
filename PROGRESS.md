@@ -531,3 +531,37 @@ its last work), the four bad numbers, the series page order and states, and
 grouping on the shelf with `sort=title`. Not done: suggesting a series from
 Open Library's own series data (it is thin, per the brief) — the Goodreads
 import fills it from titles instead.
+
+---
+
+## 2026-09-25 — Step 9: tags and bulk selection
+
+**Tags** (`lib/books/tags.ts`) are per account, matched by slug so "Owned",
+"owned" and "  Owned  " are one tag (the first spelling is kept). A tag is
+deleted when nothing carries it any more — tags exist only by being applied,
+and an unused one would keep appearing in the filter and suggestions. The
+edition page lists an entry's tags (each links to the shelf filtered by it, ×
+removes it) with an add field offering your existing tags. The shelf has a tag
+filter, listing only tags in use, with counts; `tag` is part of the view the
+nav link restores but, like the shelf filter, not of the remembered
+preferences.
+
+**Bulk selection** (`app/(app)/bulk-actions.ts`), as gameshelf: a Select mode,
+not a checkbox on every cover. In it, tiles (and list rows) toggle; "Select all
+shown" respects the title filter; the bar moves the selection to a shelf, adds
+a tag, or removes one. Moving uses `changeShelf`, so the read rules are the
+edition page's. Every id posted is narrowed to your own entries first.
+
+**Verified**: bulk actions driven through Next's action endpoint (a To-read and
+a Reading entry moved to Finished — a read created for one, the open read
+closed on the other; three tagged "  Owned  ", then "owned" joining the same
+tag; untag two, then the last, deleting the tag; an empty selection and an
+unknown id change nothing), and the edition-page tag forms plus `?tag=` on the
+shelf by the no-JS post.
+
+Worth recording, since it cost an hour: calling a server action by hand needs
+the FormData argument's fields sent as `_1_<name>` **before** the root part
+`0=["$undefined","$K1"]`. Next parses the body as a stream, so a root that
+arrives first resolves to an empty FormData. The client does it in that order.
+
+Not clicked in a browser: select mode, the bulk bar, and its messages.

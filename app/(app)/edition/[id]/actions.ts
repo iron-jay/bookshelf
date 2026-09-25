@@ -6,8 +6,9 @@ import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { changeShelf, readAgain, shelveEdition } from "@/lib/books/shelving";
+import { cleanTagName, ensureTag, tagEntries, untagEntries } from "@/lib/books/tags";
 import { db } from "@/lib/db";
-import { editions, entries, reads } from "@/lib/db/schema";
+import { editions, entries, reads, tags } from "@/lib/db/schema";
 import { isShelf } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
 
@@ -167,6 +168,33 @@ export async function setFormat(formData: FormData): Promise<void> {
   // Only someone with it on their shelf can say what it is.
   if (!(await ownEntry(user.id, editionId))) return;
   await db.update(editions).set({ format }).where(eq(editions.id, editionId));
+  refresh(editionId);
+}
+
+export async function addTag(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const editionId = await editionFrom(formData);
+  const name = cleanTagName(text(formData, "tag"));
+  if (!editionId || !name) return;
+  const entryId = await ownEntry(user.id, editionId);
+  if (!entryId) return;
+  await db.transaction(async (tx) => tagEntries(tx, await ensureTag(tx, user.id, name), [entryId]));
+  refresh(editionId);
+}
+
+export async function removeTag(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const editionId = await editionFrom(formData);
+  const tagId = text(formData, "tagId");
+  if (!editionId || !isUuid(tagId)) return;
+  const entryId = await ownEntry(user.id, editionId);
+  // Your tag only: a tag id from someone else's shelf does nothing here.
+  const [tag] = await db
+    .select({ id: tags.id })
+    .from(tags)
+    .where(and(eq(tags.id, tagId), eq(tags.userId, user.id)));
+  if (!entryId || !tag) return;
+  await db.transaction((tx) => untagEntries(tx, tag.id, [entryId]));
   refresh(editionId);
 }
 

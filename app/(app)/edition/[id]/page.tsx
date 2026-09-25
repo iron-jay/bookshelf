@@ -4,12 +4,12 @@ import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { COMMUNITY_EDITION_KINDS, editions, entries, reads, works } from "@/lib/db/schema";
+import { COMMUNITY_EDITION_KINDS, editions, entries, entryTags, reads, tags, works } from "@/lib/db/schema";
 import { SHELF_LABELS, SHELVES } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
 
 import { Cover } from "../../cover";
-import { addToShelf, readAgainAction, setFormat, setRating, setShelf } from "./actions";
+import { addTag, addToShelf, readAgainAction, removeTag, setFormat, setRating, setShelf } from "./actions";
 import { ReadRow, RemoveFromShelf, ReviewForm } from "./entry-forms";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +83,18 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
         .from(reads)
         .where(eq(reads.entryId, entry.id))
         .orderBy(sql`coalesce(${reads.finishedOn}, ${reads.startedOn}) asc nulls first`, asc(reads.createdAt))
+    : [];
+
+  const entryTagRows = entry
+    ? await db
+        .select({ id: tags.id, name: tags.name, slug: tags.slug })
+        .from(entryTags)
+        .innerJoin(tags, eq(tags.id, entryTags.tagId))
+        .where(eq(entryTags.entryId, entry.id))
+        .orderBy(asc(tags.name))
+    : [];
+  const allTags = entry
+    ? await db.select({ name: tags.name }).from(tags).where(eq(tags.userId, user.id)).orderBy(asc(tags.name))
     : [];
 
   const [base] = edition.baseEditionId
@@ -221,6 +233,49 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
                 ))}
               </div>
             </form>
+
+            {/* Free-form buckets beside the four shelves (§2). Plain text, not
+                chips in a colour: --label means fan translation. */}
+            <div className="flex flex-col gap-1.5 font-narrow">
+              <span className="text-ink-dim">Tags</span>
+              <div className="flex flex-wrap items-center gap-2">
+                {entryTagRows.map((tag) => (
+                  <form key={tag.id} action={removeTag} className="flex items-center border border-line">
+                    <input type="hidden" name="editionId" value={edition.id} />
+                    <input type="hidden" name="tagId" value={tag.id} />
+                    <Link href={`/?tag=${encodeURIComponent(tag.slug)}`} className="px-2 py-1 hover:text-ink">
+                      {tag.name}
+                    </Link>
+                    <button
+                      type="submit"
+                      aria-label={`Remove tag ${tag.name}`}
+                      className="border-l border-line px-2 py-1 text-ink-dim hover:text-ink"
+                    >
+                      ×
+                    </button>
+                  </form>
+                ))}
+                <form action={addTag} className="flex items-center gap-2">
+                  <input type="hidden" name="editionId" value={edition.id} />
+                  <input
+                    name="tag"
+                    list="tag-names"
+                    maxLength={60}
+                    placeholder="Add a tag"
+                    aria-label="Add a tag"
+                    className="w-40 border border-line bg-ground px-2 py-1 text-ink outline-none focus:border-ink-dim"
+                  />
+                  <datalist id="tag-names">
+                    {allTags.map((tag) => (
+                      <option key={tag.name} value={tag.name} />
+                    ))}
+                  </datalist>
+                  <button type="submit" className="text-ink-dim underline hover:text-ink">
+                    Add
+                  </button>
+                </form>
+              </div>
+            </div>
 
             <ReviewForm editionId={edition.id} review={entry.review} />
 

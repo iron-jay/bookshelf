@@ -1,10 +1,10 @@
-import { and, count, eq, gte, lt, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { entries, entryCards, reads } from "@/lib/db/schema";
+import { entries, entryCards, entryTags, reads, tags } from "@/lib/db/schema";
 import { isShelf, SHELF_LABELS, SHELVES, type Shelf } from "@/lib/shelves";
 
 import { FilterForm } from "./filter-form";
@@ -48,6 +48,7 @@ type View = keyof typeof VIEWS;
 
 type Params = {
   status?: string;
+  tag?: string;
   sort?: string;
   groupBy?: string;
   view?: string;
@@ -62,7 +63,7 @@ function isKeyOf<T extends object>(table: T, value: string | undefined): value i
 /** The URL-state part of the params: not the one-off added/already notice. */
 function queryFor(params: Params): string {
   const query = new URLSearchParams();
-  for (const key of ["status", "sort", "groupBy", "view"] as const) {
+  for (const key of ["status", "tag", "sort", "groupBy", "view"] as const) {
     const value = params[key];
     if (value) query.set(key, value);
   }
@@ -157,10 +158,37 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   const view: View = isKeyOf(VIEWS, params.view) ? params.view : "grid";
 
   const mine = eq(entryCards.userId, user.id);
+
+  // Your tags that something carries, with counts, so the filter never offers
+  // a choice that returns nothing.
+  const tagOptions = await db
+    .select({ slug: tags.slug, name: tags.name, n: count() })
+    .from(tags)
+    .innerJoin(entryTags, eq(entryTags.tagId, tags.id))
+    .where(eq(tags.userId, user.id))
+    .groupBy(tags.id)
+    .orderBy(asc(tags.name));
+  const tag = tagOptions.find((option) => option.slug === params.tag);
+
+  const filters = [mine];
+  if (status) filters.push(eq(entryCards.status, status));
+  if (tag) {
+    filters.push(
+      inArray(
+        entryCards.entryId,
+        db
+          .select({ id: entryTags.entryId })
+          .from(entryTags)
+          .innerJoin(tags, eq(tags.id, entryTags.tagId))
+          .where(and(eq(tags.userId, user.id), eq(tags.slug, tag.slug))),
+      ),
+    );
+  }
+
   const rows = await db
     .select()
     .from(entryCards)
-    .where(status ? and(mine, eq(entryCards.status, status)) : mine)
+    .where(and(...filters))
     .orderBy(ORDER_BY[sort]);
 
   const counts = await db
@@ -242,6 +270,17 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
       <FilterForm defaults={{ sort: "added", groupBy: "none", view: "grid" }}>
         {status ? <input type="hidden" name="status" value={status} /> : null}
 
+        {tagOptions.length > 0 ? (
+          <select name="tag" defaultValue={tag?.slug ?? ""} aria-label="Tag" className={SELECT}>
+            <option value="">All tags</option>
+            {tagOptions.map((option) => (
+              <option key={option.slug} value={option.slug}>
+                {option.name} ({option.n})
+              </option>
+            ))}
+          </select>
+        ) : null}
+
         <select name="sort" defaultValue={sort} aria-label="Sort" className={SELECT}>
           {Object.entries(SORTS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -275,10 +314,19 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
           </Link>{" "}
           to start one.
         </p>
-      ) : rows.length === 0 && status ? (
-        <p className="font-narrow text-ink-dim">Nothing on {SHELF_LABELS[status]} yet.</p>
+      ) : rows.length === 0 && (status || tag) ? (
+        <p className="font-narrow text-ink-dim">
+          Nothing {status ? `on ${SHELF_LABELS[status]}` : ""}
+          {status && tag ? " " : ""}
+          {tag ? `tagged ${tag.name}` : ""} yet.
+        </p>
       ) : (
-        <ShelfGrid sections={sections} grouped={groupBy !== "none"} view={view} />
+        <ShelfGrid
+          sections={sections}
+          grouped={groupBy !== "none"}
+          view={view}
+          tags={tagOptions.map(({ slug, name }) => ({ slug, name }))}
+        />
       )}
     </main>
   );
