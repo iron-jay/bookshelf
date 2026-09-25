@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { editions, entries, works } from "@/lib/db/schema";
 import { parseIsbn } from "@/lib/isbn";
+import { languageName } from "@/lib/languages";
 import {
   coverUrl,
   EDITIONS_PAGE,
@@ -26,14 +27,6 @@ import { FORMAT_COOKIE, isFormat, type Format } from "../../format";
 
 export const dynamic = "force-dynamic";
 
-function languageName(code: string | null): string | null {
-  if (!code) return null;
-  try {
-    return new Intl.DisplayNames("en", { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
 
 /** Newest first, undated last: the edition someone is holding is usually recent. */
 function byYear(a: OlEditionSummary, b: OlEditionSummary): number {

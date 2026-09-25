@@ -8,6 +8,8 @@ import { addEditionAction, type AddState } from "./actions";
 import { CreditField, creditLabelFor, LengthField } from "./credit-fields";
 import { FormatToggle } from "./format-toggle";
 import type { Format } from "./format";
+import { languageOptions } from "@/lib/languages";
+
 import { ShelfPicker } from "./shelf-picker";
 import { SourcePicker, WorkFields, type SourceChoice } from "./source-picker";
 import type { SourceEdition } from "./source-types";
@@ -38,19 +40,6 @@ const KINDS: { value: string; label: string }[] = [
   { value: "annotated", label: "Annotated" },
   { value: "other", label: "Other" },
 ];
-
-/** Codes, not names, go in the column; the names are for the picker only. */
-const LANGUAGE_CODES = [
-  "en", "ja", "zh", "ko", "es", "fr", "de", "it", "pt", "ru", "pl", "nl", "sv",
-  "da", "no", "fi", "cs", "hu", "el", "tr", "uk", "ar", "he", "hi", "id", "th", "vi",
-];
-
-function languageOptions(): { code: string; name: string }[] {
-  const names = new Intl.DisplayNames("en", { type: "language" });
-  return LANGUAGE_CODES.map((code) => ({ code, name: names.of(code) ?? code })).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
-}
 
 /**
  * The one form for editions typed in by hand (brief §5). Door A arrives with

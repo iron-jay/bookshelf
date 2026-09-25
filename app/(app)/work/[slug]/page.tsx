@@ -6,11 +6,13 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { COMMUNITY_EDITION_KINDS, editions, entries, series, works } from "@/lib/db/schema";
 import { SHELF_LABELS } from "@/lib/shelves";
+import { languageName } from "@/lib/languages";
 
 import { Cover } from "../../cover";
 import { CoverEditor } from "../../cover-editor";
 import { ratingLabel } from "../../shelf-card";
 import { SeriesForm } from "./series-form";
+import { WorkEditForm } from "./work-edit-form";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +26,6 @@ const KIND_LABELS: Readonly<Record<string, string | null>> = {
   other: null,
 };
 
-function languageName(code: string | null): string | null {
-  if (!code) return null;
-  try {
-    return new Intl.DisplayNames("en", { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
 
 /**
  * The work: its cover, summary and every edition on this server, with your
@@ -122,6 +116,18 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               ) : null}
             </p>
           </div>
+
+          <WorkEditForm
+            work={{
+              id: work.id,
+              title: work.title,
+              subtitle: work.subtitle,
+              authors: work.authors,
+              authorSort: work.authorSort,
+              firstPublishedYear: work.firstPublishedYear,
+              summary: work.summary,
+            }}
+          />
 
           <SeriesForm
             workId={work.id}

@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { editions, entries, works } from "@/lib/db/schema";
 import { parseIsbn, type Isbn } from "@/lib/isbn";
+import { languageName } from "@/lib/languages";
 import {
   coverUrl,
   lookupIsbn,
@@ -326,14 +327,6 @@ function AddLink({ href, again }: { href: string; again: boolean }) {
   );
 }
 
-function languageName(code: string | null): string | null {
-  if (!code) return null;
-  try {
-    return new Intl.DisplayNames("en", { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
 
 function LocalEditionResult({ found }: { found: LocalEdition }) {
   const { work } = found;

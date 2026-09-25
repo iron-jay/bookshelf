@@ -7,10 +7,12 @@ import { db } from "@/lib/db";
 import { COMMUNITY_EDITION_KINDS, editions, entries, entryTags, reads, tags, works } from "@/lib/db/schema";
 import { SHELF_LABELS, SHELVES } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
+import { languageName } from "@/lib/languages";
 
 import { Cover } from "../../cover";
 import { CoverEditor } from "../../cover-editor";
 import { addTag, addToShelf, readAgainAction, removeTag, setFormat, setRating, setShelf } from "./actions";
+import { EditionEditForm } from "./edition-edit-form";
 import { ReadRow, RemoveFromShelf, ReviewForm } from "./entry-forms";
 
 export const dynamic = "force-dynamic";
@@ -25,14 +27,6 @@ const KIND_LABELS: Readonly<Record<string, string | null>> = {
   other: null,
 };
 
-function languageName(code: string | null): string | null {
-  if (!code) return null;
-  try {
-    return new Intl.DisplayNames("en", { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
 
 function lengthLabel(minutes: number | null): string | null {
   if (!minutes) return null;
@@ -96,6 +90,14 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
     : [];
   const allTags = entry
     ? await db.select({ name: tags.name }).from(tags).where(eq(tags.userId, user.id)).orderBy(asc(tags.name))
+    : [];
+
+  const siblings = entry
+    ? await db
+        .select({ id: editions.id, name: editions.name })
+        .from(editions)
+        .where(eq(editions.workId, work.id))
+        .orderBy(asc(editions.createdAt))
     : [];
 
   const [base] = edition.baseEditionId
@@ -170,6 +172,27 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
                 </div>
               ))}
             </dl>
+          ) : null}
+
+          {entry ? (
+            <EditionEditForm
+              edition={{
+                id: edition.id,
+                name: edition.name,
+                kind: edition.kind,
+                credit: edition.credit,
+                language: edition.language,
+                publisher: edition.publisher,
+                publishedOn: edition.publishedOn,
+                pages: edition.pages,
+                durationMinutes: edition.durationMinutes,
+                isbn13: edition.isbn13,
+                url: edition.url,
+                notes: edition.notes,
+                baseEditionId: edition.baseEditionId,
+              }}
+              otherEditions={siblings.filter((s) => s.id !== edition.id)}
+            />
           ) : null}
 
           <form action={setFormat} className="flex items-center gap-3">
