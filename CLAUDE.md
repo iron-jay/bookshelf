@@ -169,8 +169,11 @@ Books have no SteamGridDB. Art comes from, in order:
    ISBN cover lookups are rate-limited by IP and 404 as a 1×1 gif unless
    `?default=false` is passed.
 2. **Google Books** — fallback when Open Library has nothing, looked up by ISBN.
-   `GOOGLE_BOOKS_API_KEY` is optional; unauthenticated works at our volume. All
-   access through `lib/googlebooks/`. Confidence: ISBN match is exact, so apply
+   `GOOGLE_BOOKS_API_KEY` is optional in that nothing breaks without it, but
+   unauthenticated requests share one quota with every anonymous caller, and on
+   2026-09-25 it was already spent for the day (429). Without a key, expect
+   this step to find nothing; with one, it works. All access through
+   `lib/googlebooks/`. Confidence: ISBN match is exact, so apply
    with `cover_needs_review = false`. Title search is fuzzy — apply with
    `cover_needs_review = true`.
 3. **Upload, or paste an image URL.** Always available. `cover_source = 'upload'`

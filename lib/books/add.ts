@@ -1,0 +1,301 @@
+import { and, eq, isNull } from "drizzle-orm";
+
+import { authorSortFor } from "@/lib/authors";
+import { db } from "@/lib/db";
+import { editions, entries, reads, works } from "@/lib/db/schema";
+import { parseIsbn, type Isbn } from "@/lib/isbn";
+import {
+  getEdition,
+  getWorkRecord,
+  getWorkSummary,
+  type OlEditionSummary,
+  type OlWorkRecord,
+  type OlWorkSummary,
+} from "@/lib/openlibrary";
+import type { Shelf } from "@/lib/shelves";
+import { slugify } from "@/lib/slug";
+
+import { editionNameFor, plainEditionName } from "./edition-name";
+import { lookUpCoversOnAdd } from "./covers-on-add";
+
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export type AddBookInput = {
+  userId: string;
+  olWorkKey: string;
+  /** Null means "any edition": a plain one named Book or Audiobook. */
+  olEditionKey: string | null;
+  format: "book" | "audiobook";
+  shelf: Shelf;
+  /** Audiobooks only: "Read by". */
+  credit: string | null;
+  durationMinutes: number | null;
+  /** The ISBN that led here, when one did — preferred over the record's first. */
+  isbn: Isbn | null;
+};
+
+export type AddBookResult = {
+  workId: string;
+  editionId: string;
+  entryId: string;
+  /** False when this edition was already on the shelf; nothing was changed. */
+  added: boolean;
+};
+
+export class AddBookError extends Error {}
+
+type WorkFetch = { record: OlWorkRecord; summary: OlWorkSummary };
+
+/** Today where the server is. The date is editable afterwards (brief §5). */
+function today(): string {
+  return new Date().toLocaleDateString("en-CA");
+}
+
+/**
+ * Adds an Open Library book to someone's shelf: the work, the edition and the
+ * entry, in one transaction. Shared by the add form and, later, the Goodreads
+ * import.
+ *
+ * Everything that needs the network happens before the transaction opens or
+ * after it commits. A transaction held open across a one-a-second request queue
+ * would hold locks for seconds, and a cover that fails to download must not
+ * roll back an otherwise correct shelf row.
+ */
+export async function addOpenLibraryBook(input: AddBookInput): Promise<AddBookResult> {
+  const [knownWork] = await db
+    .select({ id: works.id })
+    .from(works)
+    .where(eq(works.olWorkKey, input.olWorkKey));
+
+  const [knownEdition] = input.olEditionKey
+    ? await db
+        .select({ id: editions.id, workId: editions.workId })
+        .from(editions)
+        .where(eq(editions.olEditionKey, input.olEditionKey))
+    : [];
+
+  // Only fetch what is not already here: once a work is cached, adding another
+  // of its editions — or the same book on a second account — costs one request
+  // or none.
+  let workFetch: WorkFetch | null = null;
+  if (!knownWork) {
+    const record = await getWorkRecord(input.olWorkKey);
+    const summary = record ? await getWorkSummary(input.olWorkKey) : null;
+    if (!record || !summary) throw new AddBookError("Open Library no longer has that work.");
+    workFetch = { record, summary };
+  }
+
+  let editionFetch: OlEditionSummary | null = null;
+  if (input.olEditionKey && !knownEdition) {
+    editionFetch = await getEdition(input.olEditionKey);
+    if (!editionFetch) throw new AddBookError("Open Library no longer has that edition.");
+    // The key comes from a form, so it is checked against the work rather than
+    // believed: an edition of a different book would file it under this one.
+    if (editionFetch.olWorkKey !== input.olWorkKey) {
+      throw new AddBookError("That edition belongs to a different work.");
+    }
+  }
+  // A stored edition whose work is not this one — including when this work is
+  // not stored at all, since the edition's own work necessarily is.
+  if (knownEdition && knownEdition.workId !== knownWork?.id) {
+    throw new AddBookError("That edition belongs to a different work.");
+  }
+
+  const outcome = await db.transaction(async (tx) => {
+    const work = workFetch
+      ? await insertWork(tx, input, workFetch)
+      : { id: knownWork.id, created: false };
+
+    const edition = knownEdition
+      ? { id: knownEdition.id, created: false, isbn13: null }
+      : editionFetch
+        ? await insertOpenLibraryEdition(tx, input, work.id, editionFetch)
+        : await ensurePlainEdition(tx, input, work.id);
+
+    const [inserted] = await tx
+      .insert(entries)
+      .values({ userId: input.userId, editionId: edition.id, status: input.shelf })
+      .onConflictDoNothing()
+      .returning({ id: entries.id });
+
+    let entryId = inserted?.id;
+    if (!entryId) {
+      const [existing] = await tx
+        .select({ id: entries.id })
+        .from(entries)
+        .where(and(eq(entries.userId, input.userId), eq(entries.editionId, edition.id)));
+      entryId = existing.id;
+    } else if (input.shelf === "reading") {
+      await tx.insert(reads).values({ entryId, startedOn: today() });
+    } else if (input.shelf === "finished") {
+      await tx.insert(reads).values({ entryId, finishedOn: today() });
+    }
+
+    return { work, edition, entryId, added: Boolean(inserted) };
+  });
+
+  // Auto-lookup runs once, on add, for rows this add created. It never re-runs
+  // on its own, so art someone approved is never silently replaced (§4a).
+  if (outcome.work.created || outcome.edition.created) {
+    await lookUpCoversOnAdd({
+      work:
+        outcome.work.created && workFetch
+          ? {
+              id: outcome.work.id,
+              title: workFetch.summary.title,
+              firstAuthor: workFetch.summary.authors[0] ?? null,
+              coverId: workFetch.record.coverId ?? workFetch.summary.coverId,
+            }
+          : null,
+      workId: outcome.work.id,
+      edition: outcome.edition.created
+        ? {
+            id: outcome.edition.id,
+            coverId: editionFetch?.coverId ?? null,
+            isbn13: outcome.edition.isbn13,
+          }
+        : null,
+    });
+  }
+
+  return {
+    workId: outcome.work.id,
+    editionId: outcome.edition.id,
+    entryId: outcome.entryId,
+    added: outcome.added,
+  };
+}
+
+async function insertWork(
+  tx: Tx,
+  input: AddBookInput,
+  fetched: WorkFetch,
+): Promise<{ id: string; created: boolean }> {
+  const { record, summary } = fetched;
+  const base = slugify(summary.title);
+  const [clash] = await tx.select({ id: works.id }).from(works).where(eq(works.slug, base));
+
+  const [created] = await tx
+    .insert(works)
+    .values({
+      olWorkKey: input.olWorkKey,
+      // Titles repeat across books far more than game titles do. The Open
+      // Library key is the tiebreak that cannot collide.
+      slug: clash ? `${base}-${input.olWorkKey.toLowerCase()}` : base,
+      title: summary.title,
+      subtitle: summary.subtitle,
+      authors: summary.authors,
+      authorSort: authorSortFor(summary.authors[0]),
+      olAuthorKeys: record.authorKeys,
+      summary: record.summary,
+      firstPublishedYear: summary.firstPublishedYear,
+      olPayload: record.payload,
+      olSyncedAt: new Date(),
+      source: "openlibrary",
+      createdBy: input.userId,
+    })
+    // Two adds of the same new work at once: the second finds the first's row.
+    .onConflictDoNothing({ target: works.olWorkKey })
+    .returning({ id: works.id });
+
+  if (created) return { id: created.id, created: true };
+
+  const [existing] = await tx
+    .select({ id: works.id })
+    .from(works)
+    .where(eq(works.olWorkKey, input.olWorkKey));
+  return { id: existing.id, created: false };
+}
+
+type EnsuredEdition = { id: string; created: boolean; isbn13: string | null };
+
+async function insertOpenLibraryEdition(
+  tx: Tx,
+  input: AddBookInput,
+  workId: string,
+  edition: OlEditionSummary,
+): Promise<EnsuredEdition> {
+  const audio = input.format === "audiobook";
+  // Both forms from whichever the record has: a 978 ISBN-13 has exactly one
+  // ISBN-10 and the reverse, so this is arithmetic, not a guess — and it lets a
+  // later search by either find the edition locally.
+  const parsed = parseIsbn(input.isbn?.isbn13 ?? edition.isbn13 ?? edition.isbn10 ?? "");
+  const isbn = parsed.kind === "isbn" ? parsed.isbn : null;
+  const isbn13 = isbn?.isbn13 ?? null;
+
+  const [created] = await tx
+    .insert(editions)
+    .values({
+      workId,
+      name: editionNameFor(edition, input.format),
+      kind: "original",
+      // The toggle, not Open Library's physical_format: their format data is
+      // often wrong or missing, and the person adding it knows what they read.
+      format: input.format,
+      language: edition.language,
+      publisher: edition.publisher,
+      publishedOn: edition.publishedOn,
+      pages: edition.pages,
+      durationMinutes: audio ? input.durationMinutes : null,
+      isbn13,
+      isbn10: isbn?.isbn10 ?? null,
+      credit: audio ? input.credit : null,
+      olEditionKey: edition.olEditionKey,
+      source: "openlibrary",
+      createdBy: input.userId,
+    })
+    .onConflictDoNothing({ target: editions.olEditionKey })
+    .returning({ id: editions.id });
+
+  if (created) return { id: created.id, created: true, isbn13 };
+
+  const [existing] = await tx
+    .select({ id: editions.id })
+    .from(editions)
+    .where(eq(editions.olEditionKey, edition.olEditionKey));
+  return { id: existing.id, created: false, isbn13 };
+}
+
+/**
+ * "Any edition": one plain Book and one plain Audiobook per work, shared, so
+ * adding the same work twice does not grow a pile of identical editions.
+ */
+async function ensurePlainEdition(
+  tx: Tx,
+  input: AddBookInput,
+  workId: string,
+): Promise<EnsuredEdition> {
+  const name = plainEditionName(input.format);
+  const [existing] = await tx
+    .select({ id: editions.id })
+    .from(editions)
+    .where(
+      and(
+        eq(editions.workId, workId),
+        eq(editions.kind, "original"),
+        eq(editions.format, input.format),
+        eq(editions.name, name),
+        isNull(editions.olEditionKey),
+      ),
+    )
+    .limit(1);
+  if (existing) return { id: existing.id, created: false, isbn13: null };
+
+  const audio = input.format === "audiobook";
+  const [created] = await tx
+    .insert(editions)
+    .values({
+      workId,
+      name,
+      kind: "original",
+      format: input.format,
+      credit: audio ? input.credit : null,
+      durationMinutes: audio ? input.durationMinutes : null,
+      // Written here, not fetched: 'local' rows are never overwritten by a
+      // refresh from Open Library.
+      source: "local",
+      createdBy: input.userId,
+    })
+    .returning({ id: editions.id });
+  return { id: created.id, created: true, isbn13: null };
+}

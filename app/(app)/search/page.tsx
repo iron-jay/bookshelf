@@ -289,7 +289,20 @@ function ResultRow({ result: r }: { result: SearchResult }) {
         ) : null}
         <p className="font-narrow text-ink-dim">{provenanceLabel(r)}</p>
       </div>
+      {r.addHref ? <AddLink href={r.addHref} again={r.onShelf} /> : null}
     </li>
+  );
+}
+
+/** Plain text, like every other action: the verdigris label is for provenance only. */
+function AddLink({ href, again }: { href: string; again: boolean }) {
+  return (
+    <Link
+      href={href}
+      className="ml-auto shrink-0 border border-line px-3 py-1.5 font-narrow hover:border-ink-dim"
+    >
+      {again ? "Add another edition" : "Add"}
+    </Link>
   );
 }
 
@@ -366,10 +379,16 @@ function RemoteEditionResult({ found, isbn13 }: { found: IsbnLookup; isbn13: str
         </p>
         {!work ? (
           <p className="font-narrow text-ink-dim">
-            Open Library does not link this edition to a work.
+            Open Library does not link this edition to a work, so it cannot be added from here.
           </p>
         ) : null}
       </div>
+      {work ? (
+        <AddLink
+          href={`/add/book/${work.olWorkKey}?edition=${edition.olEditionKey}&isbn=${isbn13}`}
+          again={false}
+        />
+      ) : null}
     </section>
   );
 }

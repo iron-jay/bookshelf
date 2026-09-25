@@ -8,12 +8,21 @@ import { getJson } from "./client";
 import {
   bareKey,
   coverId,
+  descriptionOf,
   formatOf,
   languageOf,
+  narratorsOf,
+  publishedOnOf,
   textOf,
   yearOf,
 } from "./normalise";
-import type { OlEdition, OlSearchDoc, OlSearchResponse } from "./types";
+import type {
+  OlEdition,
+  OlEditionsResponse,
+  OlSearchDoc,
+  OlSearchResponse,
+  OlWork,
+} from "./types";
 
 export { OpenLibraryError } from "./client";
 export { coverUrl } from "./normalise";
@@ -30,6 +39,8 @@ export type OlWorkSummary = {
 
 export type OlEditionSummary = {
   olEditionKey: string;
+  /** The work Open Library files this edition under. */
+  olWorkKey: string | null;
   title: string | null;
   publisher: string | null;
   year: number | null;
@@ -41,6 +52,10 @@ export type OlEditionSummary = {
   coverId: number | null;
   isbn13: string | null;
   isbn10: string | null;
+  /** Prefill for "Read by", from the record's contributors. */
+  narrators: string[];
+  /** Only when the record names a day; see publishedOnOf. */
+  publishedOn: string | null;
 };
 
 const SEARCH_FIELDS = [
@@ -87,6 +102,7 @@ function toEditionSummary(edition: OlEdition): OlEditionSummary | null {
 
   return {
     olEditionKey,
+    olWorkKey: bareKey(edition.works?.[0]?.key),
     title: textOf(edition.title),
     publisher: textOf(edition.publishers?.[0]),
     year: yearOf(edition.publish_date),
@@ -97,6 +113,8 @@ function toEditionSummary(edition: OlEdition): OlEditionSummary | null {
     coverId: coverId(edition.covers?.[0]),
     isbn13: textOf(edition.isbn_13?.[0]),
     isbn10: textOf(edition.isbn_10?.[0]),
+    narrators: narratorsOf(edition.contributors),
+    publishedOn: publishedOnOf(edition.publish_date),
   };
 }
 
@@ -120,14 +138,74 @@ export async function lookupIsbn(isbn: Isbn): Promise<IsbnLookup | null> {
   if (!raw || !edition) return null;
 
   const workKey = bareKey(raw.works?.[0]?.key);
-  if (!workKey) return { edition, work: null };
+  return { edition, work: workKey ? await getWorkSummary(workKey) : null };
+}
 
+/** Open Library's keys are OL, digits, and one letter for the record type. */
+export function isWorkKey(value: string): boolean {
+  return /^OL\d+W$/.test(value);
+}
+
+export function isEditionKey(value: string): boolean {
+  return /^OL\d+M$/.test(value);
+}
+
+/**
+ * A work's title, author names and cover through search.json by key: the one
+ * endpoint that carries author names, where /works/ has only author keys.
+ */
+export async function getWorkSummary(olWorkKey: string): Promise<OlWorkSummary | null> {
   const response = await getJson<OlSearchResponse>("/search.json", {
-    q: `key:/works/${workKey}`,
+    q: `key:/works/${olWorkKey}`,
     fields: SEARCH_FIELDS,
     limit: "1",
   });
   const doc = response?.docs?.[0];
+  return doc ? toWorkSummary(doc) : null;
+}
 
-  return { edition, work: doc ? toWorkSummary(doc) : null };
+export type OlWorkRecord = {
+  /** Stored verbatim in works.ol_payload so fields can be re-derived later. */
+  payload: OlWork;
+  summary: string | null;
+  coverId: number | null;
+  authorKeys: string[];
+};
+
+export async function getWorkRecord(olWorkKey: string): Promise<OlWorkRecord | null> {
+  const payload = await getJson<OlWork>(`/works/${olWorkKey}.json`);
+  if (!payload) return null;
+
+  return {
+    payload,
+    summary: descriptionOf(payload.description),
+    coverId: coverId(payload.covers?.[0]),
+    authorKeys: (payload.authors ?? []).flatMap((a) => bareKey(a.author?.key) ?? []),
+  };
+}
+
+/**
+ * Open Library serves at most 1000 editions a page. A work with more than that
+ * (Pride and Prejudice has over 4000) gets the first page and the total, and
+ * the picker says so: paging through the rest would be four more queued
+ * requests to show a list nobody scrolls, when an ISBN search finds the one
+ * edition directly.
+ */
+export const EDITIONS_PAGE = 1000;
+
+export async function getEditions(
+  olWorkKey: string,
+): Promise<{ editions: OlEditionSummary[]; total: number } | null> {
+  const response = await getJson<OlEditionsResponse>(`/works/${olWorkKey}/editions.json`, {
+    limit: String(EDITIONS_PAGE),
+  });
+  if (!response) return null;
+
+  const editions = (response.entries ?? []).flatMap((e) => toEditionSummary(e) ?? []);
+  return { editions, total: response.size ?? editions.length };
+}
+
+export async function getEdition(olEditionKey: string): Promise<OlEditionSummary | null> {
+  const raw = await getJson<OlEdition>(`/books/${olEditionKey}.json`);
+  return raw ? toEditionSummary(raw) : null;
 }

@@ -7,6 +7,9 @@
 
 type Key = { key: string };
 
+/** Descriptions come either as a bare string or wrapped in {type, value}. */
+export type OlText = string | { type?: string; value?: string };
+
 export type OlSearchDoc = {
   key?: string; // "/works/OL453735W"
   title?: string;
@@ -37,5 +40,21 @@ export type OlEdition = {
   languages?: Key[]; // "/languages/eng"
   isbn_10?: string[];
   isbn_13?: string[];
+  /** Narrators live here on audiobook records: role "Narrator/Reader". */
+  contributors?: { role?: string; name?: string }[];
+};
+
+export type OlEditionsResponse = {
+  size?: number;
+  entries?: OlEdition[];
+};
+
+export type OlWork = {
+  key?: string;
+  title?: string;
+  subtitle?: string;
+  description?: OlText;
+  covers?: number[];
+  authors?: { author?: Key }[];
 };
 

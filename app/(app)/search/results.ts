@@ -31,8 +31,14 @@ export type SearchResult = {
   editionCount: number | null;
   /** Set when there is somewhere on this server to go. */
   href: string | null;
+  /** Set for anything Open Library knows: the add page for it. */
+  addHref: string | null;
   onShelf: boolean;
 };
+
+function addHrefFor(olWorkKey: string | null): string | null {
+  return olWorkKey ? `/add/book/${olWorkKey}` : null;
+}
 
 function fold(text: string): string {
   return text
@@ -82,6 +88,9 @@ function fromLocal(work: LocalWork): SearchResult {
     provenance: work.source === "local" ? "local" : "saved",
     editionCount: null,
     href: hrefFor(work),
+    // Local works — fics, zines — gain editions from their own work page
+    // (build step 6), not from Open Library's add flow.
+    addHref: addHrefFor(work.olWorkKey),
     onShelf: work.entryEditionIds.length > 0,
   };
 }
@@ -117,6 +126,7 @@ export function mergeResults(
       provenance: "openlibrary",
       editionCount: ol.editionCount,
       href: null,
+      addHref: addHrefFor(ol.olWorkKey),
       onShelf: false,
     };
   });

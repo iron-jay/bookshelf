@@ -190,3 +190,85 @@ only); how the page looks, since it was read as HTML rather than in a browser.
 
 **Next:** step 4, add to shelf — work, edition and entry in one transaction,
 cover downloaded, `tbr` unless another shelf is picked.
+
+---
+
+## 2026-09-25 — Step 4: add to shelf
+
+Search → **Add** → `/add/book/{olWorkKey}`: Book | Audiobook toggle, Open
+Library's editions for that format (filterable, newest first) or "any edition",
+shelf picker defaulting to To read. From an ISBN search the edition arrives
+chosen and first in the list, fetched on its own if it is past the first 1000
+(Pride and Prejudice has 4042).
+
+**`lib/books/add.ts`** does the work, in `lib/` because the Goodreads import
+will call it. Network first (only what is not already stored: a cached work
+costs no work requests), then one transaction for work, edition, entry and — on
+Reading or Finished — a read started or finished today; covers after commit.
+Edition keys from the form are checked against the work, since an edition of
+another book would file it under this one. "Any edition" is one shared plain
+Book or Audiobook per work (`source = 'local'`), not a new one per add.
+Re-adding an edition you have changes nothing, shelf included.
+
+**Covers** (`lib/books/covers-on-add.ts`), once, for rows the add created:
+Open Library by cover id for the edition and the work; if nothing is on screen,
+Google by ISBN (no review), then Google by title + author (flagged for review).
+`/covers/{file}` serves them to signed-in users only.
+
+- **Google Books without a key is dead in practice.** The shared anonymous
+  quota returned 429 all morning. The code treats it as "no cover" and logs it;
+  brief §4a corrected. The success path is tested with a stubbed fetch only.
+- `covers.openlibrary.org` redirects twice to archive.org; a missing id is a
+  43-byte gif unless `?default=false`. Covers under 1 KB are refused.
+- `/covers` is `max-age=3600`, not gameshelf's `immutable`: files are named by
+  row id, so a refreshed cover reuses the name.
+
+**Decisions worth knowing:**
+
+- Edition names are built as the brief's example: "Paperback, Corgi Books 1990".
+  Lowercase formats get a capital; "eAudiobook" stays as written (the first
+  version produced "EAudiobook").
+- `published_on` only when Open Library names a day. "1991" is not stored as
+  1991-01-01; the year is in the name.
+- ISBN-10 and -13 are both stored, one derived from the other when the record
+  has only one. An Open Library ISBN failing its checksum is stored as nothing.
+- Every Open Library edition lands as `kind = 'original'`, including the German
+  ones. Telling an official translation apart needs the original language,
+  which Open Library does not reliably give. Changeable on the edition page.
+- Author sort: "Pratchett, Terry", "Le Guin, Ursula K.", "del Toro, Guillermo".
+  Wrong for family-name-first names; editable when the work page lands.
+- `slugify` now keeps any script. gameshelf's made "Белая гвардия" `untitled`;
+  and my first rewrite stripped all combining marks, turning 本気だす into
+  本気たす. Only U+0300–036F is stripped now, then NFC.
+- `COVERS_DIR` must be absolute (gameshelf's rule, which step 1's
+  `.env.example` got wrong). Fixed in `.env.example` and the local `.env`.
+- The format toggle remembers the last choice in a `bookshelf_format` cookie.
+- "Read by" prefills from Open Library's narrator contributors until typed in.
+
+**The form is built for step 6.** `FormatToggle` (with the `locked` state
+podfic needs), `AudiobookFields`, `ShelfPicker` and `EditionPicker` are separate
+under `app/(app)/add/`; `AddForm` is the Book path and the kinds join it.
+
+**The home page is a stand-in list** off `entry_cards`, so an add has somewhere
+to land. Step 5 replaces it.
+
+**Verified** by posting the real form against live Open Library: Corgi paperback
+→ Finished with a read today, work and edition both with summary, payload and
+two covers, 5.3s; the eAudiobook on the same work with credit and 10h 5m →
+Reading, 1.6s since the work was cached; the paperback again → "already", no
+change; any edition twice → one plain Book; an edition of another work, a
+broken key, 75 minutes, a made-up format → an error each, nothing written; the
+ISBN route with the edition preselected at the top of 1000; a work with no
+Open Library cover → Google 429, logged, added without art. With Open Library
+unreachable: an uncached work is an error and writes nothing, a cached work
+still adds as any audiobook. `/covers` is 404 signed out and serves signed in;
+the home list shows each edition's own cover and the work's for plain ones.
+Unit cases for author sort, slugs (Cyrillic, Japanese), dates and Google.
+All test rows and covers deleted afterwards.
+
+**Not verified:** in a browser — the filter, toggle and credit prefill are
+client state and were only rendered, not clicked; a Google Books cover actually
+downloading; two adds of one new work at the same moment.
+
+**Next:** step 5, the shelf — grid, shelf filter, filter-by-title, typeset
+placeholders, label band.
