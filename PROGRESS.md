@@ -631,3 +631,47 @@ real 800-book import takes.
 **v1 build order is complete.** Owed before calling v1 done (IDEAS.md): cover
 upload / URL and `/art`, editing works and editions, a README, and a first
 deploy.
+
+---
+
+## 2026-09-25 — The owed items: covers, editing, README, deploy rehearsal
+
+**Covers** (`lib/books/covers.ts`, `app/(app)/cover-actions.ts`,
+`cover-editor.tsx`): upload, paste an address, look it up again (the manual
+refresh §4a asks for; Open Library then Google, never for fan translations),
+remove, and approve a flagged one. On the work and edition pages, closed until
+opened. `/art` lists flagged covers on your shelf, linked from Settings with a
+count. Every stored file now gets a fresh uuid name and the file it replaces is
+deleted, so a changed cover is a new URL and `/covers` is back to gameshelf's
+`immutable` caching. Image type is sniffed from the bytes, never trusted from a
+header or filename. Verified through the actions: a real JPEG uploaded, 5 KB of
+text named .jpg refused, a URL replacing it (old file deleted), an HTML page
+and a dead address refused, removal deleting the file, "look it up again"
+finding Open Library's cover for Guards! Guards!, the fan translation refused a
+lookup but taking an upload that then showed on the shelf, `/art` listing two
+flagged works and approving one.
+
+**Editing**: work details (title, subtitle, authors, sort name, year, summary)
+on the work page; edition details (name, kind, credit, language, publisher,
+date, pages, length, ISBN, link, notes, base edition) on the edition page, for
+editions on your shelf. Blank clears. The slug never changes. Verified: the
+pen-name fix ("Cuttlefish That Loves Diving" now sorts under C on the shelf),
+twelve edition validation cases, both ISBN forms stored, 11 h 5 min → 665,
+fields cleared, and a kind change moving an edition in and out of the fan
+translation rules. `lib/languages.ts` replaced four copies of `languageName`.
+
+**README**: development, the runtime-data layout, the agent `next dev` gotcha,
+and deployment adapted from gameshelf's for a shared VM.
+
+**Deploy rehearsal**, locally: `docker build --target runner` (2 min, 338 MB,
+`check:actions` inside the build), the workflow's smoke test (both entry points,
+2 migrations bundled, uid 1001, no dev deps, argon2 resolves), then
+`docker compose up -d app` with the local image on port 3002 against the dev
+database: migrations and first-user step ran as no-ops, health green, signed-out
+redirect to login, real sign-in, a book added with its cover written to
+`../bookshelf-data/covers` as uid 1001 and served with immutable caching. Then
+container, test book, cover and image removed.
+
+**Not done**: the real first deploy. There is no GitHub remote — pushing
+creates the repository's first public-facing state and triggers the GHCR build,
+so it waits for a yes. Then `docker compose pull` on the VM.
