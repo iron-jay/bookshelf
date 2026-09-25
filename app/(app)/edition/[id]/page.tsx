@@ -9,6 +9,7 @@ import { SHELF_LABELS, SHELVES } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
 
 import { Cover } from "../../cover";
+import { CoverEditor } from "../../cover-editor";
 import { addTag, addToShelf, readAgainAction, removeTag, setFormat, setRating, setShelf } from "./actions";
 import { ReadRow, RemoveFromShelf, ReviewForm } from "./entry-forms";
 
@@ -125,13 +126,27 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
   return (
     <main className="flex-1 p-6">
       <div className="flex max-w-4xl flex-col gap-8 sm:flex-row">
-        <div className="w-40 shrink-0">
+        <div className="flex w-40 shrink-0 flex-col gap-3">
           <Cover
             title={work.title}
             author={author}
             // The entry_cards rule: a fan translation shows its own art or none.
             coverUrl={edition.coverUrl ?? (community ? null : work.coverUrl)}
             band={community ? { name: edition.name, credit: edition.credit } : null}
+          />
+          <CoverEditor
+            kind="edition"
+            id={edition.id}
+            hasOwnCover={Boolean(edition.coverUrl)}
+            needsReview={edition.coverNeedsReview}
+            canLookUp={!community}
+            note={
+              community
+                ? "A fan translation shows its own art or the typeset cover — never the book’s."
+                : !edition.coverUrl && work.coverUrl
+                  ? "This is the work’s cover. One set here is this edition’s own."
+                  : null
+            }
           />
         </div>
 

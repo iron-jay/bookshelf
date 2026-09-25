@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { editions, works, type editionKind } from "@/lib/db/schema";
 import type { Shelf } from "@/lib/shelves";
 
-import { lookUpCoversOnAdd } from "./covers-on-add";
+import { lookUpCoversOnAdd } from "./covers";
 import { plainEditionName } from "./edition-name";
 import { shelveEdition } from "./shelving";
 import {

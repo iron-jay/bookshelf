@@ -6,7 +6,7 @@ import { parseIsbn, type Isbn } from "@/lib/isbn";
 import { getEdition, type OlEditionSummary } from "@/lib/openlibrary";
 import type { Shelf } from "@/lib/shelves";
 
-import { lookUpCoversOnAdd } from "./covers-on-add";
+import { lookUpCoversOnAdd } from "./covers";
 import { editionNameFor, plainEditionName } from "./edition-name";
 import { shelveEdition } from "./shelving";
 import {

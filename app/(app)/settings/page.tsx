@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { authDisabled, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { editions, entries, works } from "@/lib/db/schema";
+import { editions, entries, entryCards, works } from "@/lib/db/schema";
 
 import { AccountForm } from "./account-form";
 import { GoodreadsImport } from "./goodreads-import";
@@ -15,6 +15,13 @@ export default async function SettingsPage() {
   const user = await requireUser();
 
   const [entryTotal] = await db.select({ n: count() }).from(entries).where(eq(entries.userId, user.id));
+  // entry_cards already says whether the cover on screen for each entry is
+  // flagged, whichever row it belongs to.
+  const [flagged] = await db
+    .select({ n: count() })
+    .from(entryCards)
+    .where(and(eq(entryCards.userId, user.id), eq(entryCards.coverNeedsReview, true)));
+  const flaggedCovers = flagged.n;
 
   // Goodreads rows that matched nothing became local works (§5). Read from the
   // data rather than kept from the run, so the list survives a closed tab or
@@ -49,6 +56,18 @@ export default async function SettingsPage() {
               network, and a problem anywhere else.
             </p>
           ) : null}
+        </section>
+
+        <section>
+          <h2 className="mb-1 font-medium">Cover art</h2>
+          <p className="font-narrow text-ink-dim">
+            {flaggedCovers === 0
+              ? "No covers waiting for review."
+              : `${flaggedCovers} ${flaggedCovers === 1 ? "cover was" : "covers were"} found by title and may be the wrong book.`}{" "}
+            <Link href="/art" className="underline hover:text-ink">
+              Review cover art
+            </Link>
+          </p>
         </section>
 
         <section>

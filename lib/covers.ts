@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 /**
@@ -56,44 +57,81 @@ export async function readCover(filename: string): Promise<Blob> {
 }
 
 /**
- * Anything smaller is a placeholder, not a cover. Open Library's "no image" is
- * a 43-byte gif (already refused by type, but a 1×1 jpeg would not be), and
- * Google's are similar.
+ * Anything smaller is a placeholder, not a cover — Open Library's "no image"
+ * is a 43-byte gif — and anything larger is not a book cover.
  */
 const MIN_COVER_BYTES = 1024;
-const MAX_COVER_BYTES = 8 * 1024 * 1024;
+export const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
 /**
- * Returns the public path ("/covers/{file}"), or null if the download failed.
- * A missing cover is not worth failing an add over — the entry is still
- * correct without art, and the typeset placeholder stands in.
- *
- * `basename` is the id of the row the cover belongs to, so a work and each of
- * its editions can hold different art without colliding.
+ * What the bytes are, from their first few, not from what a header or a
+ * browser claimed: an upload named cover.jpg can be anything, and a server
+ * answering image/jpeg for an HTML error page is common.
  */
-export async function downloadCover(url: string, basename: string): Promise<string | null> {
+function sniff(bytes: Uint8Array): string | null {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
+  if (
+    String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
+    String.fromCharCode(...bytes.slice(8, 12)) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
+
+export type StoreResult = { ok: true; path: string } | { ok: false; reason: string };
+
+/**
+ * Writes a cover under a fresh name and returns its public path
+ * ("/covers/{uuid}.jpg"). A new name every time, never the row's id: a
+ * replaced cover then has a new URL, so browsers never show the old one and
+ * the route can cache files forever.
+ */
+export async function storeCover(bytes: Uint8Array): Promise<StoreResult> {
+  if (bytes.byteLength < MIN_COVER_BYTES) return { ok: false, reason: "That image is too small to be a cover." };
+  if (bytes.byteLength > MAX_COVER_BYTES) return { ok: false, reason: "That image is larger than 8 MB." };
+  const type = sniff(bytes);
+  if (!type) return { ok: false, reason: "That is not a JPEG, PNG or WebP image." };
+
+  const filename = `${randomUUID()}.${EXTENSIONS[type]}`;
+  await mkdir(coversDir(), { recursive: true });
+  await writeFile(coverPath(filename), bytes);
+  return { ok: true, path: `/covers/${filename}` };
+}
+
+/**
+ * Downloads an image once and stores it — covers are never hot-linked (§4a).
+ * Returns a reason on failure rather than throwing: a missing cover is not
+ * worth failing an add over, and a pasted URL deserves to be told why.
+ */
+export async function downloadCover(url: string): Promise<StoreResult> {
+  let res: Response;
   try {
-    const res = await fetch(url, {
+    res = await fetch(url, {
       cache: "no-store",
       // Open Library's cover host answers with two redirects to archive.org.
       redirect: "follow",
       signal: AbortSignal.timeout(20_000),
+      headers: { Accept: "image/jpeg,image/png,image/webp" },
     });
-    if (!res.ok) return null;
-
-    const type = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
-    const ext = EXTENSIONS[type];
-    if (!ext) return null;
-
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength < MIN_COVER_BYTES || bytes.byteLength > MAX_COVER_BYTES) return null;
-
-    const filename = `${basename}.${ext}`;
-    await mkdir(coversDir(), { recursive: true });
-    await writeFile(coverPath(filename), bytes);
-
-    return `/covers/${filename}`;
   } catch {
-    return null;
+    return { ok: false, reason: "That address did not answer." };
+  }
+  if (!res.ok) return { ok: false, reason: `That address answered ${res.status}.` };
+
+  const declared = Number(res.headers.get("content-length"));
+  if (declared > MAX_COVER_BYTES) return { ok: false, reason: "That image is larger than 8 MB." };
+  return storeCover(new Uint8Array(await res.arrayBuffer()));
+}
+
+/** Deletes a stored cover by its public path. Anything else, or a missing file, is ignored. */
+export async function deleteCover(publicPath: string | null): Promise<void> {
+  const filename = publicPath?.startsWith("/covers/") ? publicPath.slice("/covers/".length) : null;
+  if (!filename || !COVER_FILENAME.test(filename)) return;
+  try {
+    await rm(coverPath(filename));
+  } catch {
+    // Already gone. Either way there is nothing to clean up.
   }
 }

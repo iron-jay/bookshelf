@@ -8,6 +8,7 @@ import { COMMUNITY_EDITION_KINDS, editions, entries, series, works } from "@/lib
 import { SHELF_LABELS } from "@/lib/shelves";
 
 import { Cover } from "../../cover";
+import { CoverEditor } from "../../cover-editor";
 import { ratingLabel } from "../../shelf-card";
 import { SeriesForm } from "./series-form";
 
@@ -81,8 +82,16 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   return (
     <main className="flex-1 p-6">
       <div className="flex max-w-4xl flex-col gap-8 sm:flex-row">
-        <div className="w-40 shrink-0">
+        <div className="flex w-40 shrink-0 flex-col gap-3">
           <Cover title={work.title} author={author} coverUrl={work.coverUrl} band={null} />
+          <CoverEditor
+            kind="work"
+            id={work.id}
+            hasOwnCover={Boolean(work.coverUrl)}
+            needsReview={work.coverNeedsReview}
+            canLookUp
+            note="The work’s cover shows for any edition without its own. Fan translations never use it."
+          />
         </div>
 
         <div className="flex min-w-0 flex-col gap-3">

@@ -19,10 +19,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
     return new Response(await readCover(file), {
       headers: {
         "Content-Type": contentTypeFor(file),
-        // Not immutable, unlike gameshelf: a refreshed cover is written under
-        // the same row id, so the browser has to ask again. An hour keeps a
-        // shelf of covers from being refetched on every visit.
-        "Cache-Control": "private, max-age=3600",
+        // Every stored cover gets a fresh name and is never rewritten, so a
+        // changed cover is a new URL and the old one can be cached forever.
+        "Cache-Control": "private, max-age=31536000, immutable",
       },
     });
   } catch {

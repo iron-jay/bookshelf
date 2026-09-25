@@ -1,7 +1,7 @@
 import { and, eq, isNull, or } from "drizzle-orm";
 
 import { ensurePlainEdition, insertOpenLibraryEdition } from "@/lib/books/add";
-import { lookUpCoversOnAdd } from "@/lib/books/covers-on-add";
+import { lookUpCoversOnAdd } from "@/lib/books/covers";
 import { setWorkSeries } from "@/lib/books/series";
 import { ensureTag, tagEntries } from "@/lib/books/tags";
 import {
