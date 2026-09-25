@@ -206,7 +206,8 @@ form. Used for web serials, zines, ARCs, out-of-print things.
    clearly marked. ISBN typed or pasted goes straight to the edition. A result
    already on your shelf links to its entry.
 3. **Work page** — cover, summary, series position, editions.
-4. **Edition page** — your entry, shelf, rating out of ten, review, reads.
+4. **Edition page** — your entry, shelf, rating out of ten, review, reads, the
+   Book | Audiobook correction, and add to / remove from shelf (two-step).
 5. **Series page** — ordered works, your shelf state for each.
 6. **Settings** — account name and password, export, import, cover art review.
 
@@ -220,9 +221,13 @@ Books are the one place this model differs in practice from gameshelf, which
 removed its plays UI. "When did I finish this" is a core Goodreads question and
 the Goodreads export carries it, so reads stay visible — but minimal:
 
-- Moving an entry to **finished** creates a read finished today. One click. The date
-  is editable afterwards, never asked for up front.
-- Marking **reading** creates an open read started today.
+- Moving an entry to **finished** closes its open read today, or creates a read
+  finished today if none is open. One click. The date is editable afterwards,
+  never asked for up front.
+- Marking **reading** creates an open read started today, unless one is open.
+- Choosing the shelf an entry is already on does nothing (no second finish).
+- **Did not finish** and **to read** leave reads alone; an abandoned read stays
+  open, which is what did-not-finish means.
 - "Read again" adds a new read. No page counts, no percentages, no hours.
 - The shelf can sort by last finished. A single line on the shelf — "31 finished
   in 2026" — is the entire stats feature. No stats page.

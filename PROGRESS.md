@@ -451,3 +451,56 @@ and "Not listed" are client state.
 
 **Next:** step 7, the edition page — rating out of ten, review, reads. Ship
 after it.
+
+---
+
+## 2026-09-25 — Step 7: the edition page
+
+`/edition/[id]`, where every shelf tile and work-page row already pointed. Cover
+(fan translations: own art or placeholder, with the band), the edition's name
+and work, the facts that exist (kind, credit labelled by kind and format,
+"translated from" linking the base edition, language, publisher, date, pages,
+length, ISBN and Open Library key in mono, link), and the Book | Audiobook
+correction. Then your entry: shelf, rating out of ten (whole numbers; the
+chosen one clears it), review in Newsreader, reads with editable dates,
+"Read again", and a two-step "Remove from shelf". An edition not on your shelf
+offers the four shelves to add it — the path a second account, or you after a
+removal, needs.
+
+**Read rules** are `changeShelf` and `readAgain` in `lib/books/shelving.ts`, so
+step 9's bulk change uses the same ones. Tightened beyond the brief's wording,
+and the brief updated to say so: Finished closes the open read rather than
+adding a second; Reading opens a read only if none is open; choosing the current
+shelf does nothing; To read and Did not finish leave reads alone.
+
+Remove deletes the entry (rating, review and reads with it) and keeps the
+edition and work — they are catalogue, not yours. Format edits the edition row
+itself, which is shared, so only someone with it shelved can change it. Every
+action resolves the entry or read through the signed-in user, so a form cannot
+reach another account's rows.
+
+**Verified** by posting the page's own forms (the no-JS encoding) against the
+dev database, on the Corgi paperback: rate 7, click 7 again to clear, 11
+ignored; review saved and cleared by blank. Every shelf move checked against
+the reads table — Finished→Finished nothing; Reading opens one; Reading again
+nothing; Finished closes it today; Read again opens a reread and sets Reading;
+DNF leaves it open; Finished closes it. Read dates edited, "cannot finish
+before it started" and "real days" (31 February) refused, dates cleared, a read
+deleted; a second account's read could be neither edited nor deleted. Format
+flipped both ways. Remove took the entry and its read and kept the edition; the
+page then offered the shelves and Finished added it back with a read today.
+Bad or unknown ids 404. Every shelf tile now resolves.
+
+Fixed on the way: read rows were keyed on their dates, so a save remounted the
+row and its "Saved" never showed. Keyed on the read id now.
+
+Not clicked in a browser: the remove confirmation and the review/read "Saved"
+states are client state (checked via the no-JS post, not by clicking).
+
+**Ship point.** The brief says ship after step 7. What shipping needs that is
+not done: a deploy has never been tried (the GHCR workflow has not run, the
+image has not been pulled on the VM), there is no README, and no Settings yet —
+so no password change. The Goodreads import (step 10) is what makes it usable
+with a real library.
+
+**Next:** step 8, series.
