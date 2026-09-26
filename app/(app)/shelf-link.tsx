@@ -35,13 +35,12 @@ export function ShelfLink({
         // Link leaves a click alone once it has been defaulted-prevented, so
         // this replaces its navigation rather than racing it.
         event.preventDefault();
-        if (restoreScroll) {
-          askToRestoreShelfScroll();
-          // The shelf scrolls itself; Next's scroll-to-top would undo it.
-          router.push(shelfHref(), { scroll: false });
-        } else {
-          router.push(shelfHref());
-        }
+        // The shelf scrolls itself; Next's scroll-to-top would undo it. Only
+        // suppressed once the ask is actually recorded — with storage blocked
+        // nothing on the other side would scroll, and the default lands you at
+        // the top rather than at this page's offset.
+        const restoring = restoreScroll && askToRestoreShelfScroll();
+        router.push(shelfHref(), restoring ? { scroll: false } : undefined);
       }}
     >
       {children}

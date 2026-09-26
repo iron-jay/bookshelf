@@ -94,20 +94,56 @@ export function rememberShelfScroll(query: string, y: number): void {
   }
 }
 
-export function askToRestoreShelfScroll(): void {
+/**
+ * True when the ask was recorded. The caller suppresses Next's scroll-to-top
+ * only on a true, because with storage blocked nothing will scroll the page
+ * afterwards and the default is the right outcome.
+ */
+export function askToRestoreShelfScroll(): boolean {
   try {
     sessionStorage.setItem(RESTORE_KEY, "1");
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-/** The saved position for this view, once, if the button asked for it. */
-export function takeShelfScroll(query: string): number | null {
+/**
+ * The saved position for this view, once, if the button asked for it.
+ *
+ * `asked` is separate from `y` because the two mean different things to the
+ * caller. No ask is an ordinary visit: leave the page alone. An ask with no
+ * position — you opened a book without having scrolled the shelf, or the saved
+ * one belongs to a different view — still has to scroll, to the top, because
+ * the link has already suppressed the scroll-to-top that would have done it.
+ * Collapsing both into null left you at whatever offset the book's page had.
+ */
+export type ShelfScroll = { asked: boolean; y: number | null };
+
+export function takeShelfScroll(query: string): ShelfScroll {
+  let asked: boolean;
   try {
-    if (sessionStorage.getItem(RESTORE_KEY) !== "1") return null;
-    sessionStorage.removeItem(RESTORE_KEY);
-    const saved = JSON.parse(sessionStorage.getItem(SCROLL_KEY) ?? "null") as { query?: unknown; y?: unknown } | null;
-    return saved && saved.query === query && typeof saved.y === "number" ? saved.y : null;
+    asked = sessionStorage.getItem(RESTORE_KEY) === "1";
   } catch {
-    return null;
+    // Storage blocked: the link could not have recorded an ask either, so
+    // Next's scroll-to-top ran and this is an ordinary visit. Treating it as
+    // an ask would send every visit — the browser's own Back included — to
+    // the top.
+    return { asked: false, y: null };
+  }
+  if (!asked) return { asked: false, y: null };
+
+  try {
+    sessionStorage.removeItem(RESTORE_KEY);
+    const saved = JSON.parse(sessionStorage.getItem(SCROLL_KEY) ?? "null") as {
+      query?: unknown;
+      y?: unknown;
+    } | null;
+    const y = saved && saved.query === query && typeof saved.y === "number" ? saved.y : null;
+    return { asked: true, y };
+  } catch {
+    // The ask was read, so the scroll-to-top was suppressed: the top is the
+    // safe answer.
+    return { asked: true, y: null };
   }
 }

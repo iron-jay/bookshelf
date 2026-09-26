@@ -1000,3 +1000,29 @@ is refused, a good one saves both rows and redirects; editing an edition
 not on the shelf is refused; cover changes redirect to the book, to /art, and
 not to an off-site address; a failed paste stays; the Japanese slug redirects.
 Test book restored. Not verified in a browser: the scroll restore.
+
+## 2026-09-26 — Back to shelf: land at the top when there is nowhere to restore
+
+From gameshelf's review of the same code (its `5e8751e`, and the "For
+bookshelf" note in its PROGRESS.md). Both faults were here too:
+
+- `takeShelfScroll` returned `number | null`, and null meant both "nobody
+  asked" and "asked, nothing saved". The link had already suppressed Next's
+  scroll-to-top, so open a book without scrolling the shelf, scroll the
+  book's page, press Back to shelf: you landed at the book page's offset. It
+  now returns `{ asked, y }`, and an ask with no position scrolls to the top.
+- With storage blocked, the link suppressed the scroll-to-top with nothing on
+  the other side to scroll. `askToRestoreShelfScroll` now says whether it
+  recorded the ask, and the link suppresses only then.
+
+One change over gameshelf's version, made in both: its `takeShelfScroll`
+treated a storage error on the very first read as an ask, so with storage
+blocked every shelf visit — the browser's own Back included — jumped to the
+top. A failure reading the flag is now "not asked"; only a failure after the
+flag was read is an ask.
+
+Verified: eight cases against a sessionStorage stub, both apps (gameshelf's
+seven plus blocked storage on a plain visit, which fails on its `5e8751e`).
+Gameshelf's other two notes — a storage write per animation frame while
+scrolling (tens of bytes; left as is) and a position overshooting a shelf
+that got shorter (the browser clamps it) — need nothing.
