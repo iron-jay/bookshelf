@@ -6,3 +6,10 @@
  * functions.
  */
 export const IMPORT_CHUNK = 5;
+
+/**
+ * Books per "Find missing covers" request. Up to four queued requests each
+ * (Open Library edition and work, Google by ISBN and by title) — five books
+ * stays well inside any proxy timeout.
+ */
+export const COVER_CHUNK = 5;

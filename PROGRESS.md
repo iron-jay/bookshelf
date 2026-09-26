@@ -726,3 +726,27 @@ Run 4: 410 imported, no failures, one work holding two books (the same volume
 from IDW and Dark Horse — legitimate), 55 series, 233 covers. The 100 local
 works are mostly self-published Kindle series and Japanese/Spanish manga Open
 Library does not have.
+
+---
+
+## 2026-09-26 — Find missing covers
+
+Jay added a Google Books key on the VM after the Goodreads import had run, and
+re-running the import would not help: every row is a previous import, and
+cover lookup only runs for rows an add creates. So Settings → Cover art now has
+**Find missing covers**: the manual refresh (§4a) for every book on your shelf
+showing the typeset cover, in page-driven batches of five with progress and
+Stop, like the import.
+
+`findMissingCover` (lib/books/covers.ts) runs the §4a order per book — the
+edition's own cover (Open Library, Google by ISBN), then the work's (Open
+Library, Google by title → flagged for /art) — and re-checks first, so two
+editions of one work cost one lookup. Fan translations are never counted or
+looked up. Ids from the page are narrowed to your own shelf.
+
+Verified on the dev database: two work covers removed through the real action,
+five placeholders listed (fan translations excluded), then one batch: Earthsea
+found on its first edition and its second skipped as already covered, Pride
+and Prejudice found, the play script and the zine not found (no Open Library
+cover; no Google key locally), fan translations untouched. The "to review"
+outcome needs a Google key and is covered only by the Google module's tests.

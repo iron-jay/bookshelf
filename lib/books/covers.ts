@@ -152,3 +152,42 @@ export async function refreshCover(target: CoverTarget): Promise<"found" | "none
   if (found && (await apply(target, found.url, "googlebooks", true))) return "found";
   return "none";
 }
+
+export type MissingCoverResult = "found" | "review" | "none" | "skipped";
+
+/**
+ * One book on someone's shelf that is showing the typeset placeholder, looked
+ * up the §4a way: the edition's own cover first (Open Library, then Google by
+ * ISBN), then the work's (Open Library, then Google by title — flagged for
+ * review). Used by Settings' "Find missing covers", which is the manual refresh
+ * in bulk; nothing runs it on its own.
+ *
+ * Re-checked here rather than trusted from the list the page was given: two
+ * editions of one work share the work's cover, so the first one found can
+ * cover the second before its turn comes. Fan translations are skipped — they
+ * never inherit and nothing is guessed for them.
+ */
+export async function findMissingCover(editionId: string): Promise<MissingCoverResult> {
+  const [row] = await db
+    .select({
+      kind: editions.kind,
+      editionCover: editions.coverUrl,
+      workId: works.id,
+      workCover: works.coverUrl,
+    })
+    .from(editions)
+    .innerJoin(works, eq(works.id, editions.workId))
+    .where(eq(editions.id, editionId));
+  if (!row) return "skipped";
+  if ((COMMUNITY_EDITION_KINDS as readonly string[]).includes(row.kind)) return "skipped";
+  if (row.editionCover || row.workCover) return "skipped";
+
+  if ((await refreshCover({ kind: "edition", id: editionId })) === "found") return "found";
+  if ((await refreshCover({ kind: "work", id: row.workId })) !== "found") return "none";
+
+  const [work] = await db
+    .select({ review: works.coverNeedsReview })
+    .from(works)
+    .where(eq(works.id, row.workId));
+  return work?.review ? "review" : "found";
+}

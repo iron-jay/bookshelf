@@ -7,6 +7,7 @@ import { editions, entries, entryCards, works } from "@/lib/db/schema";
 
 import { AccountForm } from "./account-form";
 import { GoodreadsImport } from "./goodreads-import";
+import { MissingCovers } from "./missing-covers";
 import { PasswordForm } from "./password-form";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,12 @@ export default async function SettingsPage() {
     .from(entryCards)
     .where(and(eq(entryCards.userId, user.id), eq(entryCards.coverNeedsReview, true)));
   const flaggedCovers = flagged.n;
+  const [placeholders] = await db
+    .select({ n: count() })
+    .from(entryCards)
+    .where(
+      and(eq(entryCards.userId, user.id), isNull(entryCards.coverUrl), eq(entryCards.isCommunityEdition, false)),
+    );
 
   // Goodreads rows that matched nothing became local works (§5). Read from the
   // data rather than kept from the run, so the list survives a closed tab or
@@ -77,6 +84,7 @@ export default async function SettingsPage() {
               Review cover art
             </Link>
           </p>
+          <MissingCovers missing={placeholders.n} />
         </section>
 
         <section>
