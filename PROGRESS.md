@@ -750,3 +750,10 @@ found on its first edition and its second skipped as already covered, Pride
 and Prejudice found, the play script and the zine not found (no Open Library
 cover; no Google key locally), fan translations untouched. The "to review"
 outcome needs a Google key and is covered only by the Google module's tests.
+
+Later, with Jay's Google Books key and `OPENLIBRARY_CONTACT` in the dev `.env`:
+the Google path verified for real for the first time — lookups by ISBN and by
+title both answer (previously only the anonymous-quota 429 and stubbed tests),
+Open Library requests carry the contact in the User-Agent, and Find missing
+covers on the dev shelf found the play script's cover by title (flagged, listed
+on /art) and nothing for the zine.
