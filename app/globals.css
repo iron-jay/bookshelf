@@ -51,13 +51,15 @@ body {
   }
 }
 
-.shelf-tile {
+/* Only on arrival (shelf-grid.tsx), and the stagger stops at the 24th tile:
+   past a screenful, waiting 18 ms a tile only delays covers already loaded. */
+.shelf-resolving .shelf-tile {
   animation: shelf-tile-in 320ms ease-out backwards;
-  animation-delay: calc(var(--tile-index) * 18ms);
+  animation-delay: calc(min(var(--tile-index), 24) * 18ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shelf-tile {
+  .shelf-resolving .shelf-tile {
     animation: none;
   }
 }

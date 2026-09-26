@@ -1026,3 +1026,14 @@ seven plus blocked storage on a plain visit, which fails on its `5e8751e`).
 Gameshelf's other two notes — a storage write per animation frame while
 scrolling (tens of bytes; left as is) and a position overshooting a shelf
 that got shorter (the browser clamps it) — need nothing.
+
+## 2026-09-26 — The shelf fade-in plays once, not on every return
+
+Covers looked like they reloaded on every return to the shelf. They did
+not — the covers route sends `immutable` and the browser had them — but the
+fade-in replayed on each visit, holding tile n back 18 ms × n: seconds on a
+long shelf. The fade-in now plays once per tab (module state in
+`shelf-grid.tsx`, set after mount, so server and hydration agree; a full
+reload plays it again), and the stagger stops at the 24th tile. Same change
+in both apps. Checked: the shelf renders with the class on first load; the
+replay on client navigation is not something curl can see.

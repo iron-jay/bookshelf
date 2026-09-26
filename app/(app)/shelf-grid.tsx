@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import Link from "next/link";
 
@@ -19,6 +19,16 @@ const FIELD = "border border-line bg-ground px-2 py-1.5 text-ink outline-none fo
 function bandOf(card: ShelfCard): { name: string; credit: string | null } | null {
   return card.isCommunityEdition ? { name: card.editionName, credit: card.editionCredit } : null;
 }
+
+/**
+ * Whether the shelf has already resolved in this tab. The grid's fade-in is
+ * the app's one orchestrated moment (§5b): it plays on arrival, not on every
+ * return from a book, where the covers are already cached and a replayed
+ * stagger — 18 ms a tile, seconds on a long shelf — reads as them reloading.
+ * Module state outlives client navigations and resets on a full page load;
+ * it is only set after mount, so the server and hydration always agree.
+ */
+let resolvedOnce = false;
 
 /**
  * The shelf, filtered as you type. Every card is already on the client, so a
@@ -78,8 +88,13 @@ export function ShelfGrid({
   // reads as one shelf resolving.
   let tileIndex = 0;
 
+  const [resolving] = useState(() => !resolvedOnce);
+  useEffect(() => {
+    resolvedOnce = true;
+  }, []);
+
   return (
-    <>
+    <div className={resolving ? "shelf-resolving" : undefined}>
       <div className="mb-4 flex flex-wrap items-center gap-4 font-narrow">
         <label className="flex-1 basis-64">
           <span className="sr-only">Filter this shelf</span>
@@ -246,7 +261,7 @@ export function ShelfGrid({
           )}
         </section>
       ))}
-    </>
+    </div>
   );
 }
 
