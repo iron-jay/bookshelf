@@ -60,7 +60,7 @@ export function extract(doc: unknown, path: string): GoodreadsPageData | null {
 
 /**
  * The `javascript:` link to drag to the bookmarks bar. `origin` is bookshelf's
- * own public address (ORIGIN), which the opened page answers from; the data is
+ * address as the browser reaches it, which the opened page answers from; the data is
  * posted only to that origin, and only after that page says it is ready.
  */
 export function bookmarkletHref(origin: string): string {

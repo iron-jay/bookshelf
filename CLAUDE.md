@@ -220,7 +220,8 @@ GraphQL, beta, free plan 60/minute and 5,000/day):
   prohibit. Instead, one book at a time, in the person's own browser:
   - An imported edition links to its Goodreads page ("View on Goodreads").
   - The **bookmarklet** (Settings → One book at a time; `lib/goodreads-
-    bookmarklet.ts`) reads the Goodreads page being viewed — the
+    bookmarklet.ts`), built in the browser from the page's own origin — not
+    `ORIGIN`, which is often left at localhost — reads the Goodreads page being viewed — the
     `__NEXT_DATA__` Book, `og:` tags as fallback — and posts it to
     `/goodreads-fill`, which accepts messages only from www.goodreads.com,
     finds the edition by `goodreads_book_id` — or, when none has it, lists

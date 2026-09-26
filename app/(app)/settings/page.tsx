@@ -8,8 +8,6 @@ import { editions, entries, entryCards, works } from "@/lib/db/schema";
 import { hardcoverEnabled } from "@/lib/hardcover";
 
 import { AccountForm } from "./account-form";
-import { bookmarkletHref } from "@/lib/goodreads-bookmarklet";
-
 import { BookmarkletLink } from "./bookmarklet-link";
 import { GoodreadsImport } from "./goodreads-import";
 import { HardcoverFill } from "./hardcover-fill";
@@ -125,9 +123,10 @@ export default async function SettingsPage() {
           <p className="mb-3 font-narrow text-ink-dim">
             For a book nothing else fills in: drag this to your bookmarks bar. Then on a book’s Goodreads page — each
             imported book links to its own, under its details — click it, check what it found, and Apply. It reads
-            the page in your browser; bookshelf never contacts Goodreads itself.
+            the page in your browser; bookshelf never contacts Goodreads itself. The bookmark returns to the
+            address you are using now, so drag it from the address you open bookshelf at.
           </p>
-          <BookmarkletLink href={bookmarkletHref(process.env.ORIGIN ?? "http://localhost:3001")} />
+          <BookmarkletLink />
 
           {unmatched.length > 0 ? (
             <div className="mt-6">

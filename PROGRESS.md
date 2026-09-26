@@ -935,3 +935,12 @@ reads any local edition with a Goodreads id as an unmatched import.
 Jay: in group-by-year-finished, "Not finished" goes at the top. It now leads,
 above the newest year; "Finished, date unknown" stays after the oldest.
 Brief §5 updated. Checked on the dev shelf: Not finished, then 2026.
+
+## 2026-09-26 — Bookmarklet: the browser's address, not ORIGIN
+
+Jay: the bookmarklet from the VM pointed at localhost:3001. It was built from
+`ORIGIN`, which the VM's `.env` still had at the example's value. The link is
+now built in the browser from `window.location.origin` — the address bookshelf
+is actually open at, which is where the bookmarklet has to return. A bookmark
+dragged before this must be dragged again. Checked: the generated bookmarklet
+for `http://172.20.10.116:3001` parses and targets that address.

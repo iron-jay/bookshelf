@@ -2,16 +2,22 @@
 
 import { useEffect, useRef } from "react";
 
+import { bookmarkletHref } from "@/lib/goodreads-bookmarklet";
+
 /**
+ * The bookmarklet has to come back to the address this browser reaches
+ * bookshelf at, which only the browser knows for sure: ORIGIN is often left
+ * at the example's localhost, and a proxy or LAN address can differ from it.
+ *
  * React refuses to render a `javascript:` href — rightly, for anything built
- * from user input. This one is built by the server from bookshelf's own
- * ORIGIN, so it is set on the element directly after render.
+ * from user input. This one is built from the page's own origin, so it is set
+ * on the element directly after render.
  */
-export function BookmarkletLink({ href }: { href: string }) {
+export function BookmarkletLink() {
   const ref = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
-    ref.current?.setAttribute("href", href);
-  }, [href]);
+    ref.current?.setAttribute("href", bookmarkletHref(window.location.origin));
+  }, []);
   return (
     <a
       ref={ref}
