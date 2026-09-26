@@ -36,9 +36,11 @@ const ORDER_BY: Readonly<Record<Sort, SQL>> = {
 
 const GROUPINGS = {
   none: "No grouping",
+  shelf: "Shelf",
   series: "Series",
   author: "Author",
   finished: "Year finished",
+  added: "Year added",
   year: "Year published",
   format: "Book or audiobook",
 } as const;
@@ -83,6 +85,18 @@ type Row = typeof entryCards.$inferSelect;
 /** The bucket a row belongs in, and how buckets order. Unknowns always last. */
 function bucketFor(row: Row, groupBy: GroupBy): { label: string; order: number | string } {
   switch (groupBy) {
+    case "shelf": {
+      // The four shelves in the order a shelf reads in, not alphabetically.
+      const shelf = row.status ?? "tbr";
+      return { label: SHELF_LABELS[shelf], order: SHELVES.indexOf(shelf) };
+    }
+    case "added": {
+      // When it joined the shelf — Goodreads' Date Added for an import, which
+      // is kept on the entry, so a library imported today still spreads back
+      // over the years it was built.
+      const year = row.addedAt ? row.addedAt.getFullYear() : null;
+      return year ? { label: String(year), order: -year } : { label: "Date unknown", order: Number.MAX_SAFE_INTEGER };
+    }
     case "series":
       return {
         label: row.seriesName ?? "Not in a series",

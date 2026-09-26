@@ -199,7 +199,9 @@ form. Used for web serials, zines, ARCs, out-of-print things.
 ## 5. Screens (v1 scope)
 
 1. **Shelf** — the home page. Grid or list, filter by shelf and tag, group by
-   series / author / year finished / year published / book-or-audiobook.
+   shelf / series / author / year finished / year added / year published /
+   book-or-audiobook. Year added is the entry's date (Goodreads' Date Added
+   for an import).
    Year finished uses each book's latest finish (a reread moves it), with
    "Finished, date unknown" and "Not finished" after the years. Filter-by-title box filters on the client
    per keystroke (gameshelf 2026-09-18). Selection checkboxes with bulk shelf

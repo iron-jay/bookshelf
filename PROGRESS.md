@@ -777,3 +777,8 @@ date unknown"), then restoring them exactly. A restore loop first lost one read
 — `docker compose exec` inside `while read` swallowed the rest of the input —
 and was re-run with stdin from /dev/null; both reads checked against the saved
 copy.
+
+Then **Group by shelf** (To read, Reading, Finished, Did not finish, in shelf
+order) and **Group by year added** (the entry's `added_at` — Goodreads' Date
+Added for an import, so an imported library spreads over the years it was
+built). Checked against the dev database's shelf counts (4 / 3 / 5 / 1).
