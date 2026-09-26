@@ -9,7 +9,7 @@ import { SHELF_LABELS } from "@/lib/shelves";
 import { languageName } from "@/lib/languages";
 
 import { Cover } from "../../cover";
-import { CoverEditor } from "../../cover-editor";
+import { ChangeCoverLink } from "../../cover-page";
 import { ratingLabel } from "../../shelf-card";
 import { SeriesForm } from "./series-form";
 import { WorkEditForm } from "./work-edit-form";
@@ -78,15 +78,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
       <div className="flex max-w-4xl flex-col gap-8 sm:flex-row">
         <div className="flex w-40 shrink-0 flex-col gap-3">
           <Cover title={work.title} author={author} coverUrl={work.coverUrl} band={null} />
-          <CoverEditor
-            kind="work"
-            id={work.id}
-            hasOwnCover={Boolean(work.coverUrl)}
-            needsReview={work.coverNeedsReview}
-            canLookUp
-            seedTerm={[work.title, work.authors[0]].filter(Boolean).join(" ")}
-            note="The work’s cover shows for any edition without its own. Fan translations never use it."
-          />
+          <ChangeCoverLink href={`/work/${work.slug}/cover`} needsReview={work.coverNeedsReview} />
         </div>
 
         <div className="flex min-w-0 flex-col gap-3">

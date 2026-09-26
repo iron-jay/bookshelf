@@ -10,7 +10,7 @@ import { isUuid } from "@/lib/uuid";
 import { languageName } from "@/lib/languages";
 
 import { Cover } from "../../cover";
-import { CoverEditor } from "../../cover-editor";
+import { ChangeCoverLink } from "../../cover-page";
 import { addTag, addToShelf, readAgainAction, removeTag, setFormat, setRating, setShelf } from "./actions";
 import { EditionEditForm } from "./edition-edit-form";
 import { ReadRow, RemoveFromShelf, ReviewForm } from "./entry-forms";
@@ -152,21 +152,7 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
             coverUrl={edition.coverUrl ?? (community ? null : work.coverUrl)}
             band={community ? { name: edition.name, credit: edition.credit } : null}
           />
-          <CoverEditor
-            kind="edition"
-            id={edition.id}
-            hasOwnCover={Boolean(edition.coverUrl)}
-            needsReview={edition.coverNeedsReview}
-            canLookUp={!community}
-            seedTerm={[work.title, work.authors[0]].filter(Boolean).join(" ")}
-            note={
-              community
-                ? "A fan translation shows its own art or the typeset cover — never the book’s."
-                : !edition.coverUrl && work.coverUrl
-                  ? "This is the work’s cover. One set here is this edition’s own."
-                  : null
-            }
-          />
+          <ChangeCoverLink href={`/edition/${edition.id}/cover`} needsReview={edition.coverNeedsReview} />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">

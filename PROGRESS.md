@@ -944,3 +944,19 @@ now built in the browser from `window.location.origin` — the address bookshelf
 is actually open at, which is where the bookmarklet has to return. A bookmark
 dragged before this must be dragged again. Checked: the generated bookmarklet
 for `http://172.20.10.116:3001` parses and targets that address.
+
+## 2026-09-26 — Covers get their own page
+
+Jay: changing a cover was very hard to see — a small "Change cover" fold-out
+under the cover. Now `/edition/{id}/cover` and `/work/{slug}/cover` (shared
+`cover-page.tsx`): the current cover large on the left; on the right the
+review approval when flagged, "Covers found" (loaded as the page opens, in a
+grid that fills the width, each labelled with its source), then "Your own
+image" (upload, paste an address), then look up again / remove. The book pages
+show a plain "Change cover" button ("Cover needs review" when flagged); /art's
+"Change" goes straight to the cover page. A fan translation's cover page has no
+candidates, as before, and says why.
+
+Checked on the dev server: all three kinds of cover page render (work,
+edition, fan translation), a bad slug is a 404, the book pages link to them.
+The actions are unchanged. Not clicked through in a browser.

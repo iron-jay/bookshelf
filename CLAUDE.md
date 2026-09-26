@@ -176,6 +176,10 @@ Books have no SteamGridDB. Art comes from, in order:
      plus a free-text search, Google first. The page sends back a source and an
      id — never an address — and the server builds the URL. Not offered for fan
      translations: every candidate is an official cover.
+   - All of these live on a cover's own page — `/edition/{id}/cover`,
+     `/work/{slug}/cover` — reached by a "Change cover" button under the
+     cover (2026-09-26: folded away under the cover, they were hard to find
+     and too cramped to compare covers). The candidates load as it opens.
    - **Find missing covers** in Settings runs the auto-lookup order for every
      placeholder on the shelf, on demand — the manual refresh in bulk.
 4. **Typeset placeholder** — see §5b. Not an error state: a lot of books,

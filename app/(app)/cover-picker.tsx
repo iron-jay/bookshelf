@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import Image from "next/image";
 
@@ -13,8 +13,8 @@ const BUTTON =
 
 /**
  * Pick a cover from what the lookups can see, as gameshelf's art picker does,
- * rather than taking the first hit. Loaded on demand: finding the candidates
- * is several queued requests, and most visits to a page do not want them.
+ * rather than taking the first hit. Loaded as the cover page opens: finding
+ * them is several queued requests, which is what that page is for.
  */
 export function CoverPicker({ kind, id, seedTerm }: { kind: "work" | "edition"; id: string; seedTerm: string }) {
   const [candidates, setCandidates] = useState<CoverCandidate[] | null>(null);
@@ -33,12 +33,18 @@ export function CoverPicker({ kind, id, seedTerm }: { kind: "work" | "edition"; 
     }
   }
 
+  useEffect(() => {
+    let live = true;
+    void listCoverCandidates(kind, id).then((found) => {
+      if (live) setCandidates(found);
+    });
+    return () => {
+      live = false;
+    };
+  }, [kind, id]);
+
   if (candidates === null) {
-    return (
-      <button type="button" disabled={loading} onClick={() => void load(() => listCoverCandidates(kind, id))} className={BUTTON}>
-        {loading ? "Looking…" : "Choose from covers found"}
-      </button>
-    );
+    return <p className="text-ink-dim">Looking for covers… this takes a few seconds.</p>;
   }
 
   return (
@@ -64,7 +70,7 @@ export function CoverPicker({ kind, id, seedTerm }: { kind: "work" | "edition"; 
       {loading ? null : candidates.length === 0 ? (
         <p className="text-ink-dim">Nothing found. Try another search, or upload one.</p>
       ) : (
-        <ul className="grid max-w-md grid-cols-4 gap-1">
+        <ul className="grid gap-1 [grid-template-columns:repeat(auto-fill,minmax(120px,1fr))]">
           {candidates.map((c) => {
             const selected = chosen?.source === c.source && chosen.ref === c.ref;
             return (
@@ -74,19 +80,20 @@ export function CoverPicker({ kind, id, seedTerm }: { kind: "work" | "edition"; 
                   onClick={() => setChosen(selected ? null : c)}
                   aria-pressed={selected}
                   title={c.label}
-                  className={`relative block aspect-[2/3] w-full overflow-hidden border bg-panel ${selected ? "border-ink" : "border-line"}`}
+                  className={`relative block aspect-[2/3] w-full overflow-hidden border-2 bg-panel ${selected ? "border-ink" : "border-transparent hover:border-line"}`}
                 >
                   <Image
                     src={c.thumb}
                     alt={c.label}
                     fill
-                    sizes="96px"
+                    sizes="160px"
                     className="object-cover"
                     // Candidates are other sites' images, mostly never chosen:
                     // shown straight from there, not optimised or stored.
                     unoptimized
                   />
                 </button>
+                <p className="truncate text-ink-dim" title={c.label}>{c.label}</p>
               </li>
             );
           })}

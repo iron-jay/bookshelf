@@ -27,9 +27,10 @@ function Target({ kind, id }: { kind: "work" | "edition"; id: string }) {
 }
 
 /**
- * Every way to change one cover (§4a): upload, paste an address, look it up
- * again, remove. Tucked in a <details> so a page is about the book, not about
- * its art, until someone asks.
+ * Every way to change one cover (§4a): choose from covers found, upload,
+ * paste an address, look it up again, remove. The body of a cover page
+ * (cover-page.tsx) — its own page, since tucked under a small cover it was
+ * hard to find and too cramped to judge covers in.
  */
 export function CoverEditor({
   kind,
@@ -61,26 +62,28 @@ export function CoverEditor({
   const state = last ? { upload: uploadState, url: urlState, lookup: lookupState, remove: removeState }[last] : null;
 
   return (
-    <details className="font-narrow" open={needsReview}>
-      <summary className="cursor-pointer text-ink-dim hover:text-ink">
-        {needsReview ? "Cover needs review" : "Change cover"}
-      </summary>
+    <div className="flex flex-col gap-8 font-narrow">
+      {note ? <p className="text-ink-dim">{note}</p> : null}
 
-      <div className="mt-3 flex flex-col gap-3">
-        {note ? <p className="text-ink-dim">{note}</p> : null}
+      {needsReview ? (
+        <form action={approveCover} className="flex items-center gap-3">
+          <Target kind={kind} id={id} />
+          <span>Found by title, so it may be the wrong book.</span>
+          <button type="submit" className={BUTTON}>
+            It’s right
+          </button>
+        </form>
+      ) : null}
 
-        {needsReview ? (
-          <form action={approveCover} className="flex items-center gap-3">
-            <Target kind={kind} id={id} />
-            <span>Found by title, so it may be the wrong book.</span>
-            <button type="submit" className={BUTTON}>
-              It’s right
-            </button>
-          </form>
-        ) : null}
+      {canLookUp ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-medium">Covers found</h2>
+          <CoverPicker kind={kind} id={id} seedTerm={seedTerm} />
+        </section>
+      ) : null}
 
-        {canLookUp ? <CoverPicker kind={kind} id={id} seedTerm={seedTerm} /> : null}
-
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Your own image</h2>
         <form action={upload} onSubmit={() => setLast("upload")} className="flex flex-wrap items-center gap-3">
           <Target kind={kind} id={id} />
           <FilePicker name="cover" accept="image/jpeg,image/png,image/webp" label="Choose image" />
@@ -102,32 +105,32 @@ export function CoverEditor({
             {fetching ? "Fetching…" : "Use this image"}
           </button>
         </form>
+      </section>
 
-        <div className="flex flex-wrap items-center gap-4">
-          {canLookUp ? (
-            <form action={lookUp} onSubmit={() => setLast("lookup")}>
-              <Target kind={kind} id={id} />
-              <button type="submit" disabled={busy} className={LINK}>
-                {looking ? "Looking…" : "Look it up again"}
-              </button>
-            </form>
-          ) : null}
-          {hasOwnCover ? (
-            <form action={remove} onSubmit={() => setLast("remove")}>
-              <Target kind={kind} id={id} />
-              <button type="submit" disabled={busy} className={LINK}>
-                {removing ? "Removing…" : "Remove cover"}
-              </button>
-            </form>
-          ) : null}
-        </div>
-
-        {state ? (
-          <p role={state.ok ? "status" : "alert"} className={state.ok ? "text-ink-dim" : "border-l-2 border-ink-dim pl-3"}>
-            {state.message}
-          </p>
+      <div className="flex flex-wrap items-center gap-4">
+        {canLookUp ? (
+          <form action={lookUp} onSubmit={() => setLast("lookup")}>
+            <Target kind={kind} id={id} />
+            <button type="submit" disabled={busy} className={LINK}>
+              {looking ? "Looking…" : "Look it up again"}
+            </button>
+          </form>
+        ) : null}
+        {hasOwnCover ? (
+          <form action={remove} onSubmit={() => setLast("remove")}>
+            <Target kind={kind} id={id} />
+            <button type="submit" disabled={busy} className={LINK}>
+              {removing ? "Removing…" : "Remove cover"}
+            </button>
+          </form>
         ) : null}
       </div>
-    </details>
+
+      {state ? (
+        <p role={state.ok ? "status" : "alert"} className={state.ok ? "text-ink-dim" : "border-l-2 border-ink-dim pl-3"}>
+          {state.message}
+        </p>
+      ) : null}
+    </div>
   );
 }
