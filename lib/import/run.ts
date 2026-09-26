@@ -22,6 +22,9 @@ import {
   type OlWorkSummary,
 } from "@/lib/openlibrary";
 
+import { sameTitle, shareAnAuthor, titleQueries } from "@/lib/books/titles";
+import { findBook, type HardcoverBook } from "@/lib/hardcover";
+
 import type { GoodreadsRow } from "./goodreads";
 
 export type RowOutcome = {
@@ -29,59 +32,12 @@ export type RowOutcome = {
   title: string;
   result: "added" | "already" | "failed";
   /** How the book was found. "local" means no match: it became a local work. */
-  matchedBy?: "previous import" | "isbn" | "title" | "local";
+  matchedBy?: "previous import" | "isbn" | "title" | "hardcover" | "local";
   message?: string;
 };
 
-function fold(text: string): string {
-  return text
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
-}
 
-const words = (text: string) => (text ? text.split(" ").length : 0);
 
-/**
- * Whether a candidate's title — Open Library's title, alone or with its
- * subtitle — names the same book as a Goodreads title. What decides it is
- * which side is longer and where the shorter one ends:
- *
- * - Equal: yes.
- * - Open Library's is longer — it adds a subtitle ("Guards! Guards!: A
- *   Discworld Novel") or a franchise prefix ("Star Wars: Trials of the Jedi
- *   (High Republic)"): yes, if the Goodreads title is there as a whole phrase
- *   of two words or more (three when it is not at the start).
- * - Open Library's is shorter: only if it stops at one of the Goodreads
- *   title's colons and what is left is a tagline — "A Master Chief Story",
- *   "A Novel": a part starting "A" or "An" that describes the book rather than
- *   naming it. "Halo: Edge of Dawn" for "Halo: Edge of Dawn: A Master Chief
- *   Story" passes. "Star Wars : the High Republic" for "Star Wars: The High
- *   Republic: Edge of Balance, Vol. 4" does not — a franchise can run to two
- *   parts, and Open Library filed Vol. 3 and Vol. 4 under that one work in the
- *   trial run. Nor does "Halo", "The Sandman" or anything stopping mid-part.
- */
-export function sameTitle(candidate: string, subtitle: string | null, goodreadsTitle: string): boolean {
-  const r = fold(goodreadsTitle);
-  const parts = goodreadsTitle.split(":");
-  // Each way of cutting the title at a colon where the rest is a tagline.
-  const taglineCuts = parts
-    .map((_, i) => i)
-    .filter((i) => i < parts.length - 1 && /^(a|an) /.test(fold(parts.slice(i + 1).join(" "))))
-    .map((i) => fold(parts.slice(0, i + 1).join(" ")));
-
-  return [fold(candidate), fold(`${candidate} ${subtitle ?? ""}`)].some((c) => {
-    if (!c || !r) return false;
-    if (c === r) return true;
-    if (c.length > r.length) {
-      if (words(r) >= 2 && c.startsWith(`${r} `)) return true;
-      return words(r) >= 3 && ` ${c} `.includes(` ${r} `);
-    }
-    return taglineCuts.includes(c);
-  });
-}
 
 /**
  * Title search is the last resort before giving up, so it only accepts a
@@ -91,34 +47,9 @@ export function sameTitle(candidate: string, subtitle: string | null, goodreadsT
  */
 function sameBook(result: OlWorkSummary, titles: string[], row: GoodreadsRow): boolean {
   if (!titles.some((mine) => sameTitle(result.title, result.subtitle, mine))) return false;
-  if (row.authors.length === 0) return true;
-  const theirAuthors = fold(result.authors.join(" ")).split(" ");
-  return row.authors.some((name) => {
-    const surname = fold(name).split(" ").pop();
-    return surname ? theirAuthors.includes(surname) : false;
-  });
+  return shareAnAuthor(result.authors, row.authors);
 }
 
-/**
- * What to search Open Library for, best first. Goodreads titles carry things
- * Open Library's do not: a trailing bracket ("(Star Wars: The High Republic)",
- * "(Unabridged)"), an English title in square brackets after a Japanese one
- * ("ドラゴンボール超 24 [Dragon Ball Super 24]"), and long subtitles. Each is
- * tried only if the one before found nothing, so a book that matches first
- * time costs one request.
- *
- * `match` is what a result is compared against: only faithful forms of the
- * title. The part before the last colon is a search term, never a match
- * target — "Star Wars" would otherwise match any Star Wars book by the author.
- */
-export function titleQueries(title: string): { search: string[]; match: string[] } {
-  const bare = title.replace(/\s*[([][^()[\]]*[)\]]\s*$/, "").replace(/\s*[([][^()[\]]*[)\]]\s*$/, "").trim();
-  const bracketed = title.match(/\[([^\]]+)\]/)?.[1]?.trim();
-  const beforeColon = bare.includes(":") ? bare.slice(0, bare.lastIndexOf(":")).trim() : "";
-  const unique = (xs: (string | undefined)[]) => [...new Set(xs.filter((x): x is string => Boolean(x)))];
-  const match = unique([bare || title, bracketed]);
-  return { search: unique([...match, words(fold(beforeColon)) >= 2 ? beforeColon : ""]), match };
-}
 
 type Plan =
   | { kind: "edition"; editionId: string; workId: string; matchedBy: "previous import" | "isbn" }
@@ -129,7 +60,7 @@ type Plan =
       edition: OlEditionSummary | null;
     }
   /** A local work named from Goodreads, keeping Open Library's edition when the ISBN found one. */
-  | { kind: "local"; edition: OlEditionSummary | null };
+  | { kind: "local"; edition: OlEditionSummary | null; hardcover: HardcoverBook | null };
 
 /**
  * The title an imported work is shelved under: the book's own title from
@@ -188,7 +119,7 @@ async function plan(row: GoodreadsRow): Promise<Plan> {
         // work holding several volumes. Look for the real work by title, and
         // failing that give the edition a work of its own. A separate work
         // costs little; a wrong one merges two books and loses one's reads.
-        return (await byTitle(row, workFor, edition)) ?? { kind: "local", edition };
+        return (await byTitle(row, workFor, edition)) ?? (await asLocal(row, edition));
       }
       if (known) return { kind: "openlibrary", matchedBy: "isbn", work: { knownId: known.id }, edition };
       if (record) {
@@ -214,7 +145,17 @@ async function plan(row: GoodreadsRow): Promise<Plan> {
 
   // 3. Title and author, strictly.
   // 4. Nothing: a local work, listed afterwards so it can be fixed (§5).
-  return (await byTitle(row, workFor, null)) ?? { kind: "local", edition: null };
+  return (await byTitle(row, workFor, null)) ?? (await asLocal(row, null));
+}
+
+/**
+ * A book Open Library has no work for becomes a local work — and if Hardcover
+ * is configured and has it (strictly: see findBook), the work starts out with
+ * Hardcover's description, year, series and cover rather than bare. In Jay's
+ * export Hardcover had 84 of the 100 books Open Library lacked.
+ */
+async function asLocal(row: GoodreadsRow, edition: OlEditionSummary | null): Promise<Plan> {
+  return { kind: "local", edition, hardcover: await findBook(row.title, row.authors) };
 }
 
 type WorkFor = (
@@ -272,7 +213,7 @@ export async function importGoodreadsRow(userId: string, row: GoodreadsRow): Pro
     } else {
       work =
         decided.kind === "local"
-          ? await insertLocalWork(tx, { title: row.title, authors: row.authors }, userId)
+          ? await insertLocalWork(tx, { title: row.title, authors: row.authors }, userId, decided.hardcover)
           : "knownId" in decided.work
             ? { id: decided.work.knownId, created: false }
             : await insertOpenLibraryWork(tx, decided.work.fetch, userId);
@@ -300,9 +241,12 @@ export async function importGoodreadsRow(userId: string, row: GoodreadsRow): Pro
       .where(and(eq(editions.id, editionId), isNull(editions.goodreadsBookId)));
 
     // Series from the title, but never over one already set by hand.
-    if (row.series) {
+    // Goodreads' series first, it is what the person shelved it under;
+    // Hardcover's when Goodreads' title carried none.
+    const seriesFrom = row.series ?? (decided.kind === "local" ? decided.hardcover?.series : null) ?? null;
+    if (seriesFrom) {
       const [current] = await tx.select({ seriesId: works.seriesId }).from(works).where(eq(works.id, work.id));
-      if (!current?.seriesId) await setWorkSeries(tx, work.id, row.series.name, row.series.position, userId);
+      if (!current?.seriesId) await setWorkSeries(tx, work.id, seriesFrom.name, seriesFrom.position, userId);
     }
 
     const added = await addEntry(tx, userId, editionId, row);
@@ -318,6 +262,7 @@ export async function importGoodreadsRow(userId: string, row: GoodreadsRow): Pro
             title: fetched?.summary.title ?? row.title,
             firstAuthor: row.authors[0] ?? null,
             coverId: fetched ? (fetched.record.coverId ?? fetched.summary.coverId) : null,
+            hardcoverImageUrl: decided.kind === "local" ? (decided.hardcover?.imageUrl ?? null) : null,
           }
         : null,
       workId: outcome.work.id,
@@ -336,7 +281,8 @@ export async function importGoodreadsRow(userId: string, row: GoodreadsRow): Pro
     result: outcome.added ? "added" : "already",
     // A work of its own that still got Open Library's edition by ISBN matched;
     // only a book with neither is "local" — the ones listed for fixing.
-    matchedBy: decided.kind === "local" ? (decided.edition ? "isbn" : "local") : decided.matchedBy,
+    matchedBy:
+      decided.kind === "local" ? (decided.edition ? "isbn" : decided.hardcover ? "hardcover" : "local") : decided.matchedBy,
   };
 }
 

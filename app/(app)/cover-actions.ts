@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { candidateUrl, candidatesFor, searchCandidates, type CoverCandidate } from "@/lib/books/cover-candidates";
 import { refreshCover, setCover, type CoverTarget } from "@/lib/books/covers";
 import { downloadCover, MAX_COVER_BYTES, storeCover } from "@/lib/covers";
+import { coverUrlForBook } from "@/lib/hardcover";
 import { db } from "@/lib/db";
 import { COMMUNITY_EDITION_KINDS, editions, works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
@@ -162,8 +163,18 @@ export async function applyCoverCandidate(_prev: CoverState, formData: FormData)
     return { ok: false, message: "A fan translation takes its own art: upload it or paste its address." };
   }
   const source = text(formData, "source");
-  const url = candidateUrl(source, text(formData, "ref"));
-  if (!url || (source !== "openlibrary" && source !== "googlebooks")) return { ok: false, message: "Choose a cover first." };
+  const ref = text(formData, "ref");
+  // Hardcover's address comes from Hardcover, asked by id: the page never
+  // supplies it.
+  const url =
+    source === "hardcover"
+      ? /^\d{1,10}$/.test(ref)
+        ? await coverUrlForBook(Number(ref))
+        : null
+      : candidateUrl(source, ref);
+  if (!url || (source !== "openlibrary" && source !== "googlebooks" && source !== "hardcover")) {
+    return { ok: false, message: "Choose a cover first." };
+  }
 
   const stored = await downloadCover(url);
   if (!stored.ok) return { ok: false, message: `${stored.reason} Try another.` };

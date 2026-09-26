@@ -121,6 +121,22 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
       ["Length", lengthLabel(edition.durationMinutes)],
       ["ISBN", edition.isbn13 ? <span className="font-mono">{edition.isbn13}</span> : null],
       ["Open Library", edition.olEditionKey ? <span className="font-mono">{edition.olEditionKey}</span> : null],
+      // For books no catalogue has: the Goodreads page the import came from is
+      // one click away, to copy its cover address into "paste an address".
+      // Opened in the person's own browser — nothing here fetches Goodreads.
+      [
+        "Goodreads",
+        edition.goodreadsBookId ? (
+          <a
+            href={`https://www.goodreads.com/book/show/${edition.goodreadsBookId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-ink"
+          >
+            View on Goodreads
+          </a>
+        ) : null,
+      ],
       ["Link", edition.url ? <a href={edition.url} rel="noreferrer" className="break-all underline hover:text-ink">{edition.url}</a> : null],
     ] as [string, React.ReactNode][]
   ).filter(([, value]) => value !== null && value !== undefined && value !== "");

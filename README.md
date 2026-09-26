@@ -100,6 +100,9 @@ In `.env` for production:
   Library asks. Without it the repository URL stands in.
 - `GOOGLE_BOOKS_API_KEY` — optional, but without it the cover fallback finds
   nothing: the anonymous quota is shared with everyone and usually spent.
+- `HARDCOVER_API_TOKEN` — optional. A personal access token from
+  hardcover.app → Settings → Hardcover API. Fills in books Open Library does
+  not have (description, year, series, cover) on import and from Settings.
 - `COVERS_DIR` is set by the compose file; leave it out.
 
 The container applies migrations and creates the first user before serving

@@ -56,6 +56,8 @@ services:
       # Sent in the User-Agent to Open Library, which asks clients to identify.
       OPENLIBRARY_CONTACT: ${OPENLIBRARY_CONTACT:-}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      # Optional: fills in books Open Library does not have (brief §4b).
+      HARDCOVER_API_TOKEN: ${HARDCOVER_API_TOKEN:-}
       COVERS_DIR: /data/covers
       # The session cookie's Secure flag is derived from this.
       ORIGIN: ${ORIGIN:-http://localhost:3001}

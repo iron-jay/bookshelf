@@ -809,3 +809,58 @@ Corgi paperback in that order, search finding Halo: Divine Wind first, an Open
 Library candidate applied (old file deleted), a Google one applied (review
 cleared), and the four refusals. Brief §4a updated. The test cover put on the
 play script was removed afterwards.
+
+---
+
+## 2026-09-26 — Hardcover as an optional source
+
+Goodreads has no public API (retired 2020; Grimmory's Goodreads provider uses
+the site's private AppSync key, against its terms), so for the 100 books Open
+Library lacked in Jay's export we checked **Hardcover**'s public GraphQL API
+with his personal token: 84 found under the importer's strict matching, all
+84 read by hand and correct. Built as an optional source (brief §4b):
+
+- **Migration 0002**: `art_source` gains `hardcover`; `works.hardcover_id`
+  records the book that filled a work in.
+- `lib/hardcover/` — token or nothing, one queue at ~1/s (free plan: 60/min,
+  5,000/day), every failure "nothing found". `findBook` tries the title forms,
+  then title + author (recovered three Richard Fox books the check missed),
+  accepts only `sameTitle` (alternative titles count — Japanese manga find their
+  English entries) with a shared surname, and among several strict matches
+  takes the fullest (Hardcover holds duplicates; the first can be bare).
+- `sameTitle` / `titleQueries` / `shareAnAuthor` moved to `lib/books/titles.ts`
+  so the import and Hardcover share one standard.
+- **Import**: a would-be local work asks Hardcover; a match fills description,
+  year, series (if Goodreads gave none) and cover. Outcome `hardcover`; Settings'
+  unmatched list excludes filled works.
+- **Settings → Fill in from Hardcover** for works already here: fills empty
+  fields only, except that a cover still flagged for review (Google's unconfirmed
+  first hit) gives way to a strict Hardcover match. Records the id; misses are
+  simply retried next run.
+- **Covers**: Hardcover sits after Google-by-ISBN and before Google-by-title in
+  both the add-time order and "look it up again" (so Find missing covers uses it
+  too), and in the picker — which sends a Hardcover book id; the server asks
+  Hardcover for the address.
+- **docker-compose.yml** now passes `HARDCOVER_API_TOKEN` into the container —
+  without that line the VM would never have seen the token.
+- Imported editions link to their **Goodreads page**, for the books no
+  catalogue has: copy the cover address, paste it.
+
+**Verified** with the real token on scratch databases built from the 100
+unmatched rows. Import with Hardcover: 87 filled, 13 bare; 90 of 100 with a
+cover (78 Hardcover, 12 Google title matches for review); 84 with series, 67
+with a description; 4 minutes. Import with Hardcover off (confirmed off: an
+empty variable beats `.env`, panel hidden, no ids), then Fill in: 87 filled,
+13 not found; a second run changed nothing; with review-flagged Google covers
+present, 60 were replaced by Hardcover's and every replaced file deleted (90
+files, 90 referenced). Picker: Hardcover candidates on a local work, one applied
+by id; an address sent as the ref, and an id with no cover, refused.
+
+Build: `next build` in the working copy failed on `next/font/google` while the
+dev server shared its `.next`; a clean copy built with Docker, as CI does,
+passes — local cache state, not code.
+
+**Remaining 13**: Richard Fox's later Ember War books, two Spanish Dragon Ball
+tomos, two High Republic audio dramas, Sandman Act I, and a few one-offs.
+Their editions link to Goodreads for pasting a cover; adding them to Open
+Library would make them match for everyone.

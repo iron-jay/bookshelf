@@ -11,6 +11,7 @@ import {
   type OlWorkRecord,
   type OlWorkSummary,
 } from "@/lib/openlibrary";
+import type { HardcoverBook } from "@/lib/hardcover";
 import { slugify } from "@/lib/slug";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -77,11 +78,16 @@ export async function insertOpenLibraryWork(
 /**
  * A work Open Library has never heard of: a web novel, a zine, something out
  * of print. `source = 'local'`, so no refresh will ever overwrite it.
+ *
+ * `hardcover` is a strict Hardcover match for it, when one was found: the work
+ * starts with that book's description and year, and records its id so a later
+ * fill-in run does not look it up again. Title and authors stay as given.
  */
 export async function insertLocalWork(
   tx: Tx,
   work: { title: string; authors: string[] },
   userId: string,
+  hardcover: HardcoverBook | null = null,
 ): Promise<EnsuredWork> {
   const id = randomUUID();
   const base = slugify(work.title);
@@ -94,6 +100,9 @@ export async function insertLocalWork(
     title: work.title,
     authors: work.authors,
     authorSort: authorSortFor(work.authors[0]),
+    summary: hardcover?.description ?? null,
+    firstPublishedYear: hardcover?.releaseYear ?? null,
+    hardcoverId: hardcover?.id ?? null,
     source: "local",
     createdBy: userId,
   });

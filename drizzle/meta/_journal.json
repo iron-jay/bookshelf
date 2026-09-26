@@ -15,6 +15,13 @@
       "when": 1790303029571,
       "tag": "0001_drop_fanworks",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790406419954,
+      "tag": "0002_hardcover",
+      "breakpoints": true
     }
   ]
 }

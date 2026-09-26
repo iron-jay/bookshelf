@@ -4,9 +4,10 @@ import { deleteCover, downloadCover } from "@/lib/covers";
 import { db } from "@/lib/db";
 import { COMMUNITY_EDITION_KINDS, editions, works } from "@/lib/db/schema";
 import { coverByIsbn, coverByTitle } from "@/lib/googlebooks";
+import { findBook } from "@/lib/hardcover";
 import { coverUrl, getEdition, getWorkRecord } from "@/lib/openlibrary";
 
-type ArtSource = "openlibrary" | "googlebooks" | "url" | "upload";
+type ArtSource = "openlibrary" | "googlebooks" | "url" | "upload" | "hardcover";
 export type CoverTarget = { kind: "work" | "edition"; id: string };
 
 /**
@@ -57,7 +58,14 @@ async function apply(
 }
 
 type LookupTarget = {
-  work: { id: string; title: string; firstAuthor: string | null; coverId: number | null } | null;
+  work: {
+    id: string;
+    title: string;
+    firstAuthor: string | null;
+    coverId: number | null;
+    /** A strict Hardcover match's cover, for a local work (see lib/hardcover). */
+    hardcoverImageUrl?: string | null;
+  } | null;
   /** Always the work the edition hangs off, whether or not this add created it. */
   workId: string;
   edition: { id: string; coverId: number | null; isbn13: string | null } | null;
@@ -68,8 +76,11 @@ type LookupTarget = {
  *
  *   1. Open Library, by cover id — the edition's own, and the work's.
  *   2. Google Books by the edition's ISBN. Exact, so no review.
- *   3. Google Books by title and author. Fuzzy, so flagged for /art.
- *   4. Nothing: the typeset placeholder, which is not an error.
+ *   3. Hardcover, when the importer matched the book there. The same strict
+ *      title-and-author test as Open Library matching, so no review.
+ *   4. Google Books by title and author. Its first hit, fuzzy, so flagged
+ *      for /art.
+ *   5. Nothing: the typeset placeholder, which is not an error.
  *
  * 2 and 3 only run when nothing is on screen yet — an edition with no art of
  * its own already shows the work's, and that is the brief's order working.
@@ -106,6 +117,14 @@ export async function lookUpCoversOnAdd(target: LookupTarget): Promise<void> {
   if (target.edition?.isbn13) {
     const found = await coverByIsbn(target.edition.isbn13);
     if (found && (await apply({ kind: "edition", id: target.edition.id }, found.url, "googlebooks", false, found.volumeId))) {
+      return;
+    }
+  }
+
+  if (target.work?.hardcoverImageUrl) {
+    const stored = await downloadCover(target.work.hardcoverImageUrl);
+    if (stored.ok) {
+      await setCover({ kind: "work", id: target.work.id }, stored.path, "hardcover", false);
       return;
     }
   }
@@ -148,6 +167,15 @@ export async function refreshCover(target: CoverTarget): Promise<"found" | "none
 
   const record = work.olWorkKey ? await getWorkRecord(work.olWorkKey) : null;
   if (record?.coverId && (await apply(target, coverUrl(record.coverId, "L"), "openlibrary", false))) return "found";
+  // Hardcover before Google's title search: its match is the strict one.
+  const hardcover = await findBook(work.title, work.authors);
+  if (hardcover?.imageUrl) {
+    const stored = await downloadCover(hardcover.imageUrl);
+    if (stored.ok) {
+      await setCover(target, stored.path, "hardcover", false);
+      return "found";
+    }
+  }
   const found = await coverByTitle(work.title, work.authors[0] ?? null);
   if (found && (await apply(target, found.url, "googlebooks", true))) return "found";
   return "none";

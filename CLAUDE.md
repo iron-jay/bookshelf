@@ -193,6 +193,31 @@ Rules carried over from gameshelf, because they were learned the hard way:
   filter on the shelf.
 - Download on add, store under `COVERS_DIR`, serve locally.
 
+## 4b. Hardcover (optional)
+
+Added 2026-09-26 after Jay's real import: Open Library lacked 100 of 410
+books (self-published Kindle series, tie-in novels, manga), and Hardcover had
+84 of them. With `HARDCOVER_API_TOKEN` set (a personal access token; its API is
+GraphQL, beta, free plan 60/minute and 5,000/day):
+
+- **Import**: a book that would become a local work is looked up on Hardcover
+  first; a match fills its description, year, series (if Goodreads' title gave
+  none) and cover, and records `works.hardcover_id`. It is still a local work —
+  Hardcover is a source of details, not the catalogue.
+- **Settings → Fill in from Hardcover**: the same for local works already
+  here. Fills only empty fields; never overwrites.
+- **Covers**: after Google-by-ISBN and before Google-by-title in the lookup
+  order, and a candidate source in the picker (`cover_source = 'hardcover'`).
+- Matching is the importer's strict rule (`lib/books/titles.ts`: `sameTitle`
+  plus a shared author surname), with Hardcover's alternative titles counted —
+  how Japanese manga titles find their English entries. Hence no review flag.
+- All access through `lib/hardcover/`. No token: nothing is requested. Every
+  failure is "nothing found". Terms: personal use; no training AI models on the
+  data.
+- **Goodreads itself is not a source.** It has had no public API since 2020;
+  the private one some apps use (Grimmory) breaks its terms. An imported
+  edition links to its Goodreads page instead, for pasting a cover by hand.
+
 ### Adding a fan translation (the important flow)
 
 From any work page: **Add edition** → kind, name, base edition, credit, URL,
@@ -456,7 +481,7 @@ differences.
 - First user defaults to `admin`; name and password changeable in Settings.
 - Env vars: `DATABASE_URL`, `SESSION_SECRET`, `ORIGIN`, `ADMIN_USERNAME`,
   `ADMIN_PASSWORD`, `AUTH_DISABLED`, `COVERS_DIR`, `OPENLIBRARY_CONTACT`,
-  optional `GOOGLE_BOOKS_API_KEY`.
+  optional `GOOGLE_BOOKS_API_KEY` and `HARDCOVER_API_TOKEN`.
 - `pg_dump` nightly via cron alongside gameshelf's.
 
 ---

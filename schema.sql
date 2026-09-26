@@ -35,7 +35,8 @@ CREATE TYPE edition_kind AS ENUM (
 CREATE TYPE book_format AS ENUM ('book', 'audiobook');
 
 -- Where a cover image came from, so it can be re-fetched or left alone.
-CREATE TYPE art_source AS ENUM ('openlibrary', 'googlebooks', 'url', 'upload');
+-- 'hardcover' added 2026-09-26 (0002): the optional Hardcover source.
+CREATE TYPE art_source AS ENUM ('openlibrary', 'googlebooks', 'url', 'upload', 'hardcover');
 
 -- The shelves, in the order a shelf reads in. The UI calls these shelves and
 -- the free-form ones tags; gameshelf reached that naming after launch, so here
@@ -118,6 +119,9 @@ CREATE TABLE works (
   -- without another round trip. NULL for local works.
   ol_payload            jsonb,
   ol_synced_at          timestamptz,
+  -- The Hardcover book that filled in a local work's details (optional source,
+  -- 0002). Set once; a fill-in run skips works that have it. NULL otherwise.
+  hardcover_id          integer,
   source                source_kind NOT NULL DEFAULT 'openlibrary',
   created_by            uuid REFERENCES users(id) ON DELETE SET NULL,
   created_at            timestamptz NOT NULL DEFAULT now(),

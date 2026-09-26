@@ -50,7 +50,7 @@ export const editionKind = pgEnum("edition_kind", [
 
 export const bookFormat = pgEnum("book_format", ["book", "audiobook"]);
 
-export const artSource = pgEnum("art_source", ["openlibrary", "googlebooks", "url", "upload"]);
+export const artSource = pgEnum("art_source", ["openlibrary", "googlebooks", "url", "upload", "hardcover"]);
 
 /** Declared in the order a shelf reads in. No wishlist: tbr is "want to read". */
 export const shelfStatus = pgEnum("shelf_status", ["tbr", "reading", "finished", "dnf"]);
@@ -127,6 +127,7 @@ export const works = pgTable(
     coverNeedsReview: boolean("cover_needs_review").notNull().default(false),
     olPayload: jsonb("ol_payload"),
     olSyncedAt: timestamp("ol_synced_at", { withTimezone: true }),
+    hardcoverId: integer("hardcover_id"),
     source: sourceKind("source").notNull().default("openlibrary"),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

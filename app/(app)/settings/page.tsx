@@ -1,12 +1,15 @@
-import { and, asc, count, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, count, countDistinct, eq, isNotNull, isNull } from "drizzle-orm";
 import Link from "next/link";
 
 import { authDisabled, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { editions, entries, entryCards, works } from "@/lib/db/schema";
 
+import { hardcoverEnabled } from "@/lib/hardcover";
+
 import { AccountForm } from "./account-form";
 import { GoodreadsImport } from "./goodreads-import";
+import { HardcoverFill } from "./hardcover-fill";
 import { MissingCovers } from "./missing-covers";
 import { PasswordForm } from "./password-form";
 
@@ -14,6 +17,15 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const user = await requireUser();
+  const hardcoverOn = hardcoverEnabled();
+  const [hardcoverPending] = hardcoverOn
+    ? await db
+        .select({ n: countDistinct(works.id) })
+        .from(entries)
+        .innerJoin(editions, eq(editions.id, entries.editionId))
+        .innerJoin(works, eq(works.id, editions.workId))
+        .where(and(eq(entries.userId, user.id), eq(works.source, "local"), isNull(works.hardcoverId)))
+    : [{ n: 0 }];
 
   const [entryTotal] = await db.select({ n: count() }).from(entries).where(eq(entries.userId, user.id));
   // entry_cards already says whether the cover on screen for each entry is
@@ -46,6 +58,8 @@ export default async function SettingsPage() {
         // Found by ISBN but given a work of its own (Open Library's was a
         // catch-all): matched, so not listed.
         isNull(editions.olEditionKey),
+        // Filled in from Hardcover: matched there, so not listed either.
+        isNull(works.hardcoverId),
       ),
     )
     .orderBy(asc(works.title));
@@ -84,6 +98,13 @@ export default async function SettingsPage() {
               Review cover art
             </Link>
           </p>
+          {hardcoverOn ? (
+            <>
+              <h3 className="mt-6 font-medium">From Hardcover</h3>
+              <HardcoverFill pending={hardcoverPending.n} />
+              <h3 className="mt-6 font-medium">Missing covers</h3>
+            </>
+          ) : null}
           <MissingCovers missing={placeholders.n} />
         </section>
 
@@ -102,7 +123,7 @@ export default async function SettingsPage() {
               <h3 className="font-medium">Added as local works</h3>
               <p className="mb-2 font-narrow text-ink-dim">
                 {unmatched.length} imported {unmatched.length === 1 ? "book" : "books"} matched
-                nothing on Open Library. They are on your shelf as they were on Goodreads; check the
+                nothing on Open Library{hardcoverOn ? " or Hardcover" : ""}. They are on your shelf as they were on Goodreads; check the
                 title and author, or add the right Open Library edition from the work page.
               </p>
               <ul className="flex flex-col font-narrow">

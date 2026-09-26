@@ -3,7 +3,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { editions, works } from "@/lib/db/schema";
 import { coverCandidates, coverUrlForVolume } from "@/lib/googlebooks";
+import { searchBooks, type HardcoverBook } from "@/lib/hardcover";
 import { coverUrl, getEdition, getEditions, getWorkRecord, searchWorks } from "@/lib/openlibrary";
+
+import { shareAnAuthor, titleQueries } from "./titles";
 
 import type { CoverTarget } from "./covers";
 
@@ -13,7 +16,7 @@ import type { CoverTarget } from "./covers";
  * server builds the URL it downloads and a page cannot point it anywhere.
  */
 export type CoverCandidate = {
-  source: "openlibrary" | "googlebooks";
+  source: "openlibrary" | "googlebooks" | "hardcover";
   ref: string;
   thumb: string;
   /** Where it came from, shown under the thumbnail. */
@@ -26,6 +29,14 @@ const OTHER_EDITIONS = 16;
 
 function fromOl(ids: number[], label: string): CoverCandidate[] {
   return ids.filter((id) => id > 0).map((id) => ({ source: "openlibrary", ref: String(id), thumb: coverUrl(id, "M"), label }));
+}
+
+/** Hardcover hits with art, this book's author first — a person picks, so the rest stay. */
+function fromHardcover(books: HardcoverBook[], authors: string[]): CoverCandidate[] {
+  return books
+    .filter((b) => b.imageUrl)
+    .sort((a, b) => Number(shareAnAuthor(b.authors, authors)) - Number(shareAnAuthor(a.authors, authors)))
+    .map((b) => ({ source: "hardcover" as const, ref: String(b.id), thumb: b.imageUrl ?? "", label: `Hardcover: ${b.title}` }));
 }
 
 function dedupe(candidates: CoverCandidate[]): CoverCandidate[] {
@@ -94,6 +105,9 @@ export async function candidatesFor(target: CoverTarget): Promise<CoverCandidate
         .slice(0, OTHER_EDITIONS),
     );
   }
+  // Hardcover next: where Open Library has nothing, it usually does.
+  out.push(...fromHardcover(await searchBooks(titleQueries(work.title).search[0] ?? work.title, 10), work.authors).slice(0, 8));
+
   const author = work.authors[0];
   const byTitle = await coverCandidates(author ? `intitle:"${work.title.replace(/"/g, "")}" inauthor:"${author.replace(/"/g, "")}"` : `intitle:"${work.title.replace(/"/g, "")}"`);
   out.push(...byTitle.map((g) => ({ source: "googlebooks" as const, ref: g.volumeId, thumb: g.url, label: g.title ? `Google: ${g.title}` : "Google" })));
@@ -110,9 +124,10 @@ export async function candidatesFor(target: CoverTarget): Promise<CoverCandidate
 export async function searchCandidates(term: string): Promise<CoverCandidate[]> {
   const q = term.trim().slice(0, 200);
   if (q.length < 2) return [];
-  const [google, ol] = [await coverCandidates(q, 20), await searchWorks(q, 8)];
+  const [google, hardcover, ol] = [await coverCandidates(q, 16), await searchBooks(q, 12), await searchWorks(q, 8)];
   return dedupe([
     ...google.map((g) => ({ source: "googlebooks" as const, ref: g.volumeId, thumb: g.url, label: g.title ? `Google: ${g.title}` : "Google" })),
+    ...fromHardcover(hardcover, []),
     ...ol.flatMap((w) => (w.coverId ? fromOl([w.coverId], `Open Library: ${w.title}`) : [])),
   ]);
 }
