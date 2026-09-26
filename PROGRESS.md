@@ -929,3 +929,9 @@ matched by id with nothing left to fill. Test book restored.
 Still not verified in a real browser. Known wrinkle: a hand-made local work
 linked this way now shows in Settings' "Added as local works" list, which
 reads any local edition with a Goodreads id as an unmatched import.
+
+## 2026-09-26 — Year finished: not finished first
+
+Jay: in group-by-year-finished, "Not finished" goes at the top. It now leads,
+above the newest year; "Finished, date unknown" stays after the oldest.
+Brief §5 updated. Checked on the dev shelf: Not finished, then 2026.

@@ -114,12 +114,13 @@ function bucketFor(row: Row, groupBy: GroupBy): { label: string; order: number |
       // sit in one group.
       const year = row.lastFinishedOn ? Number(row.lastFinishedOn.slice(0, 4)) : null;
       if (year) return { label: String(year), order: -year };
-      // Finished with no date is common after a Goodreads import (Read Count
-      // with no Date Read); it is still finished, so it sits apart from the
-      // books that are not.
+      // Not finished leads, above the newest year: what you are reading or
+      // mean to read is what the shelf is for. Finished with no date is common
+      // after a Goodreads import (Read Count with no Date Read); it is still
+      // finished, so it goes after the oldest year.
       return row.status === "finished"
-        ? { label: "Finished, date unknown", order: Number.MAX_SAFE_INTEGER - 1 }
-        : { label: "Not finished", order: Number.MAX_SAFE_INTEGER };
+        ? { label: "Finished, date unknown", order: Number.MAX_SAFE_INTEGER }
+        : { label: "Not finished", order: Number.MIN_SAFE_INTEGER };
     }
     case "year":
       return {

@@ -248,7 +248,7 @@ form. Used for web serials, zines, ARCs, out-of-print things.
    book-or-audiobook. Year added is the entry's date (Goodreads' Date Added
    for an import).
    Year finished uses each book's latest finish (a reread moves it), with
-   "Finished, date unknown" and "Not finished" after the years. Filter-by-title box filters on the client
+   "Not finished" before the years and "Finished, date unknown" after them. Filter-by-title box filters on the client
    per keystroke (gameshelf 2026-09-18). Selection checkboxes with bulk shelf
    change.
 2. **Search** — one box, Open Library results and local works interleaved,
