@@ -38,7 +38,8 @@ const GROUPINGS = {
   none: "No grouping",
   series: "Series",
   author: "Author",
-  year: "Year",
+  finished: "Year finished",
+  year: "Year published",
   format: "Book or audiobook",
 } as const;
 type GroupBy = keyof typeof GROUPINGS;
@@ -92,6 +93,19 @@ function bucketFor(row: Row, groupBy: GroupBy): { label: string; order: number |
       // cover leads with, as a bookshop would shelve it.
       const name = row.authors?.[0];
       return { label: name ?? "Author unknown", order: row.authorSort?.toLowerCase() ?? "￿" };
+    }
+    case "finished": {
+      // The year of the latest finish: a reread moves a book to the year it was
+      // read again, as the shelf's "last finished" sort does. A book can only
+      // sit in one group.
+      const year = row.lastFinishedOn ? Number(row.lastFinishedOn.slice(0, 4)) : null;
+      if (year) return { label: String(year), order: -year };
+      // Finished with no date is common after a Goodreads import (Read Count
+      // with no Date Read); it is still finished, so it sits apart from the
+      // books that are not.
+      return row.status === "finished"
+        ? { label: "Finished, date unknown", order: Number.MAX_SAFE_INTEGER - 1 }
+        : { label: "Not finished", order: Number.MAX_SAFE_INTEGER };
     }
     case "year":
       return {
@@ -205,6 +219,10 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   // A series group reads in series order (§2), whatever the sort says: the
   // point of grouping by series is seeing #1, #2, #3. Stable, so the chosen
   // sort still orders books that share a position or have none.
+  //
+  // Likewise a year-finished group reads newest finish first: the grouping is
+  // the question "what did I read in 2025", and the answer reads backwards
+  // through the year.
   const ordered =
     groupBy === "series"
       ? [...rows].sort(
@@ -212,7 +230,9 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
             (a.seriesPosition ?? Number.POSITIVE_INFINITY) -
             (b.seriesPosition ?? Number.POSITIVE_INFINITY),
         )
-      : rows;
+      : groupBy === "finished"
+        ? [...rows].sort((a, b) => (b.lastFinishedOn ?? "").localeCompare(a.lastFinishedOn ?? ""))
+        : rows;
 
   const groups = new Map<string, { order: number | string; cards: ShelfCard[] }>();
   for (const row of ordered) {

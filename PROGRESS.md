@@ -757,3 +757,23 @@ title both answer (previously only the anonymous-quota 429 and stubbed tests),
 Open Library requests carry the contact in the User-Agent, and Find missing
 covers on the dev shelf found the play script's cover by title (flagged, listed
 on /art) and nothing for the zine.
+
+---
+
+## 2026-09-26 — Group by year finished
+
+Jay asked to sort by year finished. Sort → Last finished already orders by
+finish date; what was missing was the Goodreads-style "read in 2025" split, so
+the shelf gains **Group by year finished**: the year of each book's latest
+finish (a reread moves it to the reread's year — one group per book), newest
+year first, then "Finished, date unknown" (Goodreads Read Count without a Date
+Read), then "Not finished". Within a year, newest finish first, whatever the
+sort — as series groups keep series order. The old "Year" grouping is renamed
+"Year published". Brief §5 updated.
+
+Verified on the dev shelf by temporarily moving test reads (2026 / 2025 / 2024
+groups in order; clearing one book's dated finishes put it under "Finished,
+date unknown"), then restoring them exactly. A restore loop first lost one read
+— `docker compose exec` inside `while read` swallowed the rest of the input —
+and was re-run with stdin from /dev/null; both reads checked against the saved
+copy.
