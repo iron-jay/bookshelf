@@ -2,6 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { candidateUrl, candidatesFor, searchCandidates, type CoverCandidate } from "@/lib/books/cover-candidates";
@@ -34,6 +35,25 @@ function refresh(): void {
   revalidatePath("/", "layout");
 }
 
+/**
+ * Where a cover page came from: the book's page, or /art. Only those shapes,
+ * so a posted form cannot turn this into a redirect anywhere else. Slugs
+ * arrive percent-encoded — a Location header cannot carry a Japanese title —
+ * so anything outside ASCII is refused rather than sent.
+ */
+const BACK = /^\/(work\/[A-Za-z0-9%._~-]+|edition\/[0-9a-f-]{36}|art)$/;
+
+/**
+ * A change made on a cover page is done once it is applied: back to the page
+ * the person came from, where the new cover shows. Without a back address
+ * (/art's own "It's right") they stay where they are.
+ */
+function finish(formData: FormData): void {
+  refresh();
+  const back = text(formData, "back");
+  if (BACK.test(back)) redirect(back);
+}
+
 const GONE: CoverState = { ok: false, message: "That book is no longer here." };
 
 export async function uploadCover(_prev: CoverState, formData: FormData): Promise<CoverState> {
@@ -49,7 +69,7 @@ export async function uploadCover(_prev: CoverState, formData: FormData): Promis
   if (!stored.ok) return { ok: false, message: stored.reason };
   // Chosen by a person, so nothing to review.
   await setCover(target, stored.path, "upload", false);
-  refresh();
+  finish(formData);
   return { ok: true, message: "Cover uploaded." };
 }
 
@@ -76,7 +96,7 @@ export async function coverFromUrl(_prev: CoverState, formData: FormData): Promi
   const stored = await downloadCover(url.toString());
   if (!stored.ok) return { ok: false, message: stored.reason };
   await setCover(target, stored.path, "url", false);
-  refresh();
+  finish(formData);
   return { ok: true, message: "Cover saved from that address." };
 }
 
@@ -86,8 +106,11 @@ export async function lookUpCoverAgain(_prev: CoverState, formData: FormData): P
   if (!target) return GONE;
 
   const result = await refreshCover(target);
+  if (result === "found") {
+    finish(formData);
+    return { ok: true, message: "Found one and applied it." };
+  }
   refresh();
-  if (result === "found") return { ok: true, message: "Found one and applied it." };
   if (result === "not-for-fan-translations") {
     return { ok: false, message: "Nothing is looked up for a fan translation: upload its art or keep the placeholder." };
   }
@@ -100,7 +123,7 @@ export async function removeCover(_prev: CoverState, formData: FormData): Promis
   const target = await targetFrom(formData);
   if (!target) return GONE;
   await setCover(target, null, null, false);
-  refresh();
+  finish(formData);
   return { ok: true, message: "Cover removed." };
 }
 
@@ -111,7 +134,7 @@ export async function approveCover(formData: FormData): Promise<void> {
   if (!target) return;
   const table = target.kind === "work" ? works : editions;
   await db.update(table).set({ coverNeedsReview: false }).where(eq(table.id, target.id));
-  refresh();
+  finish(formData);
 }
 
 /**
@@ -179,6 +202,6 @@ export async function applyCoverCandidate(_prev: CoverState, formData: FormData)
   const stored = await downloadCover(url);
   if (!stored.ok) return { ok: false, message: `${stored.reason} Try another.` };
   await setCover(target, stored.path, source, false);
-  refresh();
+  finish(formData);
   return { ok: true, message: "Cover applied." };
 }

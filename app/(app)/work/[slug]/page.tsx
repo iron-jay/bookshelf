@@ -9,10 +9,9 @@ import { SHELF_LABELS } from "@/lib/shelves";
 import { languageName } from "@/lib/languages";
 
 import { Cover } from "../../cover";
-import { ChangeCoverLink } from "../../cover-page";
+import { BackToShelf, ChangeCoverLink, SideLink } from "../../cover-page";
 import { ratingLabel } from "../../shelf-card";
 import { SeriesForm } from "./series-form";
-import { WorkEditForm } from "./work-edit-form";
 
 export const dynamic = "force-dynamic";
 
@@ -75,10 +74,12 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
 
   return (
     <main className="flex-1 p-6">
+      <BackToShelf />
       <div className="flex max-w-4xl flex-col gap-8 sm:flex-row">
         <div className="flex w-40 shrink-0 flex-col gap-3">
           <Cover title={work.title} author={author} coverUrl={work.coverUrl} band={null} />
           <ChangeCoverLink href={`/work/${work.slug}/cover`} needsReview={work.coverNeedsReview} />
+          <SideLink href={`/work/${work.slug}/edit`}>Edit details</SideLink>
         </div>
 
         <div className="flex min-w-0 flex-col gap-3">
@@ -109,18 +110,6 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               ) : null}
             </p>
           </div>
-
-          <WorkEditForm
-            work={{
-              id: work.id,
-              title: work.title,
-              subtitle: work.subtitle,
-              authors: work.authors,
-              authorSort: work.authorSort,
-              firstPublishedYear: work.firstPublishedYear,
-              summary: work.summary,
-            }}
-          />
 
           <SeriesForm
             workId={work.id}

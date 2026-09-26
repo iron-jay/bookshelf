@@ -16,7 +16,17 @@ const BUTTON =
  * rather than taking the first hit. Loaded as the cover page opens: finding
  * them is several queued requests, which is what that page is for.
  */
-export function CoverPicker({ kind, id, seedTerm }: { kind: "work" | "edition"; id: string; seedTerm: string }) {
+export function CoverPicker({
+  kind,
+  id,
+  seedTerm,
+  back,
+}: {
+  kind: "work" | "edition";
+  id: string;
+  seedTerm: string;
+  back: string;
+}) {
   const [candidates, setCandidates] = useState<CoverCandidate[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [term, setTerm] = useState(seedTerm);
@@ -103,6 +113,7 @@ export function CoverPicker({ kind, id, seedTerm }: { kind: "work" | "edition"; 
       <form action={apply} className="flex flex-wrap items-center gap-3">
         <input type="hidden" name="targetKind" value={kind} />
         <input type="hidden" name="targetId" value={id} />
+        <input type="hidden" name="back" value={back} />
         <input type="hidden" name="source" value={chosen?.source ?? ""} />
         <input type="hidden" name="ref" value={chosen?.ref ?? ""} />
         <button type="submit" disabled={!chosen || applying} className={BUTTON}>

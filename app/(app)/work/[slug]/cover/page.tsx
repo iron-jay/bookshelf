@@ -5,11 +5,17 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { works } from "@/lib/db/schema";
 
-import { CoverPage } from "../../../cover-page";
+import { backFor, CoverPage } from "../../../cover-page";
 
 export const dynamic = "force-dynamic";
 
-export default async function WorkCoverPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function WorkCoverPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ from?: string | string[] }>;
+}) {
   await requireUser();
   const { slug } = await params;
 
@@ -32,7 +38,7 @@ export default async function WorkCoverPage({ params }: { params: Promise<{ slug
       needsReview={work.coverNeedsReview}
       canLookUp
       note="The work’s cover shows for any edition without its own. Fan translations never use it."
-      backHref={`/work/${work.slug}`}
+      {...backFor((await searchParams).from, { href: `/work/${encodeURIComponent(work.slug)}`, label: work.title })}
     />
   );
 }

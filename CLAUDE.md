@@ -180,6 +180,8 @@ Books have no SteamGridDB. Art comes from, in order:
      `/work/{slug}/cover` — reached by a "Change cover" button under the
      cover (2026-09-26: folded away under the cover, they were hard to find
      and too cramped to compare covers). The candidates load as it opens.
+     A successful change returns to where the page was opened from — the
+     book, or `/art` (`?from=art`).
    - **Find missing covers** in Settings runs the auto-lookup order for every
      placeholder on the shelf, on demand — the manual refresh in bulk.
 4. **Typeset placeholder** — see §5b. Not an error state: a lot of books,
@@ -262,6 +264,11 @@ form. Used for web serials, zines, ARCs, out-of-print things.
 3. **Work page** — cover, summary, series position, editions.
 4. **Edition page** — your entry, shelf, rating out of ten, review, reads, the
    Book | Audiobook correction, and add to / remove from shelf (two-step).
+   Both have "Back to shelf" at the top — back to the view and the scroll
+   position you left (gameshelf has the same) — and, under the cover, "Change
+   cover" and "Edit details". Details are their own page: `/work/{slug}/edit`
+   for the book, `/edition/{id}/edit` for the book and that edition together,
+   one Save, back to the book.
 5. **Series page** — ordered works, your shelf state for each.
 6. **Settings** — account name and password, export, import, cover art review.
 

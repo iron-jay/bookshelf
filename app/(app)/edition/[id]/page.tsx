@@ -10,9 +10,8 @@ import { isUuid } from "@/lib/uuid";
 import { languageName } from "@/lib/languages";
 
 import { Cover } from "../../cover";
-import { ChangeCoverLink } from "../../cover-page";
+import { BackToShelf, ChangeCoverLink, SideLink } from "../../cover-page";
 import { addTag, addToShelf, readAgainAction, removeTag, setFormat, setRating, setShelf } from "./actions";
-import { EditionEditForm } from "./edition-edit-form";
 import { ReadRow, RemoveFromShelf, ReviewForm } from "./entry-forms";
 
 export const dynamic = "force-dynamic";
@@ -92,14 +91,6 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
     ? await db.select({ name: tags.name }).from(tags).where(eq(tags.userId, user.id)).orderBy(asc(tags.name))
     : [];
 
-  const siblings = entry
-    ? await db
-        .select({ id: editions.id, name: editions.name })
-        .from(editions)
-        .where(eq(editions.workId, work.id))
-        .orderBy(asc(editions.createdAt))
-    : [];
-
   const [base] = edition.baseEditionId
     ? await db
         .select({ id: editions.id, name: editions.name })
@@ -143,6 +134,7 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
 
   return (
     <main className="flex-1 p-6">
+      <BackToShelf />
       <div className="flex max-w-4xl flex-col gap-8 sm:flex-row">
         <div className="flex w-40 shrink-0 flex-col gap-3">
           <Cover
@@ -153,6 +145,8 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
             band={community ? { name: edition.name, credit: edition.credit } : null}
           />
           <ChangeCoverLink href={`/edition/${edition.id}/cover`} needsReview={edition.coverNeedsReview} />
+          {/* Off the shelf, only the work's details are yours to edit. */}
+          <SideLink href={entry ? `/edition/${edition.id}/edit` : `/work/${work.slug}/edit`}>Edit details</SideLink>
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
@@ -175,27 +169,6 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
                 </div>
               ))}
             </dl>
-          ) : null}
-
-          {entry ? (
-            <EditionEditForm
-              edition={{
-                id: edition.id,
-                name: edition.name,
-                kind: edition.kind,
-                credit: edition.credit,
-                language: edition.language,
-                publisher: edition.publisher,
-                publishedOn: edition.publishedOn,
-                pages: edition.pages,
-                durationMinutes: edition.durationMinutes,
-                isbn13: edition.isbn13,
-                url: edition.url,
-                notes: edition.notes,
-                baseEditionId: edition.baseEditionId,
-              }}
-              otherEditions={siblings.filter((s) => s.id !== edition.id)}
-            />
           ) : null}
 
           <form action={setFormat} className="flex items-center gap-3">

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { shelfHref } from "./shelf-view";
+import { askToRestoreShelfScroll, shelfHref } from "./shelf-view";
 
 /**
  * A link back to the shelf as you left it. The destination is read at click
@@ -17,9 +17,12 @@ import { shelfHref } from "./shelf-view";
 export function ShelfLink({
   className,
   children,
+  restoreScroll = false,
 }: {
   className?: string;
   children: React.ReactNode;
+  /** Back where you were on the shelf, not its top: "Back to shelf" on a book. */
+  restoreScroll?: boolean;
 }) {
   const router = useRouter();
 
@@ -32,7 +35,13 @@ export function ShelfLink({
         // Link leaves a click alone once it has been defaulted-prevented, so
         // this replaces its navigation rather than racing it.
         event.preventDefault();
-        router.push(shelfHref());
+        if (restoreScroll) {
+          askToRestoreShelfScroll();
+          // The shelf scrolls itself; Next's scroll-to-top would undo it.
+          router.push(shelfHref(), { scroll: false });
+        } else {
+          router.push(shelfHref());
+        }
       }}
     >
       {children}

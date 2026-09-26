@@ -65,7 +65,7 @@ export default async function ArtPage() {
       subtitle: "Work cover",
       authors: w.authors,
       coverUrl: w.coverUrl,
-      href: `/work/${w.slug}/cover`,
+      href: `/work/${w.slug}/cover?from=art`,
     })),
     ...flaggedEditions.map((e) => ({
       kind: "edition" as const,
@@ -74,7 +74,7 @@ export default async function ArtPage() {
       subtitle: e.name,
       authors: e.authors,
       coverUrl: e.coverUrl,
-      href: `/edition/${e.id}/cover`,
+      href: `/edition/${e.id}/cover?from=art`,
     })),
   ];
 

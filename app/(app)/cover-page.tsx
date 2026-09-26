@@ -1,7 +1,13 @@
 import Link from "next/link";
 
 import { Cover } from "./cover";
+import { ShelfLink } from "./shelf-link";
 import { CoverEditor } from "./cover-editor";
+
+/** Opened from /art, a cover page returns there; otherwise to the book. */
+export function backFor(from: string | string[] | undefined, book: { href: string; label: string }) {
+  return from === "art" ? { backHref: "/art", backLabel: "cover art to review" } : { backHref: book.href, backLabel: book.label };
+}
 
 /**
  * A cover's own page: the current cover large beside every way to change it.
@@ -21,6 +27,7 @@ export function CoverPage({
   canLookUp,
   note,
   backHref,
+  backLabel,
 }: {
   kind: "work" | "edition";
   id: string;
@@ -35,12 +42,14 @@ export function CoverPage({
   canLookUp: boolean;
   note: string | null;
   backHref: string;
+  /** Where the page returns to, when that is not the book (/art). */
+  backLabel: string;
 }) {
   return (
     <main className="flex-1 p-6">
       <p className="mb-2 font-narrow">
         <Link href={backHref} className="text-ink-dim underline hover:text-ink">
-          Back to {heading}
+          Back to {backLabel}
         </Link>
       </p>
       <h1 className="mb-6 text-xl font-medium">Cover for {heading}</h1>
@@ -57,6 +66,7 @@ export function CoverPage({
             canLookUp={canLookUp}
             note={note}
             seedTerm={[title, author?.split(", ")[0]].filter(Boolean).join(" ")}
+            back={backHref}
           />
         </div>
       </div>
@@ -64,14 +74,32 @@ export function CoverPage({
   );
 }
 
-/** The way onto a cover page from under a book's cover: plainly a button. */
-export function ChangeCoverLink({ href, needsReview }: { href: string; needsReview: boolean }) {
+/**
+ * A way off a book page to one of its own pages (cover, details), under the
+ * cover: plainly a button, since as fold-outs they were hard to find.
+ */
+export function SideLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="border border-line bg-panel px-3 py-1.5 text-center font-narrow hover:border-ink-dim"
-    >
-      {needsReview ? "Cover needs review" : "Change cover"}
+    <Link href={href} className="border border-line bg-panel px-3 py-1.5 text-center font-narrow hover:border-ink-dim">
+      {children}
     </Link>
+  );
+}
+
+export function ChangeCoverLink({ href, needsReview }: { href: string; needsReview: boolean }) {
+  return <SideLink href={href}>{needsReview ? "Cover needs review" : "Change cover"}</SideLink>;
+}
+
+/** Top of a book's page: back to the shelf, at the place you left it. */
+export function BackToShelf() {
+  return (
+    <p className="mb-4">
+      <ShelfLink
+        restoreScroll
+        className="inline-block border border-line bg-panel px-3 py-1.5 font-narrow hover:border-ink-dim"
+      >
+        Back to shelf
+      </ShelfLink>
+    </p>
   );
 }

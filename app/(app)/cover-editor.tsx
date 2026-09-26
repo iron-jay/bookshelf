@@ -17,11 +17,13 @@ const BUTTON =
   "w-fit border border-line bg-panel px-3 py-1.5 font-narrow hover:border-ink-dim disabled:text-ink-dim";
 const LINK = "font-narrow text-ink-dim underline hover:text-ink disabled:no-underline";
 
-function Target({ kind, id }: { kind: "work" | "edition"; id: string }) {
+/** Which cover, and where to go once it has changed. */
+function Target({ kind, id, back }: { kind: "work" | "edition"; id: string; back: string }) {
   return (
     <>
       <input type="hidden" name="targetKind" value={kind} />
       <input type="hidden" name="targetId" value={id} />
+      <input type="hidden" name="back" value={back} />
     </>
   );
 }
@@ -40,6 +42,7 @@ export function CoverEditor({
   canLookUp,
   note,
   seedTerm,
+  back,
 }: {
   kind: "work" | "edition";
   id: string;
@@ -51,6 +54,8 @@ export function CoverEditor({
   note?: string | null;
   /** What the picker searches for first: the title and author. */
   seedTerm: string;
+  /** Where a successful change returns to: the page the cover page was opened from. */
+  back: string;
 }) {
   const [uploadState, upload, uploading] = useActionState<CoverState, FormData>(uploadCover, null);
   const [urlState, fromUrl, fetching] = useActionState<CoverState, FormData>(coverFromUrl, null);
@@ -67,7 +72,7 @@ export function CoverEditor({
 
       {needsReview ? (
         <form action={approveCover} className="flex items-center gap-3">
-          <Target kind={kind} id={id} />
+          <Target kind={kind} id={id} back={back} />
           <span>Found by title, so it may be the wrong book.</span>
           <button type="submit" className={BUTTON}>
             It’s right
@@ -78,14 +83,14 @@ export function CoverEditor({
       {canLookUp ? (
         <section className="flex flex-col gap-3">
           <h2 className="font-medium">Covers found</h2>
-          <CoverPicker kind={kind} id={id} seedTerm={seedTerm} />
+          <CoverPicker kind={kind} id={id} seedTerm={seedTerm} back={back} />
         </section>
       ) : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Your own image</h2>
         <form action={upload} onSubmit={() => setLast("upload")} className="flex flex-wrap items-center gap-3">
-          <Target kind={kind} id={id} />
+          <Target kind={kind} id={id} back={back} />
           <FilePicker name="cover" accept="image/jpeg,image/png,image/webp" label="Choose image" />
           <button type="submit" disabled={busy} className={BUTTON}>
             {uploading ? "Uploading…" : "Upload"}
@@ -93,7 +98,7 @@ export function CoverEditor({
         </form>
 
         <form action={fromUrl} onSubmit={() => setLast("url")} className="flex flex-wrap items-center gap-3">
-          <Target kind={kind} id={id} />
+          <Target kind={kind} id={id} back={back} />
           <input
             name="url"
             type="url"
@@ -110,7 +115,7 @@ export function CoverEditor({
       <div className="flex flex-wrap items-center gap-4">
         {canLookUp ? (
           <form action={lookUp} onSubmit={() => setLast("lookup")}>
-            <Target kind={kind} id={id} />
+            <Target kind={kind} id={id} back={back} />
             <button type="submit" disabled={busy} className={LINK}>
               {looking ? "Looking…" : "Look it up again"}
             </button>
@@ -118,7 +123,7 @@ export function CoverEditor({
         ) : null}
         {hasOwnCover ? (
           <form action={remove} onSubmit={() => setLast("remove")}>
-            <Target kind={kind} id={id} />
+            <Target kind={kind} id={id} back={back} />
             <button type="submit" disabled={busy} className={LINK}>
               {removing ? "Removing…" : "Remove cover"}
             </button>

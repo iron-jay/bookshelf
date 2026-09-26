@@ -75,3 +75,39 @@ export function shelfHref(): string {
   const qs = query.toString();
   return qs ? `/?${qs}` : "/";
 }
+
+/**
+ * Where you were on the shelf, for "Back to shelf" on a book's page: half way
+ * down a 400-book shelf is a place, and landing at the top loses it. Kept per
+ * tab (sessionStorage), with the view it belongs to, so it is only restored
+ * onto the same view; and only when that button asks, so the header's
+ * "bookshelf" and a fresh visit still start at the top.
+ */
+const SCROLL_KEY = "bookshelf-shelf-scroll";
+const RESTORE_KEY = "bookshelf-shelf-restore";
+
+export function rememberShelfScroll(query: string, y: number): void {
+  try {
+    sessionStorage.setItem(SCROLL_KEY, JSON.stringify({ query, y: Math.round(y) }));
+  } catch {
+    // Storage blocked: the button still goes back, just to the top.
+  }
+}
+
+export function askToRestoreShelfScroll(): void {
+  try {
+    sessionStorage.setItem(RESTORE_KEY, "1");
+  } catch {}
+}
+
+/** The saved position for this view, once, if the button asked for it. */
+export function takeShelfScroll(query: string): number | null {
+  try {
+    if (sessionStorage.getItem(RESTORE_KEY) !== "1") return null;
+    sessionStorage.removeItem(RESTORE_KEY);
+    const saved = JSON.parse(sessionStorage.getItem(SCROLL_KEY) ?? "null") as { query?: unknown; y?: unknown } | null;
+    return saved && saved.query === query && typeof saved.y === "number" ? saved.y : null;
+  } catch {
+    return null;
+  }
+}

@@ -6,11 +6,17 @@ import { db } from "@/lib/db";
 import { COMMUNITY_EDITION_KINDS, editions, works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
 
-import { CoverPage } from "../../../cover-page";
+import { backFor, CoverPage } from "../../../cover-page";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditionCoverPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditionCoverPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string | string[] }>;
+}) {
   await requireUser();
   const { id } = await params;
   if (!isUuid(id)) notFound();
@@ -44,7 +50,7 @@ export default async function EditionCoverPage({ params }: { params: Promise<{ i
             ? "This is the work’s cover. One set here is this edition’s own."
             : null
       }
-      backHref={`/edition/${edition.id}`}
+      {...backFor((await searchParams).from, { href: `/edition/${edition.id}`, label: community ? edition.name : work.title })}
     />
   );
 }

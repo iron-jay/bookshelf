@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { dateFrom } from "@/lib/books/edit-fields";
 import { changeShelf, readAgain, shelveEdition } from "@/lib/books/shelving";
 import { cleanTagName, ensureTag, tagEntries, untagEntries } from "@/lib/books/tags";
 import { db } from "@/lib/db";
 import { editions, entries, reads, tags } from "@/lib/db/schema";
-import { parseIsbn } from "@/lib/isbn";
 import { isShelf } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
 
@@ -121,13 +121,6 @@ export async function readAgainAction(formData: FormData): Promise<void> {
 }
 
 /** "YYYY-MM-DD" that is a real day, "" for none, or "invalid". */
-function dateFrom(value: string): string | null | "invalid" {
-  if (!value) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "invalid";
-  const date = new Date(`${value}T00:00:00Z`);
-  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? "invalid" : value;
-}
-
 export async function saveRead(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
   const read = await ownRead(user.id, text(formData, "readId"));
@@ -212,109 +205,4 @@ export async function removeFromShelf(formData: FormData): Promise<void> {
   if (entryId) await db.delete(entries).where(eq(entries.id, entryId));
   revalidatePath("/");
   redirect("/");
-}
-
-const EDITION_KINDS = ["original", "translation", "fan_translation", "revised", "abridged", "annotated", "other"] as const;
-
-/**
- * The edition's own details. Open Library's edition data is uneven (§4), so
- * everything it gave is correctable; the person with the book in hand knows.
- * Blank fields become empty rather than kept, so a wrong value can be cleared.
- */
-export async function saveEdition(_prev: FormState, formData: FormData): Promise<FormState> {
-  const user = await requireUser();
-  const editionId = await editionFrom(formData);
-  if (!editionId) return { error: "That edition is no longer here.", saved: false };
-  if (!(await ownEntry(user.id, editionId))) return { error: "Add it to your shelf first.", saved: false };
-  const fail = (error: string): FormState => ({ error, saved: false });
-
-  const name = text(formData, "name");
-  if (!name) return fail("An edition needs a name, like “Paperback, Corgi 1990”.");
-  const kind = text(formData, "kind");
-  if (!(EDITION_KINDS as readonly string[]).includes(kind)) return fail("Choose what kind of edition this is.");
-
-  const languageRaw = text(formData, "language");
-  let language: string | null = null;
-  if (languageRaw) {
-    try {
-      language = Intl.getCanonicalLocales(languageRaw)[0] ?? null;
-    } catch {
-      return fail("That language is not one this server knows.");
-    }
-  }
-
-  const publishedOn = dateFrom(text(formData, "publishedOn"));
-  if (publishedOn === "invalid") return fail("The publication date should be a real day.");
-
-  const whole = (field: string, max: number): number | null | "invalid" => {
-    const value = text(formData, field);
-    if (!value) return null;
-    const n = Number(value);
-    return Number.isInteger(n) && n > 0 && n <= max ? n : "invalid";
-  };
-  const pages = whole("pages", 100_000);
-  if (pages === "invalid") return fail("Pages should be a whole number.");
-  const hours = whole("hours", 999);
-  const minutesText = text(formData, "minutes");
-  const minutes = minutesText ? Number(minutesText) : 0;
-  if (hours === "invalid" || !Number.isInteger(minutes) || minutes < 0 || minutes > 59) {
-    return fail("Length should be whole hours and minutes, minutes under 60.");
-  }
-  const durationMinutes = (hours ?? 0) * 60 + minutes || null;
-
-  const isbnText = text(formData, "isbn");
-  const isbn = isbnText ? parseIsbn(isbnText) : null;
-  if (isbn && isbn.kind !== "isbn") {
-    return fail(isbn.kind === "bad-checksum" ? "That ISBN's check digit is wrong — probably a typo." : "That is not an ISBN.");
-  }
-
-  const urlText = text(formData, "url");
-  let url: string | null = null;
-  if (urlText) {
-    try {
-      const parsed = new URL(urlText);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error();
-      url = parsed.toString();
-    } catch {
-      return fail("The link should start with http:// or https://.");
-    }
-  }
-
-  // The base must be another edition of the same work; the schema forbids an
-  // edition being its own base.
-  const baseId = text(formData, "baseEditionId");
-  const [self] = await db.select({ workId: editions.workId }).from(editions).where(eq(editions.id, editionId));
-  if (baseId) {
-    if (!isUuid(baseId) || baseId === editionId) return fail("Choose another edition of this book as the base.");
-    const [base] = await db
-      .select({ id: editions.id })
-      .from(editions)
-      .where(and(eq(editions.id, baseId), eq(editions.workId, self.workId)));
-    if (!base) return fail("The base edition belongs to a different book.");
-  }
-
-  const rawNotes = formData.get("notes");
-  const notes = typeof rawNotes === "string" && rawNotes.trim() ? rawNotes.trim().slice(0, 5000) : null;
-
-  await db
-    .update(editions)
-    .set({
-      name: name.slice(0, 200),
-      kind: kind as (typeof EDITION_KINDS)[number],
-      credit: text(formData, "credit").slice(0, 200) || null,
-      language,
-      publisher: text(formData, "publisher").slice(0, 200) || null,
-      publishedOn,
-      pages,
-      durationMinutes,
-      isbn13: isbn?.kind === "isbn" ? isbn.isbn.isbn13 : null,
-      isbn10: isbn?.kind === "isbn" ? isbn.isbn.isbn10 : null,
-      url,
-      notes,
-      baseEditionId: baseId || null,
-    })
-    .where(eq(editions.id, editionId));
-
-  revalidatePath("/", "layout");
-  return { error: null, saved: true };
 }

@@ -960,3 +960,43 @@ candidates, as before, and says why.
 Checked on the dev server: all three kinds of cover page render (work,
 edition, fan translation), a bad slug is a 404, the book pages link to them.
 The actions are unchanged. Not clicked through in a browser.
+
+## 2026-09-26 — Edit details page, covers return, back to shelf keeps its place
+
+Jay: editing book details (e.g. make the Dragon Ball entries English); "Use
+this cover" should return to the book; a way back to the shelf that keeps the
+scroll position — gameshelf too.
+
+- **Edit details** is a page, like covers, reached by a button under the
+  cover. `/edition/{id}/edit` has the book's fields (title, subtitle, authors,
+  sort name, year, summary — shared by every edition) and the edition's
+  (name, kind, credit, language, publisher, date, pages, length, ISBN, base,
+  link, notes), saved together in one transaction; `/work/{slug}/edit` the
+  book's alone. Save returns to the book; an error stays with the fields.
+  An edition not on your shelf sends you to the work's edit page, as the
+  edition fields were only ever editable by someone holding it. Validation
+  moved to `lib/books/edit-fields.ts`; the old fold-out forms and their
+  `saveWork` / `saveEdition` actions are gone.
+- **Covers**: every successful change on a cover page (choose, upload, paste,
+  look up again, remove, it's right) redirects back — to the book, or to /art
+  when opened from there (`?from=art`). The return address is checked
+  against the three shapes it can be; failures stay on the page.
+- **Back to shelf** at the top of work and edition pages: the shelf's last
+  view (cookie, as before) at the scroll position you left (sessionStorage,
+  per tab), restored only when that button asks — the header link and a fresh
+  visit still start at the top. The position is recorded only while the
+  address is the shelf's, since opening a book scrolls the new page to the
+  top before the listener is gone. Same change in gameshelf (version and
+  work pages), committed there on its own; its uncommitted auth fixes are
+  still waiting.
+
+Broke and fixed: a redirect to a work with a Japanese slug was a 500 —
+Location headers are ASCII. Slugs in redirects and return addresses are now
+percent-encoded. The failed test had already removed that dev work's cover
+before the redirect; it was restored by looking it up again from Open Library.
+
+Verified with the dev server: all the new pages render; edit with a bad year
+is refused, a good one saves both rows and redirects; editing an edition
+not on the shelf is refused; cover changes redirect to the book, to /art, and
+not to an off-site address; a failed paste stays; the Japanese slug redirects.
+Test book restored. Not verified in a browser: the scroll restore.
