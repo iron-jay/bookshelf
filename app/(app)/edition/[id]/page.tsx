@@ -142,6 +142,7 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
             hasOwnCover={Boolean(edition.coverUrl)}
             needsReview={edition.coverNeedsReview}
             canLookUp={!community}
+            seedTerm={[work.title, work.authors[0]].filter(Boolean).join(" ")}
             note={
               community
                 ? "A fan translation shows its own art or the typeset cover — never the book’s."

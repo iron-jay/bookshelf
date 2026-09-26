@@ -171,6 +171,13 @@ Books have no SteamGridDB. Art comes from, in order:
    `cover_needs_review = true`.
 3. **Upload, or paste an image URL.** Always available. `cover_source = 'upload'`
    or `'url'`. The pasted URL is downloaded once, never hot-linked.
+   - Or **choose from covers found** (as gameshelf's art picker): the edition's
+     own, the work's, other editions' (capped), Google by ISBN and by title,
+     plus a free-text search, Google first. The page sends back a source and an
+     id — never an address — and the server builds the URL. Not offered for fan
+     translations: every candidate is an official cover.
+   - **Find missing covers** in Settings runs the auto-lookup order for every
+     placeholder on the shelf, on demand — the manual refresh in bulk.
 4. **Typeset placeholder** — see §5b. Not an error state: a lot of books,
    and most fan translations, will live here permanently and should look
    deliberate.

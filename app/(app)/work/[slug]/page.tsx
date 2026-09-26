@@ -84,6 +84,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             hasOwnCover={Boolean(work.coverUrl)}
             needsReview={work.coverNeedsReview}
             canLookUp
+            seedTerm={[work.title, work.authors[0]].filter(Boolean).join(" ")}
             note="The work’s cover shows for any edition without its own. Fan translations never use it."
           />
         </div>

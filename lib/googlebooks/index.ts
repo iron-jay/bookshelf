@@ -85,3 +85,27 @@ export async function coverByTitle(title: string, author: string | null): Promis
   }
   return null;
 }
+
+export type GoogleCandidate = GoogleCover & { title: string };
+
+/**
+ * Every volume with art for a query, for the cover picker — where a person
+ * chooses, so the first hit is not taken on trust as the lookups above do.
+ * `query` is Google's own syntax: "isbn:…", or free text.
+ */
+export async function coverCandidates(query: string, max = 10): Promise<GoogleCandidate[]> {
+  return (await volumes(query, max)).flatMap((volume) => {
+    const cover = coverFrom(volume);
+    return cover ? [{ ...cover, title: volume.volumeInfo?.title ?? "" }] : [];
+  });
+}
+
+/**
+ * A volume's cover by id alone, built rather than fetched, so the picker can
+ * be sent a volume id and never an address. Ids are Google's short
+ * alphanumeric strings; anything else is refused.
+ */
+export function coverUrlForVolume(volumeId: string): string | null {
+  if (!/^[A-Za-z0-9_-]{6,20}$/.test(volumeId)) return null;
+  return `https://books.google.com/books/content?id=${volumeId}&printsec=frontcover&img=1&zoom=1`;
+}

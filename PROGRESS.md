@@ -782,3 +782,30 @@ Then **Group by shelf** (To read, Reading, Finished, Did not finish, in shelf
 order) and **Group by year added** (the entry's `added_at` — Goodreads' Date
 Added for an import, so an imported library spreads over the years it was
 built). Checked against the dev database's shelf counts (4 / 3 / 5 / 1).
+
+---
+
+## 2026-09-26 — Choose a cover from what the lookups find
+
+Jay asked for gameshelf's pick-from-results cover chooser. **Change cover →
+Choose from covers found** on work and edition pages shows a grid of
+candidates and a free-text search; picking one and "Use this cover" applies
+it (no review — a person chose it). `lib/books/cover-candidates.ts`:
+
+- Order: this edition's cover, the work's covers, Google by ISBN, up to 16 of
+  the work's other editions, Google by title. The first version capped the
+  grid at 36 before Google got a look-in — Guards! Guards! has 58 editions — so
+  each source now has its share.
+- Search puts Google first: Open Library's search answered "halo divine wind"
+  with "Mesopotamian medicine"; Google's first result was the book.
+- The page sends `source` + `ref` (an Open Library cover id or a Google volume
+  id); the server builds the download URL. A `ref` of `http://127.0.0.1:9/evil`
+  is refused, as is an unknown source.
+- Not for fan translations, in the page and in the actions — every candidate is
+  an official cover (§4a).
+
+Verified through the actions with the real Google key: 25 candidates for the
+Corgi paperback in that order, search finding Halo: Divine Wind first, an Open
+Library candidate applied (old file deleted), a Google one applied (review
+cleared), and the four refusals. Brief §4a updated. The test cover put on the
+play script was removed afterwards.

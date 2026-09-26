@@ -10,6 +10,7 @@ import {
   uploadCover,
   type CoverState,
 } from "./cover-actions";
+import { CoverPicker } from "./cover-picker";
 import { FilePicker } from "./file-picker";
 
 const BUTTON =
@@ -37,6 +38,7 @@ export function CoverEditor({
   needsReview,
   canLookUp,
   note,
+  seedTerm,
 }: {
   kind: "work" | "edition";
   id: string;
@@ -46,6 +48,8 @@ export function CoverEditor({
   canLookUp: boolean;
   /** A line saying whose cover is on screen, when it is not this row's own. */
   note?: string | null;
+  /** What the picker searches for first: the title and author. */
+  seedTerm: string;
 }) {
   const [uploadState, upload, uploading] = useActionState<CoverState, FormData>(uploadCover, null);
   const [urlState, fromUrl, fetching] = useActionState<CoverState, FormData>(coverFromUrl, null);
@@ -74,6 +78,8 @@ export function CoverEditor({
             </button>
           </form>
         ) : null}
+
+        {canLookUp ? <CoverPicker kind={kind} id={id} seedTerm={seedTerm} /> : null}
 
         <form action={upload} onSubmit={() => setLast("upload")} className="flex flex-wrap items-center gap-3">
           <Target kind={kind} id={id} />
