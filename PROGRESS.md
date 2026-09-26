@@ -901,3 +901,31 @@ dropped, an unknown id and malformed data refused. Test book restored.
 Not verified: the bookmarklet in a real browser (no browser here) —
 window.open from a Goodreads tab, postMessage across the two origins, and
 whether Goodreads' page security blocks bookmarklets in Jay's browser.
+
+## 2026-09-26 — Goodreads fill: pick the book when nothing matches
+
+Jay: when the bookmarklet finds no book with the page's Goodreads id, let him
+choose which entry it belongs to — books missing a cover first, expandable.
+
+- `/goodreads-fill` with no match now lists your books instead of stopping:
+  no cover or cover to review first (the only ones shown until "All books"),
+  titles most like the Goodreads one at the top of each group, a
+  title/author filter, 60 rows at a time. Fan translations are never listed
+  or accepted: every Goodreads cover is official (§4a).
+- Picking one previews it as before, with "Choose a different book" to go
+  back. Apply also stores the Goodreads id on that edition, when it has none
+  and no other book of yours has this one, so the next click matches
+  directly and a re-import of that CSV row resumes onto it.
+- `previewGoodreads` / `applyGoodreads` take an optional edition id;
+  `lib/books/goodreads-fill.ts` gained `findEditionTarget` and
+  `listFillCandidates`, sharing one lookup with `findGoodreadsTarget`.
+
+Verified through the actions on the dev database: an unlinked page listed the
+two cover-less books first, the likest title on top, no fan translations; a
+picked book previewed; a fan translation's id and a junk id were refused;
+Apply filled the Goodreads link, description, year and cover; the next click
+matched by id with nothing left to fill. Test book restored.
+
+Still not verified in a real browser. Known wrinkle: a hand-made local work
+linked this way now shows in Settings' "Added as local works" list, which
+reads any local edition with a Goodreads id as an unmatched import.

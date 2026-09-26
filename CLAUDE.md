@@ -223,7 +223,10 @@ GraphQL, beta, free plan 60/minute and 5,000/day):
     bookmarklet.ts`) reads the Goodreads page being viewed — the
     `__NEXT_DATA__` Book, `og:` tags as fallback — and posts it to
     `/goodreads-fill`, which accepts messages only from www.goodreads.com,
-    finds the edition by `goodreads_book_id`, previews, and on Apply fills
+    finds the edition by `goodreads_book_id` — or, when none has it, lists
+    your books to pick from (no cover or cover to review first, "all books"
+    on request; never fan translations) and links the pick to that id —
+    previews, and on Apply fills
     empty fields: description, year, series on the work; cover on the edition
     (a Goodreads id names an edition), optionally replacing one. Cover
     addresses are accepted only on Goodreads' image hosts (Amazon's).

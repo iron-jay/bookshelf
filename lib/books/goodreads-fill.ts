@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne, type SQL } from "drizzle-orm";
 
 import { downloadCover } from "@/lib/covers";
 import { db } from "@/lib/db";
@@ -7,6 +7,7 @@ import type { GoodreadsPageData } from "@/lib/goodreads-bookmarklet";
 
 import { setCover } from "./covers";
 import { parsePosition, setWorkSeries } from "./series";
+import { fold } from "./titles";
 
 /**
  * Goodreads' covers come from Amazon's image servers (or Goodreads' older
@@ -40,20 +41,22 @@ export type GoodreadsTarget = {
   editionName: string;
   workId: string;
   workTitle: string;
+  goodreadsBookId: number | null;
   missing: { description: boolean; year: boolean; series: boolean; cover: boolean };
   coverNeedsReview: boolean;
 };
 
 /**
- * Your edition with that Goodreads id — the import stored it on every book it
- * brought in. What is empty is worked out from what the shelf shows, so a
- * cover inherited from the work counts as a cover.
+ * One of your editions, with what is empty worked out from what the shelf
+ * shows, so a cover inherited from the work counts as a cover. Never a fan
+ * translation: every Goodreads cover is an official one (§4a).
  */
-export async function findGoodreadsTarget(userId: string, goodreadsId: number): Promise<GoodreadsTarget | null> {
+async function findTarget(userId: string, which: SQL): Promise<GoodreadsTarget | null> {
   const [row] = await db
     .select({
       editionId: editions.id,
       editionName: editions.name,
+      goodreadsBookId: editions.goodreadsBookId,
       workId: works.id,
       workTitle: works.title,
       summary: works.summary,
@@ -63,7 +66,7 @@ export async function findGoodreadsTarget(userId: string, goodreadsId: number): 
     .from(editions)
     .innerJoin(works, eq(works.id, editions.workId))
     .innerJoin(entries, and(eq(entries.editionId, editions.id), eq(entries.userId, userId)))
-    .where(eq(editions.goodreadsBookId, goodreadsId))
+    .where(and(which, ne(editions.kind, "fan_translation")))
     .limit(1);
   if (!row) return null;
 
@@ -77,6 +80,7 @@ export async function findGoodreadsTarget(userId: string, goodreadsId: number): 
     editionName: row.editionName,
     workId: row.workId,
     workTitle: row.workTitle,
+    goodreadsBookId: row.goodreadsBookId,
     missing: {
       description: row.summary === null,
       year: row.year === null,
@@ -87,21 +91,97 @@ export async function findGoodreadsTarget(userId: string, goodreadsId: number): 
   };
 }
 
+/** Your edition with that Goodreads id — the import stored it on every book it brought in. */
+export function findGoodreadsTarget(userId: string, goodreadsId: number): Promise<GoodreadsTarget | null> {
+  return findTarget(userId, eq(editions.goodreadsBookId, goodreadsId));
+}
+
+/** One of your editions by id, for a book picked by hand. */
+export function findEditionTarget(userId: string, editionId: string): Promise<GoodreadsTarget | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(editionId)) return Promise.resolve(null);
+  return findTarget(userId, eq(editions.id, editionId));
+}
+
+export type FillCandidate = {
+  editionId: string;
+  title: string;
+  authors: string[];
+  editionName: string;
+  cover: "missing" | "review" | "ok";
+};
+
+/**
+ * Books on your shelf to fill from a Goodreads page no edition is linked to:
+ * those missing a cover (or with one to review) first, then the rest, each
+ * group with titles most like the page's at the top. The page shows the first
+ * group and expands to the rest on request.
+ */
+export async function listFillCandidates(userId: string, goodreadsTitle: string | null): Promise<FillCandidate[]> {
+  const rows = await db
+    .select({
+      editionId: entryCards.editionId,
+      title: entryCards.workTitle,
+      authors: entryCards.authors,
+      editionName: entryCards.editionName,
+      coverUrl: entryCards.coverUrl,
+      review: entryCards.coverNeedsReview,
+    })
+    .from(entryCards)
+    .where(and(eq(entryCards.userId, userId), eq(entryCards.isCommunityEdition, false)));
+
+  // Goodreads' title carries the series in brackets; the words before it are
+  // the ones worth comparing.
+  const wanted = new Set(fold((goodreadsTitle ?? "").replace(/\s*\([^)]*#[^)]*\)\s*$/, "")).split(" ").filter(Boolean));
+  const likeness = (title: string) => {
+    if (!wanted.size) return 0;
+    const own = fold(title).split(" ").filter(Boolean);
+    return own.filter((w) => wanted.has(w)).length / Math.max(wanted.size, own.length);
+  };
+
+  const candidates: FillCandidate[] = rows.map((r) => ({
+    editionId: r.editionId!,
+    title: r.title ?? "",
+    authors: r.authors ?? [],
+    editionName: r.editionName ?? "",
+    cover: !r.coverUrl ? "missing" : r.review ? "review" : "ok",
+  }));
+  const score = new Map(candidates.map((c) => [c.editionId, likeness(c.title)]));
+  return candidates.sort(
+    (a, b) =>
+      Number(a.cover === "ok") - Number(b.cover === "ok") ||
+      score.get(b.editionId)! - score.get(a.editionId)! ||
+      a.title.localeCompare(b.title),
+  );
+}
+
 /**
  * Fills the empty fields from the page: description, year and series on the
  * work; the cover on the edition, since a Goodreads id names one edition and
  * its art is that edition's. The cover is replaced only when there is none,
  * it is waiting for review, or the person ticked "replace".
+ *
+ * `editionId` is the book the person picked when no edition had the page's
+ * Goodreads id. That edition is linked to it, if it has no Goodreads id of its
+ * own and no other book of theirs has this one, so the next click finds it —
+ * and a later import of the same CSV row resumes onto it instead of adding a
+ * second copy.
  */
 export async function applyGoodreadsFill(
   userId: string,
   data: GoodreadsPageData,
   replaceCover: boolean,
+  editionId?: string,
 ): Promise<{ target: GoodreadsTarget; filled: string[] } | { error: string }> {
-  const target = await findGoodreadsTarget(userId, data.goodreadsId);
-  if (!target) return { error: "No book on your shelf has that Goodreads id." };
+  const target = editionId
+    ? await findEditionTarget(userId, editionId)
+    : await findGoodreadsTarget(userId, data.goodreadsId);
+  if (!target) return { error: editionId ? "That book is not on your shelf." : "No book on your shelf has that Goodreads id." };
 
   const filled: string[] = [];
+  if (editionId && target.goodreadsBookId === null && !(await findGoodreadsTarget(userId, data.goodreadsId))) {
+    await db.update(editions).set({ goodreadsBookId: data.goodreadsId }).where(eq(editions.id, target.editionId));
+    filled.push("Goodreads link");
+  }
   const position = data.position ? parsePosition(data.position) : null;
   await db.transaction(async (tx) => {
     const set: Partial<typeof works.$inferInsert> = {};
