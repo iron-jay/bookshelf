@@ -8,6 +8,9 @@ import { editions, entries, entryCards, works } from "@/lib/db/schema";
 import { hardcoverEnabled } from "@/lib/hardcover";
 
 import { AccountForm } from "./account-form";
+import { bookmarkletHref } from "@/lib/goodreads-bookmarklet";
+
+import { BookmarkletLink } from "./bookmarklet-link";
 import { GoodreadsImport } from "./goodreads-import";
 import { HardcoverFill } from "./hardcover-fill";
 import { MissingCovers } from "./missing-covers";
@@ -117,6 +120,14 @@ export default async function SettingsPage() {
             to out of ten, and series come from titles like “Guards! Guards! (Discworld, #8)”.
           </p>
           <GoodreadsImport />
+
+          <h3 className="mt-6 font-medium">One book at a time</h3>
+          <p className="mb-3 font-narrow text-ink-dim">
+            For a book nothing else fills in: drag this to your bookmarks bar. Then on a book’s Goodreads page — each
+            imported book links to its own, under its details — click it, check what it found, and Apply. It reads
+            the page in your browser; bookshelf never contacts Goodreads itself.
+          </p>
+          <BookmarkletLink href={bookmarkletHref(process.env.ORIGIN ?? "http://localhost:3001")} />
 
           {unmatched.length > 0 ? (
             <div className="mt-6">

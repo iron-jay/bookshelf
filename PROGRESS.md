@@ -864,3 +864,40 @@ passes — local cache state, not code.
 tomos, two High Republic audio dramas, Sandman Act I, and a few one-offs.
 Their editions link to Goodreads for pasting a cover; adding them to Open
 Library would make them match for everyone.
+
+---
+
+## 2026-09-26 — Goodreads, one book at a time, via a bookmarklet
+
+Jay asked for per-book filling from Goodreads. A server-side "fetch this id"
+button would still be automated fetching of Goodreads (against its terms,
+fragile), so — his choice of three — it is a **bookmarklet**: run in his own
+browser on the Goodreads page he is looking at.
+
+- `lib/goodreads-bookmarklet.ts`: `extract()` reads the page's `__NEXT_DATA__`
+  (the Book by legacyId: title, stripped description, imageUrl, first
+  bookSeries + position, the work's original publicationTime) with `og:` tags as
+  fallback; shipped as source text so the same function runs in the
+  bookmarklet and in tests. The bookmarklet opens `/goodreads-fill` and posts
+  the data only after that page says it is ready, only to bookshelf's ORIGIN.
+- `/goodreads-fill` listens only to `https://www.goodreads.com`, previews what
+  would fill (by `goodreads_book_id`), and Apply fills empty fields —
+  description, year, series on the work; the cover on the edition — with an
+  optional "replace the current cover". Payload checked server-side; cover
+  addresses only on Amazon's / Goodreads' image hosts.
+- Settings → One book at a time: the draggable link (set client-side — React
+  refuses `javascript:` hrefs, rightly, for anything user-built).
+
+To write the parser, one Goodreads page (Guards! Guards!, id 64216) was loaded
+once and saved; bookshelf itself never fetches Goodreads. Verified: `extract`
+on that page (title, full description, Amazon cover, Discworld #8, 1989 — the
+original year), the og: fallback, null off a book page, and the bookmarklet as
+valid JavaScript. Through the actions on a dev test book given that id:
+preview listed the empty fields; Apply filled description, year and the
+edition's cover (downloaded from Amazon); a second Apply changed nothing;
+replace swapped the cover and deleted the old file; a foreign cover host was
+dropped, an unknown id and malformed data refused. Test book restored.
+
+Not verified: the bookmarklet in a real browser (no browser here) —
+window.open from a Goodreads tab, postMessage across the two origins, and
+whether Goodreads' page security blocks bookmarklets in Jay's browser.

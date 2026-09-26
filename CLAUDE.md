@@ -214,9 +214,19 @@ GraphQL, beta, free plan 60/minute and 5,000/day):
 - All access through `lib/hardcover/`. No token: nothing is requested. Every
   failure is "nothing found". Terms: personal use; no training AI models on the
   data.
-- **Goodreads itself is not a source.** It has had no public API since 2020;
-  the private one some apps use (Grimmory) breaks its terms. An imported
-  edition links to its Goodreads page instead, for pasting a cover by hand.
+- **Goodreads itself is not a server-side source.** It has had no public API
+  since 2020; the private one some apps use (Grimmory) breaks its terms, and
+  server fetching of its pages is the "robots / data extraction" its terms
+  prohibit. Instead, one book at a time, in the person's own browser:
+  - An imported edition links to its Goodreads page ("View on Goodreads").
+  - The **bookmarklet** (Settings → One book at a time; `lib/goodreads-
+    bookmarklet.ts`) reads the Goodreads page being viewed — the
+    `__NEXT_DATA__` Book, `og:` tags as fallback — and posts it to
+    `/goodreads-fill`, which accepts messages only from www.goodreads.com,
+    finds the edition by `goodreads_book_id`, previews, and on Apply fills
+    empty fields: description, year, series on the work; cover on the edition
+    (a Goodreads id names an edition), optionally replacing one. Cover
+    addresses are accepted only on Goodreads' image hosts (Amazon's).
 
 ### Adding a fan translation (the important flow)
 
