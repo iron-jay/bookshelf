@@ -220,6 +220,11 @@ GraphQL, beta, free plan 60/minute and 5,000/day):
   Hardcover is a source of details, not the catalogue.
 - **Settings → Fill in from Hardcover**: the same for local works already
   here. Fills only empty fields; never overwrites.
+- **Search** (2026-10-11): book search shows Hardcover's results beside Open
+  Library's, minus any Open Library already has (same strict rule) or that is
+  here already (`hardcover_id`). Adding one (`/add/hardcover/{id}`) makes a
+  local work from Hardcover's answer, fetched by id on the server
+  (`books_by_pk`), with a plain Book or Audiobook edition.
 - **Covers**: after Google-by-ISBN and before Google-by-title in the lookup
   order, and a candidate source in the picker (`cover_source = 'hardcover'`).
 - Matching is the importer's strict rule (`lib/books/titles.ts`: `sameTitle`
@@ -246,6 +251,27 @@ GraphQL, beta, free plan 60/minute and 5,000/day):
     (a Goodreads id names an edition), optionally replacing one. Cover
     addresses are accepted only on Goodreads' image hosts (Amazon's).
 
+## 4c. Comic Vine (optional) — comics and graphic novels
+
+Added 2026-10-11. With `COMICVINE_API_KEY` set (free with a Comic Vine
+account), Door A's "Add comic or graphic novel" searches Comic Vine. Without
+it that tab says how to get one and offers "create it by hand".
+
+- Comic Vine's volume is a run (Saga, Image, 2012) or a collected edition;
+  its issues are what you shelve — a single issue, a trade paperback, a
+  graphic novel. **One issue is one work**, found again by
+  `works.comicvine_issue_id`, `source = 'comicvine'`. A volume of more than
+  one issue is the work's series, numbered by the issue; a volume of one is a
+  graphic novel, titled by the volume alone. Writers are the authors (everyone
+  credited when no writer is). One plain "Book" edition; covers are
+  `cover_source = 'comicvine'`.
+- Search `/add/comic?q=` lists volumes; `/add/comic/{volumeId}` its issues
+  (the first hundred) to pick from. The issue is fetched again by id on add.
+- All access through `lib/comicvine/`, serialised a second apart: its terms
+  allow 200 requests per resource an hour and block bursts. Non-commercial use
+  only, and **a link back wherever its data is shown**: the add pages credit
+  it, and a comic's work page links to its Comic Vine page.
+
 ### Adding an edition or a book by hand
 
 From any work page: **Add edition** → kind, name, base edition, credit, URL,
@@ -266,8 +292,8 @@ form. Used for web serials, zines, ARCs, out-of-print things.
    "Not finished" before the years and "Finished, date unknown" after them. Filter-by-title box filters on the client
    per keystroke (gameshelf 2026-09-18). Selection checkboxes with bulk shelf
    change.
-2. **Search** — one box, Open Library results and local works interleaved,
-   clearly marked. ISBN typed or pasted goes straight to the edition. A result
+2. **Search** — one box, Open Library results, Hardcover's (for what Open
+   Library lacks) and local works interleaved, clearly marked. ISBN typed or pasted goes straight to the edition. A result
    already on your shelf links to its entry.
 3. **Work page** — cover, summary, series position, editions.
 4. **Edition page** — your entry, shelf, rating out of ten, review, reads, the
@@ -307,11 +333,12 @@ the Goodreads export carries it, so reads stay visible — but minimal:
 There is **one** add flow. It always produces an edition attached to a work.
 
 ```
-Door A — "Add book" in the top bar
-  └ Book              → Open Library search (or ISBN) → pick work →
+Door A — "Add" in the top bar: "Add book" | "Add comic or graphic novel"
+  └ Book              → Open Library + Hardcover search (or ISBN) → pick work →
                         Book | Audiobook → pick edition from their list, or
                         "any edition" which creates a plain one named
                         "Book" or "Audiobook"; or "Create it manually"
+  └ Comic             → Comic Vine search → pick volume → pick issue (§4c)
 
 Door B — "Add edition" on an existing work page
   work already known; straight to kind + details
@@ -505,7 +532,8 @@ differences.
 - First user defaults to `admin`; name and password changeable in Settings.
 - Env vars: `DATABASE_URL`, `SESSION_SECRET`, `ORIGIN`, `ADMIN_USERNAME`,
   `ADMIN_PASSWORD`, `AUTH_DISABLED`, `COVERS_DIR`, `OPENLIBRARY_CONTACT`,
-  optional `GOOGLE_BOOKS_API_KEY` and `HARDCOVER_API_TOKEN`.
+  optional `GOOGLE_BOOKS_API_KEY`, `HARDCOVER_API_TOKEN` and
+  `COMICVINE_API_KEY`.
 - `pg_dump` nightly via cron alongside gameshelf's.
 
 ---

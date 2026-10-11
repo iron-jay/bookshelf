@@ -118,10 +118,29 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             <p className="font-narrow text-ink-dim">
               {[
                 work.firstPublishedYear,
-                work.source === "local" ? "Added by hand" : "Open Library",
+                work.source === "openlibrary"
+                  ? "Open Library"
+                  : work.source === "local"
+                    ? work.hardcoverId
+                      ? "Hardcover"
+                      : "Added by hand"
+                    : null,
               ]
                 .filter(Boolean)
                 .join(" · ")}
+              {/* Comic Vine asks for a link back wherever its data is shown. */}
+              {work.comicvineIssueId ? (
+                <>
+                  {work.firstPublishedYear ? " · " : ""}
+                  <a
+                    href={`https://comicvine.gamespot.com/issue/4000-${work.comicvineIssueId}/`}
+                    rel="noreferrer"
+                    className="underline hover:text-ink"
+                  >
+                    Comic Vine
+                  </a>
+                </>
+              ) : null}
               {work.olWorkKey ? (
                 <>
                   {" · "}

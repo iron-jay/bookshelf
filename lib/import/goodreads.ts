@@ -83,6 +83,15 @@ const ENTITIES: Readonly<Record<string, string>> = {
   quot: '"',
   apos: "'",
   nbsp: " ",
+  // Typographic ones, which Comic Vine's descriptions are full of.
+  ndash: "–",
+  mdash: "—",
+  hellip: "…",
+  lsquo: "‘",
+  rsquo: "’",
+  ldquo: "“",
+  rdquo: "”",
+  eacute: "é",
 };
 
 /**

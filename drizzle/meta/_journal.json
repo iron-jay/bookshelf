@@ -43,6 +43,13 @@
       "when": 1791710888804,
       "tag": "0005_collections",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791711236550,
+      "tag": "0006_comicvine",
+      "breakpoints": true
     }
   ]
 }

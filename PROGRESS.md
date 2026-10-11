@@ -1110,3 +1110,45 @@ Checked on dev: a series and a book with no series put in one collection
 (the second typed in different case joined it); entry_cards, the shelf's
 groups, the collection page and the work page's link all show it; clearing
 both deleted the collection and its page 404s.
+
+## 2026-10-11 — Comics from Comic Vine; Hardcover in book search
+
+Jay: "when clicking add, next page 'add book' or 'add comic/graphic novel'
+searches openlibrary hardcover or comic vine respectively". A comic on the
+shelf is a volume or graphic novel (his choice) — in Comic Vine's terms, an
+issue, since collected editions are volumes whose issues are "Volume One"…
+
+- The nav says **Add**; `/add` and `/add/comic` carry the two tabs.
+- **Book search** (`/search`, which "Add book" uses) now asks Hardcover beside
+  Open Library, in parallel, and keeps a Hardcover result only when Open
+  Library has nothing passing the import's strict same-book rule and it is not
+  here already. `/add/hardcover/{id}` → `addHardcoverBook` fetches the book by
+  id (`getBook`: `books_by_pk`, field names checked live) and makes a local
+  work with its details, series and cover.
+- **Comics**: `lib/comicvine/` (optional `COMICVINE_API_KEY`; serialised
+  1.1 s; status 100 = key rejected, warned once; only its own image host).
+  `/add/comic?q=` lists volumes; `/add/comic/{volumeId}` the issues (first
+  100, number order) to pick; `addComicBook` fetches the issue and its volume
+  by id. Migration `0006`: `source_kind` and `art_source` gain `comicvine`,
+  `works.comicvine_issue_id` (unique). Title: a one-issue volume is its
+  volume's name; else "Saga: Volume One" or "Saga #12". Volume of more than
+  one issue = series, issue number = position. Writers are the authors.
+  Credit to Comic Vine on the add pages and a link on the comic's work page,
+  as its terms ask.
+- Both go through `lib/books/add-from-catalogue.ts`: find the work by its
+  catalogue id or create it, the plain edition (`ensurePlainEdition`), the
+  entry, then the cover after commit for a new work only.
+- `reviewText` now decodes typographic entities (&ndash; and friends).
+
+Verified live: Hardcover search ("the fall of reach" shows three Hardcover-
+only results and suppresses its copies of Open Library's); a Hardcover add
+(series Halo #1, cover, year, description; Reading opened a read) and a second
+add reported "already"; test data and its cover removed. Comic Vine **not
+tested live** — no key here. Its client was run against stand-in responses in
+its documented shape: search, issue ordering (2 before 10), blank-art
+placeholder dropped, writers as authors, HTML description, a rejected key as
+"nothing" — all as intended. Without a key the comic tab explains and offers
+"create it by hand"; the volume page 404s.
+
+Next: a real Comic Vine key, to check the live shapes (image keys, person
+credit roles) and a full add.

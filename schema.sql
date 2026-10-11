@@ -13,7 +13,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Where a record came from. 'openlibrary' rows are cached upstream data and
 -- may be refreshed; 'local' rows are user-authored and never overwritten.
-CREATE TYPE source_kind AS ENUM ('openlibrary', 'local');
+-- 'comicvine' (0006): a comic or graphic novel added from Comic Vine.
+CREATE TYPE source_kind AS ENUM ('openlibrary', 'local', 'comicvine');
 
 -- What an edition *is*, relative to its work. Fanfic, podfic and fan edits
 -- were dropped on 2026-09-25 (0001), fan translations on 2026-10-11 (0004).
@@ -34,7 +35,8 @@ CREATE TYPE book_format AS ENUM ('book', 'audiobook');
 
 -- Where a cover image came from, so it can be re-fetched or left alone.
 -- 'hardcover' added 2026-09-26 (0002): the optional Hardcover source.
-CREATE TYPE art_source AS ENUM ('openlibrary', 'googlebooks', 'url', 'upload', 'hardcover');
+-- 'comicvine' added 2026-10-11 (0006).
+CREATE TYPE art_source AS ENUM ('openlibrary', 'googlebooks', 'url', 'upload', 'hardcover', 'comicvine');
 
 -- The shelves, in the order a shelf reads in. The UI calls these shelves and
 -- the free-form ones tags; gameshelf reached that naming after launch, so here
@@ -139,6 +141,9 @@ CREATE TABLE works (
   -- The Hardcover book that filled in a local work's details (optional source,
   -- 0002). Set once; a fill-in run skips works that have it. NULL otherwise.
   hardcover_id          integer,
+  -- The Comic Vine issue a comic was added from (0006). One work per issue,
+  -- so adding it twice finds the first.
+  comicvine_issue_id    integer UNIQUE,
   source                source_kind NOT NULL DEFAULT 'openlibrary',
   created_by            uuid REFERENCES users(id) ON DELETE SET NULL,
   created_at            timestamptz NOT NULL DEFAULT now(),

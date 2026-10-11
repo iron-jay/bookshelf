@@ -36,7 +36,7 @@ import {
 
 // ---------------------------------------------------------------- enums
 
-export const sourceKind = pgEnum("source_kind", ["openlibrary", "local"]);
+export const sourceKind = pgEnum("source_kind", ["openlibrary", "local", "comicvine"]);
 
 export const editionKind = pgEnum("edition_kind", [
   "original",
@@ -49,7 +49,7 @@ export const editionKind = pgEnum("edition_kind", [
 
 export const bookFormat = pgEnum("book_format", ["book", "audiobook"]);
 
-export const artSource = pgEnum("art_source", ["openlibrary", "googlebooks", "url", "upload", "hardcover"]);
+export const artSource = pgEnum("art_source", ["openlibrary", "googlebooks", "url", "upload", "hardcover", "comicvine"]);
 
 /** Declared in the order a shelf reads in. No wishlist: tbr is "want to read". */
 export const shelfStatus = pgEnum("shelf_status", ["tbr", "reading", "finished", "dnf"]);
@@ -140,6 +140,8 @@ export const works = pgTable(
     olPayload: jsonb("ol_payload"),
     olSyncedAt: timestamp("ol_synced_at", { withTimezone: true }),
     hardcoverId: integer("hardcover_id"),
+    /** The Comic Vine issue a comic was added from (0006): one work per issue. */
+    comicvineIssueId: integer("comicvine_issue_id").unique("works_comicvine_issue_id_key"),
     source: sourceKind("source").notNull().default("openlibrary"),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -1,3 +1,5 @@
+import { sameTitle, shareAnAuthor } from "@/lib/books/titles";
+import type { HardcoverBook } from "@/lib/hardcover";
 import type { OlWorkSummary } from "@/lib/openlibrary";
 
 export type LocalWork = {
@@ -9,12 +11,19 @@ export type LocalWork = {
   authors: string[];
   firstPublishedYear: number | null;
   coverUrl: string | null;
-  source: "openlibrary" | "local";
+  source: "openlibrary" | "local" | "comicvine";
+  /** The Hardcover book it was added from or filled in by, if any. */
+  hardcoverId: number | null;
   /** Your entries on this work's editions. */
   entryEditionIds: string[];
 };
 
-export type Cover = { kind: "openlibrary"; id: number } | { kind: "local"; url: string } | null;
+export type Cover =
+  | { kind: "openlibrary"; id: number }
+  | { kind: "local"; url: string }
+  /** Hardcover's art, shown from its own host until the book is added. */
+  | { kind: "remote"; url: string }
+  | null;
 
 export type SearchResult = {
   key: string;
@@ -24,10 +33,11 @@ export type SearchResult = {
   year: number | null;
   cover: Cover;
   /**
-   * Where the result lives. "local" is a work Open Library has never heard of —
-   * a fic, a zine. "saved" is an Open Library work already on this server.
+   * Where the result lives. "local" is a work no catalogue had — a zine, an
+   * ARC. "saved" is an Open Library work already on this server, "comic" a
+   * Comic Vine one. "hardcover" is a book only Hardcover has, not added yet.
    */
-  provenance: "openlibrary" | "saved" | "local";
+  provenance: "openlibrary" | "saved" | "local" | "comic" | "hardcover";
   editionCount: number | null;
   /** Set when there is somewhere on this server to go. */
   href: string | null;
@@ -84,7 +94,7 @@ function fromLocal(work: LocalWork): SearchResult {
     authors: work.authors,
     year: work.firstPublishedYear,
     cover: work.coverUrl ? { kind: "local", url: work.coverUrl } : null,
-    provenance: work.source === "local" ? "local" : "saved",
+    provenance: work.source === "local" ? "local" : work.source === "comicvine" ? "comic" : "saved",
     editionCount: null,
     href: hrefFor(work),
     // Local works — fics, zines — gain editions from their own work page
@@ -95,14 +105,20 @@ function fromLocal(work: LocalWork): SearchResult {
 }
 
 /**
- * One list, not two blocks. An Open Library result that is already on this
+ * One list, not three blocks. An Open Library result that is already on this
  * server becomes the local row — same work, shown once, with your shelf state —
  * and everything is then ordered by how well its title matches.
+ *
+ * Hardcover's results are for what Open Library lacks (§4b), so one is kept
+ * only when it is neither here already (by its id) nor the same book as an
+ * Open Library result — judged by the import's strict rule, same title and a
+ * shared surname — and it sits after the others of its tier.
  */
 export function mergeResults(
   query: string,
   local: LocalWork[],
   remote: OlWorkSummary[],
+  hardcover: HardcoverBook[] = [],
 ): SearchResult[] {
   const localByKey = new Map(
     local.flatMap((work) => (work.olWorkKey ? [[work.olWorkKey, work] as const] : [])),
@@ -132,9 +148,34 @@ export function mergeResults(
 
   const localOnly = local.filter((work) => !claimed.has(work.id)).map(fromLocal);
 
+  const hereAlready = new Set(local.flatMap((work) => (work.hardcoverId ? [work.hardcoverId] : [])));
+  const fromHardcover = hardcover
+    .filter(
+      (book) =>
+        !hereAlready.has(book.id) &&
+        !remote.some(
+          (ol) => shareAnAuthor(ol.authors, book.authors) && sameTitle(ol.title, ol.subtitle, book.title),
+        ),
+    )
+    .map(
+      (book): SearchResult => ({
+        key: `hc-${book.id}`,
+        title: book.title,
+        subtitle: book.subtitle,
+        authors: book.authors,
+        year: book.releaseYear,
+        cover: book.imageUrl ? { kind: "remote", url: book.imageUrl } : null,
+        provenance: "hardcover",
+        editionCount: null,
+        href: null,
+        addHref: `/add/hardcover/${book.id}`,
+        onShelf: false,
+      }),
+    );
+
   // Array.prototype.sort is stable, so Open Library's order survives within a
-  // tier and local-only works sit after remote ones of the same score.
-  return [...fromRemote, ...localOnly]
+  // tier and local-only works and Hardcover's sit after it at the same score.
+  return [...fromRemote, ...localOnly, ...fromHardcover]
     .map((result) => ({ result, score: score(query, result.title, result.authors) }))
     .sort((a, b) => b.score - a.score)
     .map(({ result }) => result);

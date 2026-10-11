@@ -5,6 +5,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { editions, entries, works } from "@/lib/db/schema";
+import { hardcoverEnabled, searchBooks } from "@/lib/hardcover";
 import { parseIsbn, type Isbn } from "@/lib/isbn";
 import { languageName } from "@/lib/languages";
 import {
@@ -46,6 +47,7 @@ async function searchLocal(userId: string, term: string): Promise<LocalWork[]> {
       firstPublishedYear: works.firstPublishedYear,
       coverUrl: works.coverUrl,
       source: works.source,
+      hardcoverId: works.hardcoverId,
     })
     .from(works)
     .where(and(...conditions))
@@ -108,6 +110,7 @@ async function findLocalEdition(userId: string, isbn: Isbn): Promise<LocalEditio
       firstPublishedYear: works.firstPublishedYear,
       coverUrl: works.coverUrl,
       source: works.source,
+      hardcoverId: works.hardcoverId,
     })
     .from(editions)
     .innerJoin(works, eq(works.id, editions.workId))
@@ -171,14 +174,17 @@ export default async function SearchPage({
     // Local first and regardless of the network, so an offline server still
     // finds everything it has already cached.
     const local = await searchLocal(user.id, term);
-    let remote: Awaited<ReturnType<typeof searchWorks>> = [];
-    try {
-      remote = await searchWorks(term);
-    } catch (error) {
-      notice = remoteFailure(error);
-      remoteFailed = true;
-    }
-    results = mergeResults(term, local, remote);
+    // Open Library and Hardcover each have their own queue, so they are asked
+    // at once. Hardcover never fails a search: no token or no answer is none.
+    const [remote, hardcover] = await Promise.all([
+      searchWorks(term).catch((error: unknown) => {
+        notice = remoteFailure(error);
+        remoteFailed = true;
+        return [];
+      }),
+      hardcoverEnabled() ? searchBooks(term, 10) : Promise.resolve([]),
+    ]);
+    results = mergeResults(term, local, remote, hardcover);
   }
 
   return (
@@ -274,10 +280,14 @@ function Thumb({ cover }: { cover: Cover }) {
 function provenanceLabel(result: SearchResult): string {
   const parts = [
     result.provenance === "local"
-      ? "Local work"
+      ? "Added by hand"
       : result.provenance === "saved"
         ? "Open Library · saved here"
-        : "Open Library",
+        : result.provenance === "comic"
+          ? "Comic Vine · saved here"
+          : result.provenance === "hardcover"
+            ? "Hardcover"
+            : "Open Library",
   ];
   if (result.editionCount && result.editionCount > 1) {
     parts.push(`${result.editionCount} editions`);

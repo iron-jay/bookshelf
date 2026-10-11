@@ -102,7 +102,11 @@ In `.env` for production:
   nothing: the anonymous quota is shared with everyone and usually spent.
 - `HARDCOVER_API_TOKEN` — optional. A personal access token from
   hardcover.app → Settings → Hardcover API. Fills in books Open Library does
-  not have (description, year, series, cover) on import and from Settings.
+  not have (description, year, series, cover) on import and from Settings,
+  and is searched beside Open Library when adding a book.
+- `COMICVINE_API_KEY` — optional. A free key from a Comic Vine account
+  (comicvine.gamespot.com/api), for "Add comic or graphic novel".
+  Non-commercial use only.
 - `COVERS_DIR` is set by the compose file; leave it out.
 
 The container applies migrations and creates the first user before serving

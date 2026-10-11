@@ -186,3 +186,48 @@ export async function coverUrlForBook(id: number): Promise<string | null> {
   const url = data?.books_by_pk?.image?.url;
   return url && /^https:\/\/assets\.hardcover\.app\//.test(url) ? url : null;
 }
+
+type ByPk = {
+  id?: number;
+  title?: string;
+  subtitle?: string | null;
+  description?: string | null;
+  release_year?: number | null;
+  image?: { url?: string } | null;
+  contributions?: { author?: { name?: string } | null; contribution?: string | null }[];
+  book_series?: { position?: number | null; series?: { name?: string } | null }[];
+};
+
+/**
+ * One book by its id, for adding it from search: the page sends the id and
+ * everything stored comes from Hardcover's own answer. Field names checked
+ * against the live API on 2026-10-11. Narrators and the like are left out of
+ * the authors: a contribution of null or "Author" is an author.
+ */
+export async function getBook(id: number): Promise<HardcoverBook | null> {
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const data = await request<{ books_by_pk?: ByPk | null }>(
+    `query($id: Int!) { books_by_pk(id: $id) {
+      id title subtitle description release_year image { url }
+      contributions { author { name } contribution }
+      book_series { position series { name } }
+    } }`,
+    { id },
+  );
+  const book = data?.books_by_pk;
+  if (!book) return null;
+  const first = book.book_series?.find((s) => s.series?.name);
+  return toBook({
+    id: book.id,
+    title: book.title,
+    subtitle: book.subtitle ?? undefined,
+    description: book.description ?? undefined,
+    release_year: book.release_year,
+    image: book.image ?? undefined,
+    author_names: (book.contributions ?? [])
+      .filter((c) => !c.contribution || c.contribution === "Author")
+      .flatMap((c) => (c.author?.name ? [c.author.name] : [])),
+    featured_series: first?.series?.name ? { series: { name: first.series.name } } : undefined,
+    featured_series_position: first?.position ?? null,
+  });
+}

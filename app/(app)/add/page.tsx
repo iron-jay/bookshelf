@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { editions, works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
 
+import { AddTabs } from "./add-tabs";
 import { EditionForm, type FixedWork } from "./edition-form";
 import { FORMAT_COOKIE, isFormat } from "./format";
 
@@ -74,6 +75,7 @@ export default async function AddPage({
           "Add a book"
         )}
       </h1>
+      {fixedWork ? null : <AddTabs current="book" />}
 
       <EditionForm
         fixedWork={fixedWork}

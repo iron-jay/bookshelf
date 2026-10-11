@@ -23,7 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Search
           </Link>
           <Link href="/add" className="font-narrow text-ink-dim hover:text-ink">
-            Add book
+            Add
           </Link>
           <Link href="/settings" className="font-narrow text-ink-dim hover:text-ink">
             Settings

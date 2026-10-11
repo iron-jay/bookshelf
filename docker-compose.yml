@@ -58,6 +58,8 @@ services:
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
       # Optional: fills in books Open Library does not have (brief §4b).
       HARDCOVER_API_TOKEN: ${HARDCOVER_API_TOKEN:-}
+      # Optional: comics and graphic novels.
+      COMICVINE_API_KEY: ${COMICVINE_API_KEY:-}
       COVERS_DIR: /data/covers
       # The session cookie's Secure flag is derived from this.
       ORIGIN: ${ORIGIN:-http://localhost:3001}

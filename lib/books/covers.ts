@@ -2,12 +2,12 @@ import { eq } from "drizzle-orm";
 
 import { deleteCover, downloadCover } from "@/lib/covers";
 import { db } from "@/lib/db";
-import { editions, works } from "@/lib/db/schema";
+import { artSource, editions, works } from "@/lib/db/schema";
 import { coverByIsbn, coverByTitle } from "@/lib/googlebooks";
 import { findBook } from "@/lib/hardcover";
 import { coverUrl, getEdition, getWorkRecord } from "@/lib/openlibrary";
 
-type ArtSource = "openlibrary" | "googlebooks" | "url" | "upload" | "hardcover";
+type ArtSource = (typeof artSource.enumValues)[number];
 export type CoverTarget = { kind: "work" | "edition"; id: string };
 
 /**
