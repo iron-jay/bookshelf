@@ -10,7 +10,7 @@ const FIELD =
  * notes. Null means the field has nothing to say for this edition.
  */
 export function creditLabelFor(kind: string, format: "book" | "audiobook"): string | null {
-  if (kind === "translation" || kind === "fan_translation") return "Translated by";
+  if (kind === "translation") return "Translated by";
   if (format === "audiobook") return "Read by";
   return null;
 }

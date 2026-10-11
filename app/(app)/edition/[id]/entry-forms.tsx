@@ -95,8 +95,7 @@ export function ReadRow({
 
 /**
  * Two steps, because it takes the rating, review and every read with it.
- * Plain text rather than a warning colour: --label is the only chromatic value
- * and it means fan translation, nothing else.
+ * Plain text rather than a warning colour: the app has none.
  */
 export function RemoveFromShelf({ editionId }: { editionId: string }) {
   const [confirming, setConfirming] = useState(false);

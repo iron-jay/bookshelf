@@ -37,8 +37,7 @@ export function LoginForm() {
         />
       </label>
 
-      {/* Marked by position and a hairline rather than colour: --label is the
-          only chromatic value in the app and it means community provenance. */}
+      {/* Marked by position and a hairline rather than colour: the app has none. */}
       {state.error ? (
         <p role="alert" className="border-l-2 border-ink-dim pl-3 font-narrow">
           {state.error}

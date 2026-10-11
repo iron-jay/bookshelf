@@ -148,7 +148,6 @@ function toCard(row: Row): ShelfCard {
     status: row.status ?? "tbr",
     rating: row.rating,
     coverUrl: row.coverUrl,
-    isCommunityEdition: row.isCommunityEdition ?? false,
     lastFinishedOn: row.lastFinishedOn,
   };
 }

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { COMMUNITY_EDITION_KINDS, editions, entries, series, works } from "@/lib/db/schema";
+import { editions, entries, series, works } from "@/lib/db/schema";
 import { SHELF_LABELS } from "@/lib/shelves";
 import { languageName } from "@/lib/languages";
 
@@ -18,7 +18,6 @@ export const dynamic = "force-dynamic";
 const KIND_LABELS: Readonly<Record<string, string | null>> = {
   original: null,
   translation: "Official translation",
-  fan_translation: "Fan translation",
   revised: "Revised text",
   abridged: "Abridged",
   annotated: "Annotated",
@@ -77,7 +76,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
       <BackToShelf />
       <div className="flex max-w-4xl flex-col gap-8 sm:flex-row">
         <div className="flex w-40 shrink-0 flex-col gap-3">
-          <Cover title={work.title} author={author} coverUrl={work.coverUrl} band={null} />
+          <Cover title={work.title} author={author} coverUrl={work.coverUrl} />
           <ChangeCoverLink href={`/work/${work.slug}/cover`} needsReview={work.coverNeedsReview} />
           <SideLink href={`/work/${work.slug}/edit`}>Edit details</SideLink>
         </div>
@@ -148,7 +147,6 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
 
         <ul className="flex flex-col">
           {rows.map((edition) => {
-            const community = (COMMUNITY_EDITION_KINDS as readonly string[]).includes(edition.kind);
             const details = [
               KIND_LABELS[edition.kind],
               edition.format === "audiobook" ? "Audiobook" : null,
@@ -161,10 +159,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                   <Cover
                     title={work.title}
                     author={author}
-                    // The same rule entry_cards applies: a community edition
-                    // shows its own art or none, never the work's.
-                    coverUrl={edition.coverUrl ?? (community ? null : work.coverUrl)}
-                    band={community ? { name: "", credit: null } : null}
+                    coverUrl={edition.coverUrl ?? work.coverUrl}
                   />
                 </div>
                 <div className="min-w-0">

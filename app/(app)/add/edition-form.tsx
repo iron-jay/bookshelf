@@ -11,14 +11,16 @@ import type { Format } from "./format";
 import { languageOptions } from "@/lib/languages";
 
 import { ShelfPicker } from "./shelf-picker";
-import { SourcePicker, WorkFields, type SourceChoice } from "./source-picker";
-import type { SourceEdition } from "./source-types";
+import { WorkFields } from "./work-fields";
 
 const INITIAL: AddState = { error: null };
 const FIELD =
   "w-full border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
 const BUTTON =
   "w-fit border border-line bg-panel px-4 py-2 font-medium hover:border-ink-dim disabled:text-ink-dim";
+
+/** An edition already here, as a candidate base for a new one. */
+export type SourceEdition = { id: string; name: string; language: string | null };
 
 export type FixedWork = {
   id: string;
@@ -28,13 +30,10 @@ export type FixedWork = {
   editions: SourceEdition[];
 };
 
-export type DoorAType = "book" | "fan_translation";
-
-/** Door B's kinds. fanfic, podfic and fan_edit were dropped (migration 0001). */
+/** Door B's kinds. Fanfic, podfic and fan edits went in 0001, fan translations in 0004. */
 const KINDS: { value: string; label: string }[] = [
   { value: "original", label: "Edition" },
   { value: "translation", label: "Official translation" },
-  { value: "fan_translation", label: "Fan translation" },
   { value: "revised", label: "Revised text" },
   { value: "abridged", label: "Abridged" },
   { value: "annotated", label: "Annotated" },
@@ -43,70 +42,41 @@ const KINDS: { value: string; label: string }[] = [
 
 /**
  * The one form for editions typed in by hand (brief §5). Door A arrives with
- * no work and a Book | Fan translation choice; Door B arrives from a work page
- * with the work fixed and asks what kind of edition to add. Same component,
- * same action, same fields — Door B is Door A with the work pre-filled.
+ * no work; Door B arrives from a work page with the work fixed and asks what
+ * kind of edition to add. Same component, same action, same fields — Door B
+ * is Door A with the work pre-filled.
  *
- * Door A's Book is mostly a way into search, because a book Open Library has
- * is better added from Open Library. "Create it manually" is the way out for
- * the rest, and turns this into the same form with title and author fields.
+ * Door A is mostly a way into search, because a book Open Library has is
+ * better added from Open Library. "Create it manually" is the way out for the
+ * rest, and turns this into the same form with title and author fields.
  */
 export function EditionForm({
   fixedWork,
-  initialType = "book",
   initialManual = false,
   initialTitle = "",
   defaultFormat,
 }: {
   fixedWork: FixedWork | null;
-  initialType?: DoorAType;
   initialManual?: boolean;
   initialTitle?: string;
   defaultFormat: Format;
 }) {
   const [state, action, pending] = useActionState(addEditionAction, INITIAL);
-  const [type, setType] = useState<DoorAType>(initialType);
   const [manual, setManual] = useState(initialManual);
   const [doorBKind, setDoorBKind] = useState("original");
   const [format, setFormat] = useState<Format>(defaultFormat);
   const [credit, setCredit] = useState("");
-  const [source, setSource] = useState<SourceChoice | null>(null);
 
-  const kind = fixedWork ? doorBKind : type === "fan_translation" ? "fan_translation" : "original";
-  const translation = kind === "fan_translation" || kind === "translation";
+  const kind = fixedWork ? doorBKind : "original";
+  const translation = kind === "translation";
   const creditLabel = creditLabelFor(kind, format);
-
-  // Candidates for the base edition: the fixed work's, or the chosen source's
-  // when it is already here. A work not cached yet has none to offer.
-  const baseOptions = fixedWork?.editions ?? (source?.kind === "local" ? source.editions : []);
+  const baseOptions = fixedWork?.editions ?? [];
 
   const doorA = !fixedWork;
-  const searching = doorA && type === "book" && !manual;
+  const searching = doorA && !manual;
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      {doorA ? (
-        <div className="flex gap-5 font-narrow" role="tablist">
-          {(
-            [
-              ["book", "Book"],
-              ["fan_translation", "Fan translation"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={type === value}
-              onClick={() => setType(value)}
-              className={type === value ? "font-medium" : "text-ink-dim hover:text-ink"}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
       {searching ? (
         // Its own form, outside the add form: forms do not nest.
         <div className="flex flex-col gap-3">
@@ -163,29 +133,19 @@ export function EditionForm({
             </div>
           ) : null}
 
-          {/* Fan translation: name first, then source, then details (§5). */}
-          {kind === "fan_translation" || fixedWork ? (
+          {fixedWork ? (
             <label className="flex flex-col gap-1.5">
-              <span className="font-narrow text-ink-dim">
-                {kind === "fan_translation" ? "Name" : "Name (optional)"}
-              </span>
+              <span className="font-narrow text-ink-dim">Name (optional)</span>
               <input
                 name="name"
-                required={kind === "fan_translation"}
                 maxLength={200}
-                placeholder={
-                  kind === "fan_translation" ? "Web novel (fan TL)" : format === "audiobook" ? "Audiobook" : "Book"
-                }
+                placeholder={format === "audiobook" ? "Audiobook" : "Book"}
                 className={`${FIELD} max-w-md`}
               />
             </label>
           ) : null}
 
-          {doorA && type === "fan_translation" ? (
-            <SourcePicker choice={source} onChoose={setSource} />
-          ) : null}
-
-          {doorA && type === "book" && manual ? (
+          {doorA && manual ? (
             <div className="flex flex-col gap-2">
               <WorkFields defaultTitle={initialTitle} />
               <button
@@ -260,11 +220,7 @@ export function EditionForm({
             </p>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={pending || (doorA && type === "fan_translation" && !source)}
-            className={BUTTON}
-          >
+          <button type="submit" disabled={pending} className={BUTTON}>
             {pending ? "Adding…" : "Add to shelf"}
           </button>
         </form>

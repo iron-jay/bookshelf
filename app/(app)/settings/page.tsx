@@ -40,7 +40,7 @@ export default async function SettingsPage() {
     .select({ n: count() })
     .from(entryCards)
     .where(
-      and(eq(entryCards.userId, user.id), isNull(entryCards.coverUrl), eq(entryCards.isCommunityEdition, false)),
+      and(eq(entryCards.userId, user.id), isNull(entryCards.coverUrl)),
     );
 
   // Goodreads rows that matched nothing became local works (§5). Read from the

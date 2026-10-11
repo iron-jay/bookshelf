@@ -72,8 +72,8 @@ export function MissingCovers({ missing }: { missing: number }) {
     <div className="mt-3 flex flex-col gap-3 font-narrow">
       <p className="text-ink-dim">
         {missing === 0
-          ? "Every book on your shelf that can have a looked-up cover has one."
-          : `${missing} ${missing === 1 ? "book shows" : "books show"} the typeset cover. Fan translations are not counted: nothing is looked up for them.`}
+          ? "Every book on your shelf has a cover."
+          : `${missing} ${missing === 1 ? "book shows" : "books show"} the typeset cover.`}
       </p>
       {missing > 0 || progress ? (
         <div className="flex items-center gap-3">

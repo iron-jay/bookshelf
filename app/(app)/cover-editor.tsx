@@ -39,7 +39,6 @@ export function CoverEditor({
   id,
   hasOwnCover,
   needsReview,
-  canLookUp,
   note,
   seedTerm,
   back,
@@ -48,8 +47,6 @@ export function CoverEditor({
   id: string;
   hasOwnCover: boolean;
   needsReview: boolean;
-  /** False for fan translations: nothing is ever looked up for them. */
-  canLookUp: boolean;
   /** A line saying whose cover is on screen, when it is not this row's own. */
   note?: string | null;
   /** What the picker searches for first: the title and author. */
@@ -80,12 +77,10 @@ export function CoverEditor({
         </form>
       ) : null}
 
-      {canLookUp ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="font-medium">Covers found</h2>
-          <CoverPicker kind={kind} id={id} seedTerm={seedTerm} back={back} />
-        </section>
-      ) : null}
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Covers found</h2>
+        <CoverPicker kind={kind} id={id} seedTerm={seedTerm} back={back} />
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Your own image</h2>
@@ -113,14 +108,12 @@ export function CoverEditor({
       </section>
 
       <div className="flex flex-wrap items-center gap-4">
-        {canLookUp ? (
-          <form action={lookUp} onSubmit={() => setLast("lookup")}>
-            <Target kind={kind} id={id} back={back} />
-            <button type="submit" disabled={busy} className={LINK}>
-              {looking ? "Looking…" : "Look it up again"}
-            </button>
-          </form>
-        ) : null}
+        <form action={lookUp} onSubmit={() => setLast("lookup")}>
+          <Target kind={kind} id={id} back={back} />
+          <button type="submit" disabled={busy} className={LINK}>
+            {looking ? "Looking…" : "Look it up again"}
+          </button>
+        </form>
         {hasOwnCover ? (
           <form action={remove} onSubmit={() => setLast("remove")}>
             <Target kind={kind} id={id} back={back} />

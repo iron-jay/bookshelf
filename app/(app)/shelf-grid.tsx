@@ -16,10 +16,6 @@ const BUTTON =
   "border border-line bg-panel px-3 py-1.5 font-narrow hover:border-ink-dim disabled:text-ink-dim";
 const FIELD = "border border-line bg-ground px-2 py-1.5 text-ink outline-none focus:border-ink-dim";
 
-function bandOf(card: ShelfCard): { name: string; credit: string | null } | null {
-  return card.isCommunityEdition ? { name: card.editionName, credit: card.editionCredit } : null;
-}
-
 /**
  * Whether the shelf has already resolved in this tab. The grid's fade-in is
  * the app's one orchestrated moment (§5b): it plays on arrival, not on every
@@ -304,7 +300,6 @@ function Tile({ card, index, selecting, checked, onToggle }: { card: ShelfCard; 
           title={card.workTitle}
           author={card.authors.join(", ") || null}
           coverUrl={card.coverUrl}
-          band={bandOf(card)}
         />
         <SelectOverlay card={card} title={title} checked={checked} onToggle={onToggle} />
       </li>
@@ -322,7 +317,6 @@ function Tile({ card, index, selecting, checked, onToggle }: { card: ShelfCard; 
           title={card.workTitle}
           author={card.authors.join(", ") || null}
           coverUrl={card.coverUrl}
-          band={bandOf(card)}
         />
         {/* Metadata on hover or focus rather than under every cover, so the
             grid stays a wall of books. pointer-events-none so the overlay never
@@ -342,9 +336,7 @@ function Tile({ card, index, selecting, checked, onToggle }: { card: ShelfCard; 
 function Row({ card, selecting, checked, onToggle }: { card: ShelfCard } & Selectable) {
   const { title, subtitle } = headlineOf(card);
   const details = [
-    // A community edition's name is already the title, so its credit takes the
-    // slot; an official one's name ("Paperback, Corgi Books 1990") is the detail.
-    card.isCommunityEdition ? card.editionCredit : card.editionName,
+    card.editionName,
     card.format === "audiobook" ? "Audiobook" : null,
     SHELF_LABELS[card.status],
     card.rating === null ? null : ratingLabel(card.rating),
@@ -379,9 +371,6 @@ function Row({ card, selecting, checked, onToggle }: { card: ShelfCard } & Selec
             title={card.workTitle}
             author={card.authors.join(", ") || null}
             coverUrl={card.coverUrl}
-            // At 48px the band's text is unreadable; the list row says it
-            // instead, and the band stays as the mark.
-            band={card.isCommunityEdition ? { name: "", credit: null } : null}
           />
         </div>
         <div className="min-w-0">

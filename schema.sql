@@ -1,6 +1,6 @@
 -- ============================================================
 -- bookshelf — Postgres schema
--- Goodreads-shaped book tracker with first-class fan translation support
+-- Goodreads-shaped book tracker
 -- Target: PostgreSQL 16+
 -- ============================================================
 
@@ -15,16 +15,14 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- may be refreshed; 'local' rows are user-authored and never overwritten.
 CREATE TYPE source_kind AS ENUM ('openlibrary', 'local');
 
--- What an edition *is*, relative to its work. fan_translation is the one
--- community release: it gets the label band and never inherits the work's
--- cover. Fanfic, podfic and fan edits were dropped on 2026-09-25 (0001).
+-- What an edition *is*, relative to its work. Fanfic, podfic and fan edits
+-- were dropped on 2026-09-25 (0001), fan translations on 2026-10-11 (0004).
 CREATE TYPE edition_kind AS ENUM (
   'original',         -- a published edition of the text, any format
   'revised',          -- author's revised / expanded text
   'abridged',
   'annotated',
   'translation',      -- official, published translation
-  'fan_translation',  -- unofficial translation (light novels, web novels)
   'other'
 );
 
@@ -140,16 +138,15 @@ CREATE INDEX works_author_sort_idx ON works(author_sort);
 -- ------------------------------------------------------------
 -- Editions — the thing you actually read or listened to.
 --
--- Every work gets at least one. A fan translation is an edition whose kind is
--- 'fan_translation' and whose base_edition_id points at the text it
--- translates. Local editions hang off cached Open Library works without
--- contaminating upstream data.
+-- Every work gets at least one. A translation or an audiobook can point
+-- base_edition_id at the text it translates or narrates. Local editions hang
+-- off cached Open Library works without contaminating upstream data.
 -- ------------------------------------------------------------
 
 CREATE TABLE editions (
   id                 uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   work_id            uuid NOT NULL REFERENCES works(id) ON DELETE CASCADE,
-  -- "Paperback", "Audiobook", "Wachen! Wachen!", "Web novel (fan TL)"
+  -- "Paperback, 1990", "Audiobook", "Wachen! Wachen!"
   name               text NOT NULL,
   kind               edition_kind NOT NULL DEFAULT 'original',
   format             book_format NOT NULL DEFAULT 'book',
@@ -169,7 +166,7 @@ CREATE TABLE editions (
   -- "Translated by" for translations, "Read by" for audiobooks.
   credit             text,
   version_label      text,                 -- "v2", "Chapter 1–64", "Rev. 2019"
-  url                text,                 -- AO3 link, TL site, publisher page
+  url                text,                 -- the book's own page, wherever it is
   cover_url          text,
   cover_source       art_source,
   cover_needs_review boolean NOT NULL DEFAULT false,
@@ -283,18 +280,11 @@ SELECT
   ed.format,
   ed.credit           AS edition_credit,
   ed.language,
-  -- A community edition never inherits the work's cover: the official English
-  -- cover on a fan translation looks correct and is wrong, which is worse than
-  -- the typeset placeholder. Own art or nothing.
-  CASE
-    WHEN ed.kind = 'fan_translation'
-      THEN ed.cover_url
-    ELSE COALESCE(ed.cover_url, w.cover_url)
-  END                 AS cover_url,
-  -- The flag belongs to whichever cover is on screen. A placeholder needs no review.
+  -- The edition's own cover, else the work's.
+  COALESCE(ed.cover_url, w.cover_url) AS cover_url,
+  -- The flag belongs to whichever cover is on screen.
   CASE
     WHEN ed.cover_url IS NOT NULL THEN ed.cover_needs_review
-    WHEN ed.kind = 'fan_translation' THEN false
     ELSE w.cover_needs_review
   END                 AS cover_needs_review,
   w.id                AS work_id,
@@ -309,7 +299,6 @@ SELECT
   -- year it came out rather than the year the original did.
   COALESCE(extract(year FROM ed.published_on)::int, w.first_published_year::int)
                       AS year,
-  (ed.kind = 'fan_translation') AS is_community_edition,
   -- A reread is a new read, so the latest finish is the meaningful one.
   (SELECT max(r.finished_on) FROM reads r WHERE r.entry_id = e.id) AS last_finished_on
 FROM entries e

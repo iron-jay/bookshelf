@@ -112,7 +112,6 @@ export function WorkFields({ work, heading }: { work: EditableWork; heading: str
 const KINDS: { value: string; label: string }[] = [
   { value: "original", label: "Edition" },
   { value: "translation", label: "Official translation" },
-  { value: "fan_translation", label: "Fan translation" },
   { value: "revised", label: "Revised text" },
   { value: "abridged", label: "Abridged" },
   { value: "annotated", label: "Annotated" },

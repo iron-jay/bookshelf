@@ -1059,3 +1059,30 @@ plain "Corgi Books") by string comparison, not regex. Tried on the dev
 database's two editions and, in a rolled-back transaction, on six made-up
 ones (punctuation in the publisher, a near-miss publisher, a hand-written
 name, a local edition): all as intended. The column stays and is exported.
+
+## 2026-10-11 — Fan translations removed
+
+Jay: remove fan translations; existing ones deleted. Migration `0004`:
+
+- deletes every `fan_translation` edition — their entries, reads and tags go
+  by cascade; an edition that named one as its base keeps going with none;
+- deletes works left with no edition (a fan translation's source, added
+  through its form); series are left alone;
+- rebuilds `edition_kind` without the value and `entry_cards` without
+  `is_community_edition` and the no-inherited-cover rule (view dropped and
+  recreated around the enum, as in 0001).
+
+Their cover files stay on disk unreferenced. On dev: 6 fan translations,
+their 6 entries and 3 source works deleted; 5 works, 8 editions, 7 entries
+left, as previewed.
+
+In the app: the label band and the `--color-label` token are gone (the app
+now has no colour at all); the add flow's Fan translation tab and its
+source-work search are gone (Door A is search or "Create it manually");
+covers are looked up and chosen for every edition; cards, the cover pages and
+the edit page lead with the work's title. The brief is rewritten around it:
+non-negotiable 1 is now "a book no catalogue has is still a book".
+
+Checked: typecheck, lint, check:actions; every main page renders on the
+migrated dev database; a book created by hand through the add action lands on
+the shelf (then removed).

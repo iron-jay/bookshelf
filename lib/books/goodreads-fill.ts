@@ -1,4 +1,4 @@
-import { and, eq, ne, type SQL } from "drizzle-orm";
+import { and, eq, type SQL } from "drizzle-orm";
 
 import { downloadCover } from "@/lib/covers";
 import { db } from "@/lib/db";
@@ -48,8 +48,7 @@ export type GoodreadsTarget = {
 
 /**
  * One of your editions, with what is empty worked out from what the shelf
- * shows, so a cover inherited from the work counts as a cover. Never a fan
- * translation: every Goodreads cover is an official one (§4a).
+ * shows, so a cover inherited from the work counts as a cover.
  */
 async function findTarget(userId: string, which: SQL): Promise<GoodreadsTarget | null> {
   const [row] = await db
@@ -66,7 +65,7 @@ async function findTarget(userId: string, which: SQL): Promise<GoodreadsTarget |
     .from(editions)
     .innerJoin(works, eq(works.id, editions.workId))
     .innerJoin(entries, and(eq(entries.editionId, editions.id), eq(entries.userId, userId)))
-    .where(and(which, ne(editions.kind, "fan_translation")))
+    .where(which)
     .limit(1);
   if (!row) return null;
 
@@ -127,7 +126,7 @@ export async function listFillCandidates(userId: string, goodreadsTitle: string 
       review: entryCards.coverNeedsReview,
     })
     .from(entryCards)
-    .where(and(eq(entryCards.userId, userId), eq(entryCards.isCommunityEdition, false)));
+    .where(eq(entryCards.userId, userId));
 
   // Goodreads' title carries the series in brackets; the words before it are
   // the ones worth comparing.

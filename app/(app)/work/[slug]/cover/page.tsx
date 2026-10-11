@@ -30,14 +30,11 @@ export default async function WorkCoverPage({
       kind="work"
       id={work.id}
       title={work.title}
-      heading={work.title}
       author={work.authors.join(", ") || null}
       coverUrl={work.coverUrl}
-      band={null}
       hasOwnCover={Boolean(work.coverUrl)}
       needsReview={work.coverNeedsReview}
-      canLookUp
-      note="The work’s cover shows for any edition without its own. Fan translations never use it."
+      note="The work’s cover shows for any edition without its own."
       {...backFor((await searchParams).from, { href: `/work/${encodeURIComponent(work.slug)}`, label: work.title })}
     />
   );

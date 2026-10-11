@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { COMMUNITY_EDITION_KINDS, editions, entries, works } from "@/lib/db/schema";
+import { editions, entries, works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
 
 import { EditForm, EditionFields, WorkFields } from "../../../edit-fields";
@@ -38,8 +38,7 @@ export default async function EditEditionPage({ params }: { params: Promise<{ id
     .from(editions)
     .where(eq(editions.workId, work.id))
     .orderBy(asc(editions.createdAt));
-  const community = (COMMUNITY_EDITION_KINDS as readonly string[]).includes(edition.kind);
-  const heading = community ? edition.name : work.title;
+  const heading = work.title;
   const back = `/edition/${edition.id}`;
 
   return (
@@ -53,7 +52,7 @@ export default async function EditEditionPage({ params }: { params: Promise<{ id
       <EditForm action={saveEditionDetails} hidden={{ editionId: edition.id }} backHref={back}>
         <WorkFields
           work={workFields(work)}
-          heading={community ? "The book it translates — shared by all its editions" : "The book — shared by all its editions"}
+          heading="The book — shared by all its editions"
         />
         <EditionFields
           edition={{

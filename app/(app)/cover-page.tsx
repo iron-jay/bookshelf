@@ -18,13 +18,10 @@ export function CoverPage({
   kind,
   id,
   title,
-  heading,
   author,
   coverUrl,
-  band,
   hasOwnCover,
   needsReview,
-  canLookUp,
   note,
   backHref,
   backLabel,
@@ -32,14 +29,10 @@ export function CoverPage({
   kind: "work" | "edition";
   id: string;
   title: string;
-  /** What the page is called: the work's title, or the edition's name for a fan translation. */
-  heading: string;
   author: string | null;
   coverUrl: string | null;
-  band: { name: string; credit: string | null } | null;
   hasOwnCover: boolean;
   needsReview: boolean;
-  canLookUp: boolean;
   note: string | null;
   backHref: string;
   /** Where the page returns to, when that is not the book (/art). */
@@ -52,10 +45,10 @@ export function CoverPage({
           Back to {backLabel}
         </Link>
       </p>
-      <h1 className="mb-6 text-xl font-medium">Cover for {heading}</h1>
+      <h1 className="mb-6 text-xl font-medium">Cover for {title}</h1>
       <div className="flex flex-col gap-8 sm:flex-row">
         <div className="w-56 shrink-0">
-          <Cover title={title} author={author} coverUrl={coverUrl} band={band} />
+          <Cover title={title} author={author} coverUrl={coverUrl} />
         </div>
         <div className="min-w-0 flex-1">
           <CoverEditor
@@ -63,7 +56,6 @@ export function CoverPage({
             id={id}
             hasOwnCover={hasOwnCover}
             needsReview={needsReview}
-            canLookUp={canLookUp}
             note={note}
             seedTerm={[title, author?.split(", ")[0]].filter(Boolean).join(" ")}
             back={backHref}

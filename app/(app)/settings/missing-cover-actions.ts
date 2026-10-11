@@ -25,11 +25,7 @@ export async function listMissingCovers(): Promise<MissingCover[]> {
     .select({ editionId: entryCards.editionId, title: entryCards.workTitle })
     .from(entryCards)
     .where(
-      and(
-        eq(entryCards.userId, user.id),
-        isNull(entryCards.coverUrl),
-        eq(entryCards.isCommunityEdition, false),
-      ),
+      and(eq(entryCards.userId, user.id), isNull(entryCards.coverUrl)),
     )
     .orderBy(asc(entryCards.workTitle));
   return rows.flatMap((row) => (row.editionId ? [{ editionId: row.editionId, title: row.title ?? "Untitled" }] : []));

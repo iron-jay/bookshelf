@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { editions, works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
 
-import { EditionForm, type DoorAType, type FixedWork } from "./edition-form";
+import { EditionForm, type FixedWork } from "./edition-form";
 import { FORMAT_COOKIE, isFormat } from "./format";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +59,6 @@ export default async function AddPage({
   }
 
   const remembered = (await cookies()).get(FORMAT_COOKIE)?.value;
-  const type: DoorAType = query.type === "fan_translation" ? "fan_translation" : "book";
 
   return (
     <main className="flex-1 p-6">
@@ -78,7 +77,6 @@ export default async function AddPage({
 
       <EditionForm
         fixedWork={fixedWork}
-        initialType={type}
         initialManual={query.type === "manual"}
         initialTitle={query.title?.slice(0, 500) ?? ""}
         defaultFormat={isFormat(remembered) ? remembered : "book"}

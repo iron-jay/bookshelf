@@ -44,7 +44,6 @@ export const editionKind = pgEnum("edition_kind", [
   "abridged",
   "annotated",
   "translation",
-  "fan_translation",
   "other",
 ]);
 
@@ -54,14 +53,6 @@ export const artSource = pgEnum("art_source", ["openlibrary", "googlebooks", "ur
 
 /** Declared in the order a shelf reads in. No wishlist: tbr is "want to read". */
 export const shelfStatus = pgEnum("shelf_status", ["tbr", "reading", "finished", "dnf"]);
-
-/**
- * Edition kinds that are community releases: they get the label band and never
- * inherit the work's cover. The entry_cards view carries the same list; keep
- * the two in step. Only fan translations since fanfic, podfic and fan edits
- * were dropped (migration 0001).
- */
-export const COMMUNITY_EDITION_KINDS = ["fan_translation"] as const;
 
 // ---------------------------------------------------------------- users
 
@@ -306,7 +297,7 @@ export const entryCards = pgView("entry_cards", {
   format: bookFormat("format"),
   editionCredit: text("edition_credit"),
   language: text("language"),
-  /** Never the work's cover for a community edition: own art or placeholder. */
+  /** The edition's own cover, else the work's. */
   coverUrl: text("cover_url"),
   /** Follows whichever cover is actually shown. Drives /art. */
   coverNeedsReview: boolean("cover_needs_review"),
@@ -320,7 +311,6 @@ export const entryCards = pgView("entry_cards", {
   seriesName: text("series_name"),
   /** The edition's own year where it has one, else the work's. */
   year: integer("year"),
-  isCommunityEdition: boolean("is_community_edition"),
   /** Latest finish across all reads — a reread is a new read, not an edit. */
   lastFinishedOn: date("last_finished_on"),
 }).existing();

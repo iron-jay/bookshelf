@@ -10,7 +10,7 @@ import { refreshCover, setCover, type CoverTarget } from "@/lib/books/covers";
 import { downloadCover, MAX_COVER_BYTES, storeCover } from "@/lib/covers";
 import { coverUrlForBook } from "@/lib/hardcover";
 import { db } from "@/lib/db";
-import { COMMUNITY_EDITION_KINDS, editions, works } from "@/lib/db/schema";
+import { editions, works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
 
 export type CoverState = { ok: boolean; message: string } | null;
@@ -111,9 +111,6 @@ export async function lookUpCoverAgain(_prev: CoverState, formData: FormData): P
     return { ok: true, message: "Found one and applied it." };
   }
   refresh();
-  if (result === "not-for-fan-translations") {
-    return { ok: false, message: "Nothing is looked up for a fan translation: upload its art or keep the placeholder." };
-  }
   return { ok: false, message: "Nothing found; the cover is unchanged." };
 }
 
@@ -137,24 +134,13 @@ export async function approveCover(formData: FormData): Promise<void> {
   finish(formData);
 }
 
-/**
- * Fan translations are refused the picker: every candidate is some official
- * book's art, which is exactly what a fan translation must not wear (§4a —
- * "looks correct and is wrong"). Upload and paste stay open to them.
- */
-async function isFanTranslation(target: CoverTarget): Promise<boolean> {
-  if (target.kind !== "edition") return false;
-  const [row] = await db.select({ kind: editions.kind }).from(editions).where(eq(editions.id, target.id));
-  return Boolean(row && (COMMUNITY_EDITION_KINDS as readonly string[]).includes(row.kind));
-}
-
 export async function listCoverCandidates(kind: string, id: string): Promise<CoverCandidate[]> {
   await requireUser();
   const form = new FormData();
   form.set("targetKind", kind);
   form.set("targetId", id);
   const target = await targetFrom(form);
-  if (!target || (await isFanTranslation(target))) return [];
+  if (!target) return [];
   try {
     return await candidatesFor(target);
   } catch {
@@ -182,9 +168,6 @@ export async function applyCoverCandidate(_prev: CoverState, formData: FormData)
   await requireUser();
   const target = await targetFrom(formData);
   if (!target) return GONE;
-  if (await isFanTranslation(target)) {
-    return { ok: false, message: "A fan translation takes its own art: upload it or paste its address." };
-  }
   const source = text(formData, "source");
   const ref = text(formData, "ref");
   // Hardcover's address comes from Hardcover, asked by id: the page never

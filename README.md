@@ -1,7 +1,7 @@
 # bookshelf
 
-Self-hosted book tracker: Goodreads' interaction model, Open Library's
-catalogue, and first-class fan translations. Sibling of
+Self-hosted book tracker: Goodreads' interaction model and Open Library's
+catalogue. Sibling of
 [gameshelf](https://github.com/iron-jay/gameshelf) — same stack, same
 deployment shape.
 

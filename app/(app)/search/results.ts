@@ -68,8 +68,7 @@ function score(query: string, title: string, authors: string[]): number {
 /**
  * Where a work on this server should open: the entry when you have exactly one,
  * the work page otherwise. With two editions shelved there is no single entry
- * to open, and guessing between a fan translation and the official one would be
- * worse than letting you pick.
+ * to open, and guessing between them would be worse than letting you pick.
  */
 function hrefFor(work: LocalWork): string {
   return work.entryEditionIds.length === 1

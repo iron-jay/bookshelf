@@ -89,7 +89,6 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
                     title={work.title}
                     author={work.authors.join(", ") || null}
                     coverUrl={work.coverUrl}
-                    band={null}
                   />
                 </div>
                 <div className="min-w-0">

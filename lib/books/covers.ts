@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { deleteCover, downloadCover } from "@/lib/covers";
 import { db } from "@/lib/db";
-import { COMMUNITY_EDITION_KINDS, editions, works } from "@/lib/db/schema";
+import { editions, works } from "@/lib/db/schema";
 import { coverByIsbn, coverByTitle } from "@/lib/googlebooks";
 import { findBook } from "@/lib/hardcover";
 import { coverUrl, getEdition, getWorkRecord } from "@/lib/openlibrary";
@@ -84,9 +84,6 @@ type LookupTarget = {
  *
  * 2 and 3 only run when nothing is on screen yet — an edition with no art of
  * its own already shows the work's, and that is the brief's order working.
- *
- * Only for official editions. Fan translations never inherit a cover and
- * never get one guessed for them: own art, uploaded, or the placeholder.
  */
 export async function lookUpCoversOnAdd(target: LookupTarget): Promise<void> {
   let editionHasCover = false;
@@ -141,14 +138,13 @@ export async function lookUpCoversOnAdd(target: LookupTarget): Promise<void> {
  * Google by ISBN for an edition or by title for a work. Replaces the current
  * cover only when it finds one; a miss leaves what is there alone.
  */
-export async function refreshCover(target: CoverTarget): Promise<"found" | "none" | "not-for-fan-translations"> {
+export async function refreshCover(target: CoverTarget): Promise<"found" | "none"> {
   if (target.kind === "edition") {
     const [edition] = await db
-      .select({ kind: editions.kind, olEditionKey: editions.olEditionKey, isbn13: editions.isbn13 })
+      .select({ olEditionKey: editions.olEditionKey, isbn13: editions.isbn13 })
       .from(editions)
       .where(eq(editions.id, target.id));
     if (!edition) return "none";
-    if ((COMMUNITY_EDITION_KINDS as readonly string[]).includes(edition.kind)) return "not-for-fan-translations";
 
     const ol = edition.olEditionKey ? await getEdition(edition.olEditionKey) : null;
     if (ol?.coverId && (await apply(target, coverUrl(ol.coverId, "L"), "openlibrary", false))) return "found";
@@ -192,13 +188,11 @@ export type MissingCoverResult = "found" | "review" | "none" | "skipped";
  *
  * Re-checked here rather than trusted from the list the page was given: two
  * editions of one work share the work's cover, so the first one found can
- * cover the second before its turn comes. Fan translations are skipped — they
- * never inherit and nothing is guessed for them.
+ * cover the second before its turn comes.
  */
 export async function findMissingCover(editionId: string): Promise<MissingCoverResult> {
   const [row] = await db
     .select({
-      kind: editions.kind,
       editionCover: editions.coverUrl,
       workId: works.id,
       workCover: works.coverUrl,
@@ -207,7 +201,6 @@ export async function findMissingCover(editionId: string): Promise<MissingCoverR
     .innerJoin(works, eq(works.id, editions.workId))
     .where(eq(editions.id, editionId));
   if (!row) return "skipped";
-  if ((COMMUNITY_EDITION_KINDS as readonly string[]).includes(row.kind)) return "skipped";
   if (row.editionCover || row.workCover) return "skipped";
 
   if ((await refreshCover({ kind: "edition", id: editionId })) === "found") return "found";

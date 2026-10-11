@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { COMMUNITY_EDITION_KINDS, editions, entries, entryTags, reads, tags, works } from "@/lib/db/schema";
+import { editions, entries, entryTags, reads, tags, works } from "@/lib/db/schema";
 import { SHELF_LABELS, SHELVES } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
 import { languageName } from "@/lib/languages";
@@ -19,7 +19,6 @@ export const dynamic = "force-dynamic";
 const KIND_LABELS: Readonly<Record<string, string | null>> = {
   original: null,
   translation: "Official translation",
-  fan_translation: "Fan translation",
   revised: "Revised text",
   abridged: "Abridged",
   annotated: "Annotated",
@@ -36,11 +35,11 @@ function lengthLabel(minutes: number | null): string | null {
 
 /** The label the credit gets depends on what the edition is (schema comment). */
 function creditLabel(kind: string, format: string): string {
-  if (kind === "translation" || kind === "fan_translation") return "Translated by";
+  if (kind === "translation") return "Translated by";
   return format === "audiobook" ? "Read by" : "Credit";
 }
 
-/** Selected by weight and a hairline, never colour: --label means one thing. */
+/** Selected by weight and a hairline, never colour: the app has none. */
 function choiceClass(selected: boolean): string {
   return `-ml-px border px-3 py-1.5 font-narrow first:ml-0 ${
     selected ? "relative border-ink text-ink" : "border-line text-ink-dim hover:text-ink"
@@ -98,7 +97,6 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
         .where(eq(editions.id, edition.baseEditionId))
     : [];
 
-  const community = (COMMUNITY_EDITION_KINDS as readonly string[]).includes(edition.kind);
   const author = work.authors.join(", ") || null;
   const facts: [string, React.ReactNode][] = (
     [
@@ -139,9 +137,7 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
           <Cover
             title={work.title}
             author={author}
-            // The entry_cards rule: a fan translation shows its own art or none.
-            coverUrl={edition.coverUrl ?? (community ? null : work.coverUrl)}
-            band={community ? { name: edition.name, credit: edition.credit } : null}
+            coverUrl={edition.coverUrl ?? work.coverUrl}
           />
           <ChangeCoverLink href={`/edition/${edition.id}/cover`} needsReview={edition.coverNeedsReview} />
           {/* Off the shelf, only the work's details are yours to edit. */}
@@ -150,10 +146,10 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <div>
-            <h1 className="text-2xl font-medium">{community ? edition.name : work.title}</h1>
+            <h1 className="text-2xl font-medium">{work.title}</h1>
             <p>
               <Link href={`/work/${work.slug}`} className="underline hover:text-ink">
-                {community ? work.title : edition.name}
+                {edition.name}
               </Link>
               {author ? <span className="text-ink-dim"> · {author}</span> : null}
             </p>
@@ -248,7 +244,7 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
             </form>
 
             {/* Free-form buckets beside the four shelves (§2). Plain text, not
-                chips in a colour: --label means fan translation. */}
+                chips in a colour: the app has none. */}
             <div className="flex flex-col gap-1.5 font-narrow">
               <span className="text-ink-dim">Tags</span>
               <div className="flex flex-wrap items-center gap-2">

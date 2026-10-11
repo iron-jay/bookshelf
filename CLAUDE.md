@@ -1,8 +1,7 @@
 # bookshelf — Project Brief
 
-Self-hosted book tracker. Goodreads' interaction model, Open Library's
-catalogue, and first-class support for the thing neither of them handles well:
-fan translations.
+Self-hosted book tracker. Goodreads' interaction model and Open Library's
+catalogue.
 
 Sibling of **gameshelf** (`github.com/iron-jay/gameshelf`). Same stack, same
 deployment shape, same design language. Where this brief is silent, do what
@@ -17,13 +16,17 @@ server. No SaaS dependencies, and no API keys required to run.
 
 These shape every other decision. Do not quietly relax them.
 
-1. **Fan translations are equal citizens.** A fan translation of a light novel
-   must be as easy to create, shelve, rate and review as a Penguin paperback.
-   No second-class "custom book" flow bolted on the side.
-   - Fanfic, podfic and fan edits were dropped on 2026-09-25, after the shelf
-     was built: not wanted. Migration `0001` removed their edition kinds and
-     `works.derived_from_work_id`. Do not reintroduce them; a book Open Library
-     lacks is a manually created work, not a fanwork.
+1. **A book no catalogue has is still a book.** One created by hand must be as
+   easy to shelve, rate and review as a Penguin paperback. No second-class
+   "custom book" flow bolted on the side.
+   - Fan translations were the original reason for this rule, and the brief
+     was built around them. Jay dropped them on 2026-10-11: not wanted.
+     Migration `0004` **deleted** the existing ones (their entries, reads and
+     tags with them, and works left with no edition), removed the
+     `fan_translation` kind, and took the community rules out of
+     `entry_cards`. Fanfic, podfic and fan edits went the same way on
+     2026-09-25 (`0001`). Do not reintroduce any of them, nor the label band
+     and colour that marked them.
 2. **Open Library data is cached, never mirrored wholesale.** We fetch on demand
    and store what we fetched. We never run a bulk import of their dumps, and the
    app must work fully offline once a work is cached.
@@ -49,9 +52,6 @@ series      Discworld
         └ entry   Jay's shelf row: shelf, rating, review
             └ read   Mar 2026, finished
             └ read   Aug 2026, finished
-
-work        Mushoku Tensei vol. 1                   (openlibrary)
- └ edition   Web novel (fan TL)        fan_translation  (local, base = JP edition)
 ```
 
 This is Open Library's own model — works and editions — so the mapping from
@@ -64,7 +64,7 @@ Each link means something different:
 - `works.series_id` + `series_position` — **reading order**. Discworld #8.
   Positions are `numeric` because novellas are 2.5.
 - `editions.base_edition_id` — **the same text, differently**. Translations,
-  audiobooks of a specific text, fan translations.
+  audiobooks of a specific text.
 
 An edition never changes the story. A different story is a different work. If a
 proposed feature blurs these, the feature is wrong, not the model.
@@ -84,7 +84,7 @@ Rules:
   least one. Derived editions set `base_edition_id` to the text they translate
   or narrate.
 - An **entry** is unique per `(user_id, edition_id)`. Rating and review live
-  here, so you can rate the fan translation differently from the official one.
+  here, so you can rate the translation differently from the original.
 - A **read** is one pass through. Rereads are new reads, not edits.
 - **Shelf** (the `status` column) is a state machine: `tbr`, `reading`,
   `finished`, `dnf`. Free-form buckets are **tags**. gameshelf arrived at this naming
@@ -174,8 +174,7 @@ Books have no SteamGridDB. Art comes from, in order:
    - Or **choose from covers found** (as gameshelf's art picker): the edition's
      own, the work's, other editions' (capped), Google by ISBN and by title,
      plus a free-text search, Google first. The page sends back a source and an
-     id — never an address — and the server builds the URL. Not offered for fan
-     translations: every candidate is an official cover.
+     id — never an address — and the server builds the URL.
    - All of these live on a cover's own page — `/edition/{id}/cover`,
      `/work/{slug}/cover` — reached by a "Change cover" button under the
      cover (2026-09-26: folded away under the cover, they were hard to find
@@ -184,15 +183,12 @@ Books have no SteamGridDB. Art comes from, in order:
      book, or `/art` (`?from=art`).
    - **Find missing covers** in Settings runs the auto-lookup order for every
      placeholder on the shelf, on demand — the manual refresh in bulk.
-4. **Typeset placeholder** — see §5b. Not an error state: a lot of books,
-   and most fan translations, will live here permanently and should look
-   deliberate.
+4. **Typeset placeholder** — see §5b. Not an error state: a lot of books
+   will live here permanently and should look deliberate.
 
 Rules carried over from gameshelf, because they were learned the hard way:
 
-- **A community edition never inherits the work's cover.** A fan translation
-  shown with the official English cover looks correct and is wrong. Own art or
-  placeholder. The `entry_cards` view enforces this; do not undo it in the app.
+- An edition with no cover of its own shows the work's (`entry_cards`).
 - Auto-lookup runs once on add and never re-runs on its own. Refresh is a manual
   action, so art you approved is never silently replaced.
 - Covers needing review get their own page at `/art`, linked from Settings. Not a
@@ -232,13 +228,13 @@ GraphQL, beta, free plan 60/minute and 5,000/day):
     `/goodreads-fill`, which accepts messages only from www.goodreads.com,
     finds the edition by `goodreads_book_id` — or, when none has it, lists
     your books to pick from (no cover or cover to review first, "all books"
-    on request; never fan translations) and links the pick to that id —
+    on request) and links the pick to that id —
     previews, and on Apply fills
     empty fields: description, year, series on the work; cover on the edition
     (a Goodreads id names an edition), optionally replacing one. Cover
     addresses are accepted only on Goodreads' image hosts (Amazon's).
 
-### Adding a fan translation (the important flow)
+### Adding an edition or a book by hand
 
 From any work page: **Add edition** → kind, name, base edition, credit, URL,
 language, notes. That is it. No approval, no moderation. It is your server.
@@ -299,12 +295,10 @@ There is **one** add flow. It always produces an edition attached to a work.
 
 ```
 Door A — "Add book" in the top bar
-  type selector: Book | Fan translation
   └ Book              → Open Library search (or ISBN) → pick work →
                         Book | Audiobook → pick edition from their list, or
                         "any edition" which creates a plain one named
-                        "Book" or "Audiobook"
-  └ Fan translation   → name first, then source work, then details
+                        "Book" or "Audiobook"; or "Create it manually"
 
 Door B — "Add edition" on an existing work page
   work already known; straight to kind + details
@@ -314,7 +308,7 @@ Door B is Door A with the work pre-filled. Build the form once. Do not write two
 components.
 
 **Book or audiobook** is a two-option toggle on the form, not a dropdown, and it
-is on every path that creates an edition (Door A, Door B, fan translation). It
+is on every path that creates an edition (Door A, Door B, by hand). It
 defaults to whichever you picked last. It is the whole of
 `editions.format` — there is no hardcover/paperback/ebook split. Choosing
 Audiobook reveals two optional fields, "Read by" (`credit`) and length
@@ -333,12 +327,6 @@ and language, filterable, not a raw dump.
 edition names ("Paperback, 1990"; migration `0003` took it out of existing
 Open Library names). The column is still filled from Open Library and
 exported.
-
-**The source work for a fan translation** is picked by inline search: Open
-Library or a work already here. When it is neither — a web novel Open Library
-has never heard of — the same form creates it as a local work first. A fan
-translation always has a source text; if there isn't one, it is not a fan
-translation.
 
 **Default shelf on add:** `tbr`, including for books not yet published. The
 picker is visible on the add form. Nothing moves entries between shelves
@@ -402,13 +390,12 @@ are deliberate.
 --line      #464E55
 --ink       #E8E6E1
 --ink-dim   #98A1A8
---label     #6F9A8D   muted verdigris. Community provenance only.
 ```
 
-Same ground, different label. The ochre belongs to gameshelf; a different hue
-here means a screenshot of either is identifiable at a glance. `--label` is still
-the only chromatic value in the app and still means exactly one thing: this
-edition is unofficial. Never buttons, links, focus or emphasis.
+No chromatic value at all. `--label` (verdigris, gameshelf's ochre's
+counterpart) existed only to mark fan translations and went with them on
+2026-10-11. Selection, warnings and tags are marked by weight, position and
+hairlines, never colour.
 
 ### Type
 
@@ -423,8 +410,7 @@ edition is unofficial. Never buttons, links, focus or emphasis.
 
 Covers flush in a dense grid, 4px gaps (gameshelf settled on 4px, not 1px). No
 radius, no shadows, no hover lift. Metadata on selection. On hover, the title and
-author; for a community edition, its own name first and the source work as the
-subtitle.
+author.
 
 Book covers are 2:3 and often inconsistent in ratio. `object-fit: cover` into a
 fixed 2:3 cell; do not letterbox.
@@ -435,15 +421,10 @@ A book with no art gets a generated cover, not a grey box: `--panel` ground, the
 title in Newsreader set large and left-aligned, the author beneath in Archivo
 Narrow `--ink-dim`, a single `--line` rule between them. Rendered as HTML in the
 cell, not a stored image, so it follows title edits. A good placeholder makes a
-shelf of web-novel translations look like a shelf rather than a gap.
+shelf of books no catalogue has look like a shelf rather than a gap.
 
-### The label band
-
-As gameshelf: community editions — here only `fan_translation` — render a solid
-`--label` band across the lower portion of the cover,
-carrying the edition's name and credit in Archivo Narrow. Official editions get
-no band, no badge, no marker. The absence is the signal. Do not extend it into a
-system — no band for audiobooks, no icon per format.
+No band, badge or marker on any cover: gameshelf's label band is for its
+community versions, and bookshelf no longer has any. No icon per format.
 
 ### Motion and don'ts
 
@@ -543,10 +524,10 @@ runs end to end.
 4. Add-to-shelf: creates work, edition and entry in one transaction; cover
    downloaded; lands on `tbr` unless another shelf is picked.
 5. Shelf page with shelf filtering, filter-by-title, typeset placeholders.
-6. The unified add form (§5) for fan translations and manually created works.
-   Verify a fan translation end to end through Door A, then another through
-   Door B on an existing work page. If the two paths need different code, stop and fix the
-   form before continuing.
+6. The unified add form (§5) for manually created works and editions.
+   Verify one end to end through Door A, then another through Door B on an
+   existing work page. If the two paths need different code, stop and fix
+   the form before continuing. (Built for fan translations, since removed.)
 7. Edition page: rating out of ten, review, reads.
 8. Series: assign on the work page, series page, group-by-series on the shelf.
 9. Tags, bulk selection.

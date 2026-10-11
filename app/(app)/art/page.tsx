@@ -92,7 +92,7 @@ export default async function ArtPage() {
         <ul className="grid max-w-4xl gap-4 [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
           {flagged.map((item) => (
             <li key={`${item.kind}-${item.id}`} className="flex flex-col gap-2">
-              <Cover title={item.title} author={item.authors.join(", ") || null} coverUrl={item.coverUrl} band={null} />
+              <Cover title={item.title} author={item.authors.join(", ") || null} coverUrl={item.coverUrl} />
               <div className="font-narrow">
                 <p className="truncate text-ink">{item.title}</p>
                 <p className="truncate text-ink-dim">{item.subtitle}</p>

@@ -12,21 +12,12 @@ export type ShelfCard = {
   status: Shelf;
   rating: number | null;
   coverUrl: string | null;
-  isCommunityEdition: boolean;
   lastFinishedOn: string | null;
 };
 
-/**
- * The two lines a card leads with. An official edition is the book, so the
- * work leads and the author follows. A community edition is the thing you
- * actually read, so its own name leads and the source work is the subtitle
- * (§5b) — same two lines, opposite order.
- */
+/** The two lines a card leads with: the book, then who wrote it. */
 export function headlineOf(card: ShelfCard): { title: string; subtitle: string | null } {
-  if (!card.isCommunityEdition) {
-    return { title: card.workTitle, subtitle: card.authors.join(", ") || null };
-  }
-  return { title: card.editionName, subtitle: card.workTitle };
+  return { title: card.workTitle, subtitle: card.authors.join(", ") || null };
 }
 
 /** Stored 1..10 and shown 1..10: a ten-point scale with no halves or stars. */

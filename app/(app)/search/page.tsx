@@ -243,10 +243,6 @@ export default async function SearchPage({
             className="underline hover:text-ink"
           >
             Create it manually
-          </Link>{" "}
-          or{" "}
-          <Link href="/add?type=fan_translation" className="underline hover:text-ink">
-            add a fan translation
           </Link>
           .
         </p>

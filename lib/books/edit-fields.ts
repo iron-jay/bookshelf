@@ -72,7 +72,6 @@ export function readWorkFields(formData: FormData): Parsed<Partial<typeof works.
 export const EDITION_KINDS = [
   "original",
   "translation",
-  "fan_translation",
   "revised",
   "abridged",
   "annotated",

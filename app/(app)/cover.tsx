@@ -2,7 +2,7 @@ import Image from "next/image";
 
 /**
  * A book's cover in a fixed 2:3 cell — the art when there is some, otherwise
- * the typeset placeholder — and the label band for community editions.
+ * the typeset placeholder.
  *
  * Covers are cropped into the cell rather than letterboxed (§5b): book art is
  * roughly 2:3 but rarely exactly, and bars on every other tile would read as
@@ -16,13 +16,10 @@ export function Cover({
   title,
   author,
   coverUrl,
-  band,
 }: {
   title: string;
   author: string | null;
   coverUrl: string | null;
-  /** Community editions only: the edition's own name, and its credit. */
-  band: { name: string; credit: string | null } | null;
 }) {
   return (
     <div className="@container relative aspect-[2/3] w-full overflow-hidden bg-panel">
@@ -40,22 +37,6 @@ export function Cover({
       ) : (
         <Placeholder title={title} author={author} />
       )}
-
-      {/* The one bold element in the app: a solid band across the lower part of
-          the cover. Official editions get nothing — the absence is the signal.
-          Never extended to audiobooks or formats (§5b). */}
-      {band ? (
-        <div className="absolute inset-x-0 bottom-0 bg-label px-[6cqw] py-[4cqw]">
-          <p className="truncate font-narrow text-[max(9px,9cqw)] leading-tight font-medium text-ground">
-            {band.name}
-          </p>
-          {band.credit ? (
-            <p className="truncate font-narrow text-[max(9px,8cqw)] leading-tight text-ground">
-              {band.credit}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }
