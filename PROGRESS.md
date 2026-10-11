@@ -1086,3 +1086,27 @@ non-negotiable 1 is now "a book no catalogue has is still a book".
 Checked: typecheck, lint, check:actions; every main page renders on the
 migrated dev database; a book created by hand through the add action lands on
 the shelf (then removed).
+
+## 2026-10-11 — Collections above series
+
+Jay: "halo forerunner trilogy is a series, all halo books in a collection".
+Chosen: a collection sits above series, one per book.
+
+- Migration `0005`: `collections` (name, slug), `series.collection_id`, and
+  `works.collection_id` for a book with no series. `entry_cards` gains
+  `collection_id` / `collection_name` — the series', else the work's own.
+- `lib/books/collections.ts`: `setCollection` on a series or a work, matched
+  by name without regard to case, created on first use; a collection left
+  empty is deleted, including when its last series is deleted for being empty
+  (`setWorkSeries` now passes that on).
+- Set from the work page (on the series, "for every book in Forerunner", when
+  the book has one; else on the book) and the series page. Both link to it.
+- `/collection/[slug]`: series in the order they began, each in reading
+  order, then books with no series by year; shelf state beside each.
+- Shelf: group by Collection, series by series within it; "Not in a
+  collection" last. Export: a Collection field in JSON and a column in CSV.
+
+Checked on dev: a series and a book with no series put in one collection
+(the second typed in different case joined it); entry_cards, the shelf's
+groups, the collection page and the work page's link all show it; clearing
+both deleted the collection and its page 404s.

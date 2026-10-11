@@ -1,8 +1,8 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "@/lib/db";
-import { editions, entries, entryTags, reads, series, tags, works } from "@/lib/db/schema";
+import { collections, editions, entries, entryTags, reads, series, tags, works } from "@/lib/db/schema";
 
 export type ExportRead = { startedOn: string | null; finishedOn: string | null; note: string | null };
 
@@ -38,6 +38,7 @@ export type ExportEntry = {
     authors: string[];
     firstPublishedYear: number | null;
     summary: string | null;
+    collection: string | null;
     series: string | null;
     seriesPosition: number | null;
     source: string;
@@ -60,11 +61,20 @@ export type ExportDocument = {
 export async function buildExport(userId: string, username: string): Promise<ExportDocument> {
   const base = alias(editions, "base");
   const rows = await db
-    .select({ entry: entries, edition: editions, work: works, seriesName: series.name, baseName: base.name })
+    .select({
+      entry: entries,
+      edition: editions,
+      work: works,
+      seriesName: series.name,
+      collectionName: collections.name,
+      baseName: base.name,
+    })
     .from(entries)
     .innerJoin(editions, eq(editions.id, entries.editionId))
     .innerJoin(works, eq(works.id, editions.workId))
     .leftJoin(series, eq(series.id, works.seriesId))
+    // The series' collection, else the work's own — as entry_cards has it.
+    .leftJoin(collections, eq(collections.id, sql`coalesce(${series.collectionId}, ${works.collectionId})`))
     .leftJoin(base, eq(base.id, editions.baseEditionId))
     .where(eq(entries.userId, userId))
     .orderBy(asc(entries.addedAt));
@@ -87,7 +97,7 @@ export async function buildExport(userId: string, username: string): Promise<Exp
     username,
     note: "bookshelf export. Ratings are out of ten. Reads are one pass each; rereads are separate reads.",
     entryCount: rows.length,
-    entries: rows.map(({ entry, edition, work, seriesName, baseName }) => ({
+    entries: rows.map(({ entry, edition, work, seriesName, collectionName, baseName }) => ({
       shelf: entry.status,
       rating: entry.rating,
       review: entry.review,
@@ -121,6 +131,7 @@ export async function buildExport(userId: string, username: string): Promise<Exp
         authors: work.authors,
         firstPublishedYear: work.firstPublishedYear,
         summary: work.summary,
+        collection: collectionName,
         series: seriesName,
         seriesPosition: work.seriesPosition,
         source: work.source,
@@ -138,7 +149,7 @@ function cell(value: string | number | null | undefined): string {
 }
 
 const COLUMNS = [
-  "Title", "Authors", "Series", "Series number", "Edition", "Kind", "Format", "Credit", "Language",
+  "Title", "Authors", "Collection", "Series", "Series number", "Edition", "Kind", "Format", "Credit", "Language",
   "ISBN13", "ISBN10", "Shelf", "Rating (of 10)", "Tags", "Date added", "Last finished",
   "Times finished", "Reads", "Review", "Open Library work", "Goodreads Book Id",
 ];
@@ -156,6 +167,7 @@ export function toCsv(doc: ExportDocument): string {
       [
         e.work.title,
         e.work.authors.join(", "),
+        e.work.collection,
         e.work.series,
         e.work.seriesPosition,
         e.edition.name,

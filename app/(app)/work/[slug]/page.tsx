@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { editions, entries, series, works } from "@/lib/db/schema";
+import { collections, editions, entries, series, works } from "@/lib/db/schema";
 import { SHELF_LABELS } from "@/lib/shelves";
 import { languageName } from "@/lib/languages";
 
 import { Cover } from "../../cover";
 import { BackToShelf, ChangeCoverLink, SideLink } from "../../cover-page";
 import { ratingLabel } from "../../shelf-card";
+import { CollectionForm } from "../../collection-form";
 import { SeriesForm } from "./series-form";
 
 export const dynamic = "force-dynamic";
@@ -63,13 +64,26 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
 
   const [inSeries] = work.seriesId
     ? await db
-        .select({ name: series.name, slug: series.slug })
+        .select({ id: series.id, name: series.name, slug: series.slug, collectionId: series.collectionId })
         .from(series)
         .where(eq(series.id, work.seriesId))
     : [];
   const seriesNames = (
     await db.select({ name: series.name }).from(series).orderBy(asc(series.name))
   ).map((s) => s.name);
+
+  // In a series, the series carries the collection for all its books; only a
+  // book on its own has one of its own.
+  const collectionId = inSeries ? inSeries.collectionId : work.collectionId;
+  const [inCollection] = collectionId
+    ? await db
+        .select({ name: collections.name, slug: collections.slug })
+        .from(collections)
+        .where(eq(collections.id, collectionId))
+    : [];
+  const collectionNames = (
+    await db.select({ name: collections.name }).from(collections).orderBy(asc(collections.name))
+  ).map((c) => c.name);
 
   return (
     <main className="flex-1 p-6">
@@ -86,6 +100,13 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             <h1 className="text-2xl font-medium">{work.title}</h1>
             {work.subtitle ? <p className="text-ink-dim">{work.subtitle}</p> : null}
             {author ? <p className="mt-1">{author}</p> : null}
+            {inCollection ? (
+              <p>
+                <Link href={`/collection/${inCollection.slug}`} className="underline hover:text-ink">
+                  {inCollection.name}
+                </Link>
+              </p>
+            ) : null}
             {inSeries ? (
               <p>
                 <Link href={`/series/${inSeries.slug}`} className="underline hover:text-ink">
@@ -115,6 +136,14 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             current={inSeries?.name ?? null}
             position={work.seriesPosition}
             seriesNames={seriesNames}
+          />
+
+          <CollectionForm
+            targetKind={inSeries ? "series" : "work"}
+            targetId={inSeries ? inSeries.id : work.id}
+            current={inCollection?.name ?? null}
+            names={collectionNames}
+            note={inSeries ? `for every book in ${inSeries.name}` : null}
           />
 
           {/* Long-form prose, so Newsreader (§5b). */}

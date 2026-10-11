@@ -63,6 +63,12 @@ Each link means something different:
 
 - `works.series_id` + `series_position` — **reading order**. Discworld #8.
   Positions are `numeric` because novellas are 2.5.
+- `series.collection_id`, or `works.collection_id` for a book with no
+  series — **what it belongs to**, above series (2026-10-11). Halo is a
+  collection; the Forerunner trilogy is a series in it; a standalone Halo
+  novel is in it directly. One collection per book: its series', else its
+  own. Collections, like series, are matched by name without regard to case,
+  created on first use and deleted once empty.
 - `editions.base_edition_id` — **the same text, differently**. Translations,
   audiobooks of a specific text.
 
@@ -73,7 +79,10 @@ Consequences to honour in the UI:
 
 - A series page is an ordered list of works with your shelf state beside each.
   That is the whole feature.
-- Shelf grouping includes **series** (in order) and **author**.
+- Shelf grouping includes **collection** (series by series, each in order),
+  **series** (in order) and **author**.
+- A collection page lists its series, each in order, then its books with no
+  series; series in the order they began (earliest book's year).
 
 Rules:
 
@@ -96,8 +105,11 @@ Rules:
     that is a tag.
 
 When adding a feature, ask which of these tables it belongs to. If the answer is
-"a new table", push back on the feature first. `series` is the one table added
-over gameshelf's shape, and it earns it: series order is how people read.
+"a new table", push back on the feature first. `series` and `collections` are
+the two tables added over gameshelf's shape, and they earn it: series order
+is how people read, and a franchise (Halo, Star Wars) is how they shelve.
+Collections were Jay's ask on 2026-10-11; tags were the alternative offered
+and turned down because they cannot group a shelf or order series within.
 
 Authors are a `text[]` on the work plus an `author_sort` string, not a table.
 Grouping by author works off `author_sort`. An authors table can come later if
@@ -247,7 +259,7 @@ form. Used for web serials, zines, ARCs, out-of-print things.
 ## 5. Screens (v1 scope)
 
 1. **Shelf** — the home page. Grid or list, filter by shelf and tag, group by
-   shelf / series / author / year finished / year added / year published /
+   shelf / collection / series / author / year finished / year added / year published /
    book-or-audiobook. Year added is the entry's date (Goodreads' Date Added
    for an import).
    Year finished uses each book's latest finish (a reread moves it), with
@@ -265,7 +277,8 @@ form. Used for web serials, zines, ARCs, out-of-print things.
    cover" and "Edit details". Details are their own page: `/work/{slug}/edit`
    for the book, `/edition/{id}/edit` for the book and that edition together,
    one Save, back to the book.
-5. **Series page** — ordered works, your shelf state for each.
+5. **Series page** — ordered works, your shelf state for each, and the
+   series' collection. **Collection page** — its series and books, as above.
 6. **Settings** — account name and password, export, import, cover art review.
 
 Out of scope for v1: social features, reading challenges, page-by-page progress

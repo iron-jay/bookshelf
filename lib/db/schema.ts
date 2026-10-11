@@ -77,6 +77,21 @@ export const sessions = pgTable(
   (t) => [index("sessions_user_idx").on(t.userId)],
 );
 
+// ---------------------------------------------------------- collections
+
+/**
+ * Above series (2026-10-11): Halo is a collection, the Forerunner trilogy a
+ * series in it. A series belongs to one; a book with no series can belong to
+ * one directly. A book's collection is its series', else its own.
+ */
+export const collections = pgTable("collections", {
+  id: uuid("id").primaryKey().default(sql`uuid_generate_v4()`),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique("collections_slug_key"),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // --------------------------------------------------------------- series
 
 export const series = pgTable(
@@ -86,10 +101,14 @@ export const series = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull().unique("series_slug_key"),
     notes: text("notes"),
+    collectionId: uuid("collection_id").references(() => collections.id, { onDelete: "set null" }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("series_name_trgm_idx").using("gin", sql`${t.name} gin_trgm_ops`)],
+  (t) => [
+    index("series_name_trgm_idx").using("gin", sql`${t.name} gin_trgm_ops`),
+    index("series_collection_idx").on(t.collectionId),
+  ],
 );
 
 // ---------------------------------------------------------------- works
@@ -110,6 +129,8 @@ export const works = pgTable(
 
     seriesId: uuid("series_id").references(() => series.id, { onDelete: "set null" }),
     seriesPosition: numeric("series_position", { precision: 6, scale: 2, mode: "number" }),
+    /** Only read when the work has no series; a series carries its works' collection. */
+    collectionId: uuid("collection_id").references(() => collections.id, { onDelete: "set null" }),
 
     summary: text("summary"),
     firstPublishedYear: smallint("first_published_year"),
@@ -128,6 +149,7 @@ export const works = pgTable(
     index("works_title_trgm_idx").using("gin", sql`${t.title} gin_trgm_ops`),
     index("works_source_idx").on(t.source),
     index("works_series_idx").on(t.seriesId, t.seriesPosition),
+    index("works_collection_idx").on(t.collectionId),
     index("works_author_sort_idx").on(t.authorSort),
     check(
       "works_position_needs_series",
@@ -309,6 +331,9 @@ export const entryCards = pgView("entry_cards", {
   seriesId: uuid("series_id"),
   seriesPosition: numeric("series_position", { precision: 6, scale: 2, mode: "number" }),
   seriesName: text("series_name"),
+  /** The series' collection, else the work's own. */
+  collectionId: uuid("collection_id"),
+  collectionName: text("collection_name"),
   /** The edition's own year where it has one, else the work's. */
   year: integer("year"),
   /** Latest finish across all reads — a reread is a new read, not an edit. */

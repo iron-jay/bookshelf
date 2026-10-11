@@ -37,6 +37,7 @@ const ORDER_BY: Readonly<Record<Sort, SQL>> = {
 const GROUPINGS = {
   none: "No grouping",
   shelf: "Shelf",
+  collection: "Collection",
   series: "Series",
   author: "Author",
   finished: "Year finished",
@@ -97,6 +98,11 @@ function bucketFor(row: Row, groupBy: GroupBy): { label: string; order: number |
       const year = row.addedAt ? row.addedAt.getFullYear() : null;
       return year ? { label: String(year), order: -year } : { label: "Date unknown", order: Number.MAX_SAFE_INTEGER };
     }
+    case "collection":
+      return {
+        label: row.collectionName ?? "Not in a collection",
+        order: row.collectionName?.toLowerCase() ?? "\uffff",
+      };
     case "series":
       return {
         label: row.seriesName ?? "Not in a series",
@@ -237,16 +243,36 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   // Likewise a year-finished group reads newest finish first: the grouping is
   // the question "what did I read in 2025", and the answer reads backwards
   // through the year.
+  //
+  // A collection group reads series by series, each in its order, the series
+  // in the order they began (their earliest book on the shelf), and books with
+  // no series by year among them — the collection page's order.
+  const seriesBegan = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.seriesId) continue;
+    const year = row.year ?? Number.POSITIVE_INFINITY;
+    seriesBegan.set(row.seriesId, Math.min(seriesBegan.get(row.seriesId) ?? Number.POSITIVE_INFINITY, year));
+  }
+  const inCollectionOrder = (a: Row, b: Row) => {
+    const startA = a.seriesId ? seriesBegan.get(a.seriesId)! : (a.year ?? Number.POSITIVE_INFINITY);
+    const startB = b.seriesId ? seriesBegan.get(b.seriesId)! : (b.year ?? Number.POSITIVE_INFINITY);
+    if (startA !== startB) return startA - startB;
+    if (a.seriesId !== b.seriesId) return (a.seriesName ?? "").localeCompare(b.seriesName ?? "");
+    return (a.seriesPosition ?? Number.POSITIVE_INFINITY) - (b.seriesPosition ?? Number.POSITIVE_INFINITY);
+  };
+
   const ordered =
-    groupBy === "series"
-      ? [...rows].sort(
-          (a, b) =>
-            (a.seriesPosition ?? Number.POSITIVE_INFINITY) -
-            (b.seriesPosition ?? Number.POSITIVE_INFINITY),
-        )
-      : groupBy === "finished"
-        ? [...rows].sort((a, b) => (b.lastFinishedOn ?? "").localeCompare(a.lastFinishedOn ?? ""))
-        : rows;
+    groupBy === "collection"
+      ? [...rows].sort(inCollectionOrder)
+      : groupBy === "series"
+        ? [...rows].sort(
+            (a, b) =>
+              (a.seriesPosition ?? Number.POSITIVE_INFINITY) -
+              (b.seriesPosition ?? Number.POSITIVE_INFINITY),
+          )
+        : groupBy === "finished"
+          ? [...rows].sort((a, b) => (b.lastFinishedOn ?? "").localeCompare(a.lastFinishedOn ?? ""))
+          : rows;
 
   const groups = new Map<string, { order: number | string; cards: ShelfCard[] }>();
   for (const row of ordered) {

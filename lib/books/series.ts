@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { series, works } from "@/lib/db/schema";
 import { slugify } from "@/lib/slug";
 
+import { deleteIfEmpty } from "./collections";
 import type { Tx } from "./works";
 
 /**
@@ -72,6 +73,13 @@ export async function setWorkSeries(
       .from(works)
       .where(eq(works.seriesId, before.seriesId))
       .limit(1);
-    if (!left) await tx.delete(series).where(eq(series.id, before.seriesId));
+    if (!left) {
+      const [gone] = await tx
+        .delete(series)
+        .where(eq(series.id, before.seriesId))
+        .returning({ collectionId: series.collectionId });
+      // The series may have been all its collection had.
+      if (gone?.collectionId) await deleteIfEmpty(tx, gone.collectionId);
+    }
   }
 }

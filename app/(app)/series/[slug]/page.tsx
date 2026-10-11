@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { editions, entries, series, works } from "@/lib/db/schema";
+import { collections, editions, entries, series, works } from "@/lib/db/schema";
 import { SHELF_LABELS } from "@/lib/shelves";
 
+import { CollectionForm } from "../../collection-form";
 import { Cover } from "../../cover";
 
 export const dynamic = "force-dynamic";
@@ -63,13 +64,39 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
 
   const finished = new Set(mine.filter((m) => m.status === "finished").map((m) => m.workId)).size;
 
+  const [inCollection] = found.collectionId
+    ? await db
+        .select({ name: collections.name, slug: collections.slug })
+        .from(collections)
+        .where(eq(collections.id, found.collectionId))
+    : [];
+  const collectionNames = (
+    await db.select({ name: collections.name }).from(collections).orderBy(asc(collections.name))
+  ).map((c) => c.name);
+
   return (
     <main className="flex-1 p-6">
+      {inCollection ? (
+        <p className="font-narrow">
+          <Link href={`/collection/${inCollection.slug}`} className="text-ink-dim underline hover:text-ink">
+            {inCollection.name}
+          </Link>
+        </p>
+      ) : null}
       <h1 className="text-2xl font-medium">{found.name}</h1>
-      <p className="mb-6 font-narrow text-ink-dim">
+      <p className="mb-4 font-narrow text-ink-dim">
         {members.length} {members.length === 1 ? "book" : "books"}
         {finished > 0 ? ` · ${finished} finished` : ""}
       </p>
+      <div className="mb-6">
+        <CollectionForm
+          targetKind="series"
+          targetId={found.id}
+          current={inCollection?.name ?? null}
+          names={collectionNames}
+          note="for every book in this series"
+        />
+      </div>
 
       {members.length === 0 ? (
         <p className="font-narrow text-ink-dim">

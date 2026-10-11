@@ -36,6 +36,13 @@
       "when": 1791710569484,
       "tag": "0004_drop_fan_translations",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791710888804,
+      "tag": "0005_collections",
+      "breakpoints": true
     }
   ]
 }

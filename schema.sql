@@ -69,20 +69,37 @@ CREATE TABLE sessions (
 CREATE INDEX sessions_user_idx ON sessions(user_id);
 
 -- ------------------------------------------------------------
--- Series — reading order. The one table added over gameshelf's shape.
--- Open Library's series data is thin, so these are mostly user-entered.
+-- Collections — above series (2026-10-11, 0005). Halo is a collection; the
+-- Forerunner trilogy is a series in it, and a standalone Halo novel is in it
+-- directly. A book's collection is its series' if it has a series, else its
+-- own. Like series, user-entered and deleted once nothing is in them.
 -- ------------------------------------------------------------
 
-CREATE TABLE series (
+CREATE TABLE collections (
   id         uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   name       text NOT NULL,
   slug       text NOT NULL UNIQUE,
-  notes      text,
   created_by uuid REFERENCES users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- ------------------------------------------------------------
+-- Series — reading order. Added over gameshelf's shape, with collections.
+-- Open Library's series data is thin, so these are mostly user-entered.
+-- ------------------------------------------------------------
+
+CREATE TABLE series (
+  id            uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name          text NOT NULL,
+  slug          text NOT NULL UNIQUE,
+  notes         text,
+  collection_id uuid REFERENCES collections(id) ON DELETE SET NULL,
+  created_by    uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE INDEX series_name_trgm_idx ON series USING gin (name gin_trgm_ops);
+CREATE INDEX series_collection_idx ON series(collection_id);
 
 -- ------------------------------------------------------------
 -- Works — the abstract book. "Guards! Guards!", not any one printing.
@@ -105,6 +122,8 @@ CREATE TABLE works (
   series_id             uuid REFERENCES series(id) ON DELETE SET NULL,
   -- numeric because novellas sit between books: 2.5
   series_position       numeric(6,2),
+  -- Only read when series_id is NULL: a series carries its works' collection.
+  collection_id         uuid REFERENCES collections(id) ON DELETE SET NULL,
 
   summary               text,
   -- Open Library mostly knows a year, not a date.
@@ -133,6 +152,7 @@ CREATE TABLE works (
 CREATE INDEX works_title_trgm_idx ON works USING gin (title gin_trgm_ops);
 CREATE INDEX works_source_idx ON works(source);
 CREATE INDEX works_series_idx ON works(series_id, series_position);
+CREATE INDEX works_collection_idx ON works(collection_id);
 CREATE INDEX works_author_sort_idx ON works(author_sort);
 
 -- ------------------------------------------------------------
@@ -295,6 +315,9 @@ SELECT
   w.series_id,
   w.series_position,
   s.name              AS series_name,
+  -- The series' collection, else the work's own.
+  c.id                AS collection_id,
+  c.name              AS collection_name,
   -- The edition's own year when it has one, so a translation groups under the
   -- year it came out rather than the year the original did.
   COALESCE(extract(year FROM ed.published_on)::int, w.first_published_year::int)
@@ -304,7 +327,8 @@ SELECT
 FROM entries e
 JOIN editions ed ON ed.id = e.edition_id
 JOIN works w     ON w.id = ed.work_id
-LEFT JOIN series s ON s.id = w.series_id;
+LEFT JOIN series s ON s.id = w.series_id
+LEFT JOIN collections c ON c.id = COALESCE(s.collection_id, w.collection_id);
 
 -- ------------------------------------------------------------
 -- updated_at triggers
