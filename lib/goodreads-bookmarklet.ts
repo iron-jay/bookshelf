@@ -59,9 +59,14 @@ export function extract(doc: unknown, path: string): GoodreadsPageData | null {
 }
 
 /**
- * The `javascript:` link to drag to the bookmarks bar. `origin` is bookshelf's
- * address as the browser reaches it, which the opened page answers from; the data is
- * posted only to that origin, and only after that page says it is ready.
+ * The `javascript:` link to drag to the bookmarks bar (or paste into a
+ * bookmark, on a phone). `origin` is bookshelf's address as the browser
+ * reaches it, which the opened page answers from; the data is posted only to
+ * that origin, and only after that page says it is ready.
+ *
+ * Phones block new tabs more readily (2026-10-11). When the tab cannot open,
+ * this one goes to bookshelf instead, the details in the address's fragment —
+ * which browsers never send to a server — and back returns to Goodreads.
  */
 export function bookmarkletHref(origin: string): string {
   const o = JSON.stringify(origin.replace(/\/+$/, ""));
@@ -70,7 +75,7 @@ var d = extract(document, location.pathname);
 if (!d) { alert("Open a Goodreads book page first, then click this bookmark."); return; }
 var B = ${o};
 var w = window.open(B + "/goodreads-fill", "_blank");
-if (!w) { alert("Your browser blocked the bookshelf tab; allow pop-ups from goodreads.com."); return; }
+if (!w) { location.href = B + "/goodreads-fill#book=" + encodeURIComponent(JSON.stringify(d)); return; }
 window.addEventListener("message", function h(e) {
   if (e.origin !== B || e.data !== "bookshelf-ready") return;
   w.postMessage({ type: "bookshelf-goodreads", book: d }, B);

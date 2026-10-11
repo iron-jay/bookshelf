@@ -1152,3 +1152,26 @@ placeholder dropped, writers as authors, HTML description, a rejected key as
 
 Next: a real Comic Vine key, to check the live shapes (image keys, person
 credit roles) and a full add.
+
+## 2026-10-11 — The Goodreads bookmarklet on a phone
+
+Jay asked for the Goodreads page in an iframe with an import button, for
+mobile. Not possible: Goodreads sends `X-Frame-Options: SAMEORIGIN`, and even
+framed, its page could not be read across origins. He chose making the
+bookmarklet work on phones instead:
+
+- Settings: "Copy it, for a phone" beside the draggable link. The clipboard
+  API needs https or localhost; on a plain-http LAN address it fails, and the
+  code is shown in a box, selected, to copy by hand. "On a phone" has the
+  steps for iPhone/iPad Safari and Android Chrome (run from the address bar's
+  suggestions there; Firefox on Android does not run bookmarklets).
+- The bookmarklet: where `window.open` is blocked, it goes to
+  `/goodreads-fill#book=<json>` in the same tab instead of an alert. The page
+  reads the fragment, strips it from the address, and previews as before.
+  Fragment data is not proven to come from Goodreads, unlike a message from
+  its origin; it is checked on the server like everything else, nothing is
+  written before Apply, and covers are still only from Goodreads' hosts.
+
+Checked: the bookmarklet parses and has the fallback; a 3,000-character
+description survives the fragment round trip (3.3 KB URL); Settings renders
+the button and steps. Not run on a phone.

@@ -43,6 +43,25 @@ export function GoodreadsFill() {
     window.addEventListener("message", receive);
     // Tell the Goodreads tab this page is ready for the data; only it may hear.
     window.opener?.postMessage("bookshelf-ready", GOODREADS);
+
+    // Or, where the new tab was blocked (phones), the details came in this
+    // page's fragment. Unlike a message, that is not proven to come from
+    // Goodreads — anyone could make such a link — but it is checked on the
+    // server like any other, only shown until Apply, and its cover can only
+    // be on Goodreads' own image hosts.
+    if (window.location.hash.startsWith("#book=")) {
+      let book: unknown = null;
+      try {
+        book = JSON.parse(decodeURIComponent(window.location.hash.slice("#book=".length)));
+      } catch {}
+      // Off the address, so a reload or a shared link does not carry it.
+      history.replaceState(null, "", window.location.pathname);
+      void previewGoodreads(book).then((p) => {
+        setWaiting(false);
+        setPreview(p);
+        if (!("error" in p) && p.candidates) setCandidates(p.candidates);
+      });
+    }
     const timer = setTimeout(() => setWaiting(false), 4000);
     return () => {
       window.removeEventListener("message", receive);

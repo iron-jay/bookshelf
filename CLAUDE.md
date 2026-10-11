@@ -250,6 +250,15 @@ GraphQL, beta, free plan 60/minute and 5,000/day):
     empty fields: description, year, series on the work; cover on the edition
     (a Goodreads id names an edition), optionally replacing one. Cover
     addresses are accepted only on Goodreads' image hosts (Amazon's).
+  - **On a phone** (2026-10-11): a link cannot be dragged there, so Settings
+    has "Copy it, for a phone" (the code shown to select by hand where the
+    clipboard needs https) and steps for Safari and Chrome. Where the new tab
+    is blocked, the bookmarklet opens `/goodreads-fill#book=…` in the same
+    tab instead — the fragment never reaches a server — and the page reads
+    it, unproven as to origin but checked and only shown until Apply. An
+    iframe was asked for and is impossible: Goodreads sends
+    `X-Frame-Options: SAMEORIGIN`, and a frame's page could not be read
+    across origins anyway.
 
 ## 4c. Comic Vine (optional) — comics and graphic novels
 
