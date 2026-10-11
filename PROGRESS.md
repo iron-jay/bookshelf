@@ -1037,3 +1037,25 @@ long shelf. The fade-in now plays once per tab (module state in
 reload plays it again), and the stagger stops at the 24th tile. Same change
 in both apps. Checked: the shelf renders with the class on first load; the
 replay on client navigation is not something curl can see.
+
+## 2026-10-11 — Publisher off the screen
+
+Jay's list for this session: remove publisher; comics from Comic Vine with
+"Add book" / "Add comic or graphic novel"; remove fan translations; collections
+above series (Halo ⊃ Forerunner trilogy); Goodreads on mobile. Asked and
+answered: existing fan translations are **deleted**; a collection sits above
+series, one per book; a comic on the shelf is a volume or graphic novel (a
+Comic Vine issue, its Comic Vine volume the series); Goodreads on mobile
+stays a bookmarklet, made usable on phones. An iframe was asked for, but
+Goodreads sends `X-Frame-Options: SAMEORIGIN`, and a frame's contents could
+not be read across origins anyway.
+
+First, publisher: gone from the edition page, the edit page, search results
+and the add flow's edition list (whose filter now matches format, year,
+language, ISBN). New Open Library editions are named "Paperback, 1990";
+migration `0003` rewrites existing names that end in exactly what the old
+builder wrote ("…, Corgi Books 1990", "…, Corgi Books", "Corgi Books 1990",
+plain "Corgi Books") by string comparison, not regex. Tried on the dev
+database's two editions and, in a rolled-back transaction, on six made-up
+ones (punctuation in the publisher, a near-miss publisher, a hand-written
+name, a local edition): all as intended. The column stays and is exported.

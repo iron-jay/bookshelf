@@ -130,7 +130,6 @@ export default async function AddBookPage({
     title: e.title,
     format: e.format,
     physicalFormat: e.physicalFormat,
-    publisher: e.publisher,
     year: e.year,
     languageName: languageName(e.language),
     isbn: e.isbn13 ?? e.isbn10,

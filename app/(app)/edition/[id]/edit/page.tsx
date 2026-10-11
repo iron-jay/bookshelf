@@ -61,7 +61,6 @@ export default async function EditEditionPage({ params }: { params: Promise<{ id
             kind: edition.kind,
             credit: edition.credit,
             language: edition.language,
-            publisher: edition.publisher,
             publishedOn: edition.publishedOn,
             pages: edition.pages,
             durationMinutes: edition.durationMinutes,

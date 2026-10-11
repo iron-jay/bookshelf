@@ -124,7 +124,6 @@ export type EditableEdition = {
   kind: string;
   credit: string | null;
   language: string | null;
-  publisher: string | null;
   publishedOn: string | null;
   pages: number | null;
   durationMinutes: number | null;
@@ -179,14 +178,9 @@ export function EditionFields({
           </select>
         </Field>
       </div>
-      <div className="flex flex-wrap gap-3">
-        <Field label="Publisher" className="min-w-64 flex-[2]">
-          <input name="publisher" maxLength={200} defaultValue={edition.publisher ?? ""} className={FIELD} />
-        </Field>
-        <Field label="Published" className="flex-1">
-          <input name="publishedOn" type="date" defaultValue={edition.publishedOn ?? ""} className={FIELD} />
-        </Field>
-      </div>
+      <Field label="Published" className="w-48">
+        <input name="publishedOn" type="date" defaultValue={edition.publishedOn ?? ""} className={FIELD} />
+      </Field>
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Pages" className="w-28">
           <input name="pages" inputMode="numeric" defaultValue={edition.pages ?? ""} className={FIELD} />

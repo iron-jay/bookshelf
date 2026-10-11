@@ -100,7 +100,7 @@ export async function candidatesFor(target: CoverTarget): Promise<CoverCandidate
     out.push(
       ...(others?.editions ?? [])
         .flatMap((e) =>
-          e.coverId ? fromOl([e.coverId], [e.publisher, e.year].filter(Boolean).join(" ") || "Another edition") : [],
+          e.coverId ? fromOl([e.coverId], e.year ? `Edition, ${e.year}` : "Another edition") : [],
         )
         .slice(0, OTHER_EDITIONS),
     );

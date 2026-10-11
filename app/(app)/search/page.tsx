@@ -360,7 +360,6 @@ function RemoteEditionResult({ found, isbn13 }: { found: IsbnLookup; isbn13: str
   const details = [
     edition.format === "audiobook" ? "Audiobook" : "Book",
     edition.physicalFormat,
-    edition.publisher,
     edition.year,
     languageName(edition.language),
     edition.pages ? `${edition.pages} pages` : null,

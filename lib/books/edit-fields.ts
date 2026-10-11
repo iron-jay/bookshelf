@@ -164,7 +164,6 @@ export async function readEditionFields(
       kind: kind as (typeof EDITION_KINDS)[number],
       credit: text(formData, "credit").slice(0, 200) || null,
       language,
-      publisher: text(formData, "publisher").slice(0, 200) || null,
       publishedOn,
       pages,
       durationMinutes,

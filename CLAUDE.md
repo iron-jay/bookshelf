@@ -326,8 +326,13 @@ editions and two entries, as with any other pair of editions.
 
 On the Book path, the edition picker filters Open Library's editions by the
 toggle (their `physical_format` containing "audio" → audiobook, anything else →
-book). Open Library works can have hundreds of editions; show publisher, year
+book). Open Library works can have hundreds of editions; show format, year
 and language, filterable, not a raw dump.
+
+**No publisher on screen** (2026-10-11). Not shown, not edited, and not in
+edition names ("Paperback, 1990"; migration `0003` took it out of existing
+Open Library names). The column is still filled from Open Library and
+exported.
 
 **The source work for a fan translation** is picked by inline search: Open
 Library or a work already here. When it is neither — a web novel Open Library

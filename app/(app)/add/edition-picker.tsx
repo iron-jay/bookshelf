@@ -15,7 +15,6 @@ export type PickerEdition = {
   title: string | null;
   format: Format;
   physicalFormat: string | null;
-  publisher: string | null;
   year: number | null;
   languageName: string | null;
   isbn: string | null;
@@ -28,7 +27,6 @@ export type PickerEdition = {
 function detailsOf(edition: PickerEdition): string {
   return [
     edition.physicalFormat,
-    edition.publisher,
     edition.year,
     edition.languageName,
     edition.pages ? `${edition.pages} pages` : null,
@@ -44,7 +42,7 @@ function haystackOf(edition: PickerEdition): string {
 /**
  * Open Library's editions for one format, filterable, with "any edition" first.
  * A work can have hundreds, most of them near-duplicates, so the filter matches
- * everything shown on a row — "corgi", "1990", "german", an ISBN.
+ * everything shown on a row — "paperback", "1990", "german", an ISBN.
  */
 export function EditionPicker({
   editions,
@@ -88,7 +86,7 @@ export function EditionPicker({
             type="search"
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Filter by publisher, year, language or ISBN"
+            placeholder="Filter by format, year, language or ISBN"
             aria-label="Filter editions"
             className="mt-2 w-full max-w-md border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim"
           />

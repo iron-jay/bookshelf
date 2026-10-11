@@ -106,7 +106,6 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
       [creditLabel(edition.kind, edition.format), edition.credit],
       ["Translated from", base ? <Link href={`/edition/${base.id}`} className="underline hover:text-ink">{base.name}</Link> : null],
       ["Language", languageName(edition.language)],
-      ["Publisher", edition.publisher],
       ["Published", edition.publishedOn],
       ["Pages", edition.pages],
       ["Length", lengthLabel(edition.durationMinutes)],
