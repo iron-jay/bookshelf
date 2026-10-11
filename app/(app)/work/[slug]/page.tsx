@@ -61,6 +61,10 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
     .orderBy(asc(editions.createdAt));
 
   const author = work.authors.join(", ") || null;
+  // Comic Vine's page for a comic, as its API gave it, kept on the edition.
+  const comicVinePage = work.comicvineIssueId
+    ? (rows.find((r) => r.url?.startsWith("https://comicvine.gamespot.com/"))?.url ?? null)
+    : null;
 
   const [inSeries] = work.seriesId
     ? await db
@@ -129,11 +133,11 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                 .filter(Boolean)
                 .join(" · ")}
               {/* Comic Vine asks for a link back wherever its data is shown. */}
-              {work.comicvineIssueId ? (
+              {comicVinePage ? (
                 <>
                   {work.firstPublishedYear ? " · " : ""}
                   <a
-                    href={`https://comicvine.gamespot.com/issue/4000-${work.comicvineIssueId}/`}
+                    href={comicVinePage}
                     rel="noreferrer"
                     className="underline hover:text-ink"
                   >

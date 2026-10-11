@@ -271,8 +271,8 @@ it that tab says how to get one and offers "create it by hand".
   graphic novel. **One issue is one work**, found again by
   `works.comicvine_issue_id`, `source = 'comicvine'`. A volume of more than
   one issue is the work's series, numbered by the issue; a volume of one is a
-  graphic novel, titled by the volume alone. Writers are the authors (everyone
-  credited when no writer is). One plain "Book" edition; covers are
+  graphic novel, titled by the volume alone. Writers are the authors (artists
+  when no writer is; never the "other" staff credits). One plain "Book" edition; covers are
   `cover_source = 'comicvine'`.
 - Search `/add/comic?q=` lists volumes; `/add/comic/{volumeId}` its issues
   (the first hundred) to pick from. The issue is fetched again by id on add.

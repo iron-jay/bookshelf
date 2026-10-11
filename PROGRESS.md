@@ -1175,3 +1175,23 @@ bookmarklet work on phones instead:
 Checked: the bookmarklet parses and has the fallback; a 3,000-character
 description survives the fragment round trip (3.3 KB URL); Settings renders
 the button and steps. Not run on a phone.
+
+## 2026-10-11 — Comic Vine, live
+
+Jay set a Comic Vine key in the dev .env. Live: searching "saga" lists ten
+volumes with covers (Image's 72-issue run, its 12-volume trade paperback run,
+translations); volume 52845 lists Volume One to Twelve, #1–#12, with years and
+art; a one-issue volume shows no choice and is titled by the volume. Adding
+Volume One stored "Saga: Volume One", Brian K. Vaughan, 2012, series Saga #1,
+its description and a real JPEG cover; a second add said "already"; the
+volume page marked it on the shelf and search showed it "Comic Vine · saved
+here". Test data, the Saga series and the cover removed.
+
+Two changes from what the real data showed:
+
+- Credits list the publisher's staff as "other" (twenty of them on Saga
+  Volume One), so the no-writer fallback is now the artists, not everyone.
+- The work page's link to Comic Vine was a guessed address; Comic Vine's
+  pages answer 403 to anything but a browser, so it could not be checked.
+  The issue's own `site_detail_url` from the API is now kept as the
+  edition's link, and the work page links to that.

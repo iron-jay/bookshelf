@@ -218,7 +218,7 @@ export async function volumeIssues(volumeId: number): Promise<ComicIssue[]> {
 
 export type ComicBook = ComicIssue & {
   volume: { id: number; name: string } | null;
-  /** Writers, else everyone credited: who a comic is "by". */
+  /** Writers, else artists: who a comic is "by". */
   authors: string[];
   description: string | null;
   coverUrl: string | null;
@@ -235,9 +235,12 @@ export async function getIssue(id: number): Promise<ComicBook | null> {
   const issue = doc ? toIssue(doc) : null;
   if (!doc || !issue) return null;
 
+  // Credits include everyone down to the publisher's staff (role "other"), so
+  // only creators count: the writers, else — a wordless book — the artists.
   const credits = (doc.person_credits ?? []).filter((p) => p.name?.trim());
-  const writers = credits.filter((p) => /writer/i.test(p.role ?? ""));
-  const authors = [...new Set((writers.length ? writers : credits).map((p) => p.name!.trim()))].slice(0, 10);
+  const writers = credits.filter((p) => /writer|script|plot|story/i.test(p.role ?? ""));
+  const artists = credits.filter((p) => /artist|pencil|illustrat/i.test(p.role ?? ""));
+  const authors = [...new Set((writers.length ? writers : artists).map((p) => p.name!.trim()))].slice(0, 10);
 
   return {
     ...issue,

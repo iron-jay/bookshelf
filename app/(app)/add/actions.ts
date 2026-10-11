@@ -232,6 +232,7 @@ export async function addHardcoverBook(_prev: AddState, formData: FormData): Pro
       series: book.series,
       coverUrl: book.imageUrl,
       coverSource: "hardcover",
+      pageUrl: null,
       source: "local",
     },
     format,
@@ -272,6 +273,8 @@ export async function addComicBook(_prev: AddState, formData: FormData): Promise
         volume.issueCount > 1 ? { name: volume.name, position: typeof position === "number" ? position : null } : null,
       coverUrl: issue.coverUrl,
       coverSource: "comicvine",
+      // Comic Vine's own address for it, from its answer; only on its host.
+      pageUrl: issue.pageUrl && /^https:\/\/comicvine\.gamespot\.com\//.test(issue.pageUrl) ? issue.pageUrl : null,
       source: "comicvine",
     },
     format: "book",

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { authorSortFor } from "@/lib/authors";
 import { downloadCover } from "@/lib/covers";
@@ -31,6 +31,8 @@ export type CatalogueBook = {
   series: { name: string; position: number | null } | null;
   coverUrl: string | null;
   coverSource: "hardcover" | "comicvine";
+  /** The book's page on the catalogue, kept as its edition's link — Comic Vine asks for one back. */
+  pageUrl: string | null;
   /** A Hardcover book is a local work with details filled in (§4b); a comic is Comic Vine's. */
   source: "local" | "comicvine";
 };
@@ -85,6 +87,12 @@ export async function addFromCatalogue(input: {
       { userId: input.userId, format: input.format, credit: null, durationMinutes: null, isbn: null },
       workId,
     );
+    if (book.pageUrl) {
+      await tx
+        .update(editions)
+        .set({ url: book.pageUrl })
+        .where(and(eq(editions.id, edition.id), isNull(editions.url)));
+    }
     const shelved = await shelveEdition(tx, input.userId, edition.id, input.shelf);
     return { workId, created, ...shelved };
   });
