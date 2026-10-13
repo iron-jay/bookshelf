@@ -87,7 +87,7 @@ curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
 | `GET /api/v1/me` | The signed-in user |
 | `GET /api/v1/shelf` | Shelf cards. `shelf`, `tag` (slug), `sort` (`added`, `title`, `author`, `rated`, `finished`), `limit` (1–500, default 100), `offset`. Returns `{ total, limit, offset, items }` |
 | `GET /api/v1/tags` | Your tags with how many entries carry each |
-| `GET /api/v1/search?q=` | This server, Open Library and Hardcover merged as on the search page; an ISBN answers with the one edition. `catalogueError` says why remote results are missing |
+| `GET /api/v1/search?q=` | This server, Open Library and Hardcover merged as on the search page; an ISBN answers with the one edition (`isbn.remote` carries `olWorkKey`, `olEditionKey`, `format` and `isbn`, ready for `POST /entries`). `catalogueError` says why remote results are missing |
 | `GET /api/v1/works/{slug}` | A work, its editions (with your entry on each), series and collection |
 | `GET /api/v1/editions/{id}` | An edition, its work, and your entry id if shelved |
 | `GET /api/v1/catalogue/openlibrary/{olWorkKey}` | An Open Library work and its editions (newest first, each with `format`, language, ISBN, and your `editionId` if shelved), to pick one before adding |

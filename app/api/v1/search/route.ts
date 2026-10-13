@@ -71,7 +71,16 @@ export const GET = withUser(async (request, { user }) => {
               editionId: null,
               editionName: remote.edition.title ?? null,
               workSlug: null,
-              remote: { olWorkKey: remote.work?.olWorkKey ?? null, title: remote.work?.title ?? null },
+              // Enough to add exactly this edition: POST /entries with
+              // olWorkKey, olEditionKey, format and isbn, as the web's add page
+              // does when an ISBN brought someone there.
+              remote: {
+                olWorkKey: remote.work?.olWorkKey ?? null,
+                olEditionKey: remote.edition.olEditionKey,
+                title: remote.work?.title ?? null,
+                format: remote.edition.format,
+                isbn: isbn.isbn.isbn13,
+              },
             }
           : null,
         catalogueError: null,
