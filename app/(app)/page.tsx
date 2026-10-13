@@ -1,10 +1,18 @@
-import { and, asc, count, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
+import { and, count, eq, gte, lt } from "drizzle-orm";
 import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { requireUser } from "@/lib/auth";
+import {
+  isShelfSort,
+  SHELF_SORTS,
+  shelfRows,
+  tagsWithCounts,
+  type ShelfRow,
+  type ShelfSort,
+} from "@/lib/books/shelf";
 import { db } from "@/lib/db";
-import { entries, entryCards, entryTags, reads, tags } from "@/lib/db/schema";
+import { entries, entryCards, reads } from "@/lib/db/schema";
 import { isShelf, SHELF_LABELS, SHELVES, type Shelf } from "@/lib/shelves";
 
 import { FilterForm } from "./filter-form";
@@ -14,25 +22,6 @@ import { ShelfGrid, type ShelfSection } from "./shelf-grid";
 import { preferencesFrom, SHELF_VIEW_COOKIE } from "./shelf-view";
 
 export const dynamic = "force-dynamic";
-
-const SORTS = {
-  added: "Recently added",
-  title: "Title",
-  author: "Author",
-  rated: "Rating",
-  finished: "Last finished",
-} as const;
-type Sort = keyof typeof SORTS;
-
-// Every sort ends on something unique-ish, so the order is stable between
-// renders rather than shuffling ties.
-const ORDER_BY: Readonly<Record<Sort, SQL>> = {
-  added: sql`added_at desc`,
-  title: sql`lower(work_title), edition_name, added_at desc`,
-  author: sql`lower(author_sort) nulls last, lower(work_title), added_at desc`,
-  rated: sql`rating desc nulls last, added_at desc`,
-  finished: sql`last_finished_on desc nulls last, added_at desc`,
-};
 
 const GROUPINGS = {
   none: "No grouping",
@@ -81,7 +70,7 @@ function hrefWith(current: Params, patch: Params): string {
 
 const SELECT = "border border-line bg-panel px-2 py-1.5 text-ink";
 
-type Row = typeof entryCards.$inferSelect;
+type Row = ShelfRow;
 
 /** The bucket a row belongs in, and how buckets order. Unknowns always last. */
 function bucketFor(row: Row, groupBy: GroupBy): { label: string; order: number | string } {
@@ -187,43 +176,16 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   };
 
   const status: Shelf | undefined = isShelf(params.status) ? params.status : undefined;
-  const sort: Sort = isKeyOf(SORTS, params.sort) ? params.sort : "added";
+  const sort: ShelfSort = isShelfSort(params.sort) ? params.sort : "added";
   const groupBy: GroupBy = isKeyOf(GROUPINGS, params.groupBy) ? params.groupBy : "none";
   const view: View = isKeyOf(VIEWS, params.view) ? params.view : "grid";
 
   const mine = eq(entryCards.userId, user.id);
 
-  // Your tags that something carries, with counts, so the filter never offers
-  // a choice that returns nothing.
-  const tagOptions = await db
-    .select({ slug: tags.slug, name: tags.name, n: count() })
-    .from(tags)
-    .innerJoin(entryTags, eq(entryTags.tagId, tags.id))
-    .where(eq(tags.userId, user.id))
-    .groupBy(tags.id)
-    .orderBy(asc(tags.name));
+  const tagOptions = await tagsWithCounts(user.id);
   const tag = tagOptions.find((option) => option.slug === params.tag);
 
-  const filters = [mine];
-  if (status) filters.push(eq(entryCards.status, status));
-  if (tag) {
-    filters.push(
-      inArray(
-        entryCards.entryId,
-        db
-          .select({ id: entryTags.entryId })
-          .from(entryTags)
-          .innerJoin(tags, eq(tags.id, entryTags.tagId))
-          .where(and(eq(tags.userId, user.id), eq(tags.slug, tag.slug))),
-      ),
-    );
-  }
-
-  const rows = await db
-    .select()
-    .from(entryCards)
-    .where(and(...filters))
-    .orderBy(ORDER_BY[sort]);
+  const rows = await shelfRows(user.id, { status, tag: tag?.slug, sort });
 
   const counts = await db
     .select({ status: entryCards.status, n: count() })
@@ -342,7 +304,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
         ) : null}
 
         <select name="sort" defaultValue={sort} aria-label="Sort" className={SELECT}>
-          {Object.entries(SORTS).map(([value, label]) => (
+          {Object.entries(SHELF_SORTS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>

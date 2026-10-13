@@ -1,4 +1,5 @@
 import { getCurrentUser, type SessionUser } from "@/lib/auth";
+import { isUuid } from "@/lib/uuid";
 
 /**
  * The JSON API the phone app talks to. Every route under app/api goes through
@@ -107,4 +108,29 @@ export function withUser<P = Record<string, never>>(
       if (!user) throw new ApiError("unauthorized", "Sign in again.");
       return handler(request, { ...context, user });
     });
+}
+
+/** Paging for list routes: `limit` (default 100, 1 to 500) and `offset`. */
+export function pageFrom(url: URL): { limit: number; offset: number } {
+  const read = (name: string, fallback: number, min: number, max: number) => {
+    const raw = url.searchParams.get(name);
+    if (raw === null || raw === "") return fallback;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < min || n > max) {
+      throw new ApiError("invalid", `${name} must be a whole number from ${min} to ${max}.`, {
+        fields: { [name]: "Out of range." },
+      });
+    }
+    return n;
+  };
+  return {
+    limit: read("limit", 100, 1, 500),
+    offset: read("offset", 0, 0, Number.MAX_SAFE_INTEGER),
+  };
+}
+
+/** A route parameter that has to be a uuid; anything else is a 404, as on the web. */
+export function uuidParam(value: string, what: string): string {
+  if (!isUuid(value)) throw new ApiError("not_found", `No such ${what}.`);
+  return value;
 }

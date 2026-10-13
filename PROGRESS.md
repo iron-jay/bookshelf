@@ -1223,3 +1223,41 @@ device out, and the Settings list.
 
 **Next:** move the shelf and entry logic into `lib/` for the read and write
 endpoints.
+
+## 2026-10-13 (API steps 2 to 4, ported from gameshelf)
+
+Everything the phone needs to read and change the shelf, on the same contract
+as gameshelf's API so one app talks to both.
+
+**Logic moved into `lib/books`, pages unchanged.** The edition page's actions
+are now thin wrappers over `lib/books/entries.ts` (rating, review, shelf with
+its read rules, reads, tags, removing an entry); the shelf query and tag
+counts moved to `lib/books/shelf.ts`; the search page's local search and its
+merge with Open Library and Hardcover moved to `lib/books/search.ts` and
+`lib/books/search-results.ts`. Checked by building before and after: the
+shelf's `<main>` is byte-identical for 12 views, search for 6 queries, and the
+same 22 edition-page form posts leave the database identical.
+
+One behaviour change: removing a book from the shelf now also deletes any tag
+left on nothing, the rule untagging already followed. Before, such a tag stayed
+in the table, though nothing showed it.
+
+**Routes**, listed in the README: shelf, tags, search, works, editions,
+entries (add, read, change, remove), reads (read again, change dates, delete)
+and tags by name. The card has gameshelf's top-level fields, with
+`versionId` meaning the edition and book-only fields under `extra`.
+
+**Not done:** adding from Open Library or Hardcover. Both need an edition
+chosen first, which the web's add pages do; a search result carries the
+`webPath` to that page. `POST /entries` adds any edition already on the server.
+
+**Verified** on Postgres 16 with the production build and a device token:
+each route, every 422 and 404, 401 without a token, the read rules through
+PATCH (Reading opens one read however often it is chosen, Finished closes it),
+read dates rejected out of order or not real days, tags created, matched by
+slug and dropped when empty, an entry removed with its reads and tags then
+added back (201, then 200). Open Library could not be reached from the test
+container, so search was checked for its local half and its
+`catalogueError`.
+
+**Next:** a smoke test for `/api/v1/meta` in the image build.
