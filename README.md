@@ -65,6 +65,35 @@ an agent in the environment. Start it with the detection variables unset:
 env -u AI_AGENT -u CLAUDECODE -u CLAUDE_CODE -u CLAUDE_CODE_IS_COWORK npm run dev -- -p 3001
 ```
 
+### JSON API
+
+The companion phone app talks to `/api/v1`, the same contract as gameshelf's.
+It signs in once and keeps a device token, sent as
+`Authorization: Bearer <token>`; covers and the export accept the same token,
+so it also works for scripts:
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/auth/token \
+  -H 'content-type: application/json' \
+  -d '{"username":"admin","password":"…","deviceName":"curl"}'
+curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
+```
+
+| Route | |
+|---|---|
+| `GET /api/v1/meta` | App name, shelves, whether sign-in is required. No token needed. |
+| `POST /api/v1/auth/token` | Username and password in, `{ token, user }` out |
+| `DELETE /api/v1/auth/token` | Signs the calling device out |
+| `GET /api/v1/me` | The signed-in user |
+
+Errors are `{ "error": { "code", "message" } }` with a matching status; a
+missing or expired token is a 401. Device tokens last 180 days from last use
+and are listed in Settings, where each can be signed out. Changing your
+password signs every device out. Ten failed sign-ins for one username or from
+one address in fifteen minutes block further attempts, on the web form too.
+
+With `AUTH_DISABLED=true` the API needs no token either, the same as the web.
+
 ## Deployment
 
 Same shape as gameshelf, and it can share gameshelf's Debian VM: its own

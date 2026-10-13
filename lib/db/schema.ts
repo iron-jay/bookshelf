@@ -73,6 +73,10 @@ export const sessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    kind: text("kind", { enum: ["cookie", "device"] }).notNull().default("cookie"),
+    label: text("label"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
   },
   (t) => [index("sessions_user_idx").on(t.userId)],
 );
