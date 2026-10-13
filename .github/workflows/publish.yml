@@ -72,6 +72,61 @@ jobs:
             esac
           '
 
+      # The checks above never start the server. This one does, the way the VM
+      # does: against an empty Postgres, so the migrations and the first user
+      # run for real before the API answers. /meta is what the phone asks
+      # first; /me proves the database behind it is there.
+      - name: Start it and ask the API
+        run: |
+          APP=ghcr.io/${{ github.repository }}:${{ github.sha }}
+          NAME=${GITHUB_REPOSITORY#*/}
+
+          docker network create smoke >/dev/null
+          docker run -d --name smoke-db --network smoke \
+            -e POSTGRES_USER=smoke -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=smoke \
+            postgres:16-alpine >/dev/null
+
+          # Over TCP: during its first start the image runs a socket-only server
+          # that answers a plain pg_isready and is then restarted.
+          for i in $(seq 1 30); do
+            docker exec smoke-db pg_isready -q -h 127.0.0.1 -U smoke && break
+            sleep 1
+          done
+
+          docker run -d --name smoke-app --network smoke -p 127.0.0.1:3000:3000 \
+            -e DATABASE_URL=postgres://smoke:smoke@smoke-db:5432/smoke \
+            -e SESSION_SECRET=smoke-test-only-not-a-real-secret \
+            -e ADMIN_PASSWORD=smoke-test-only \
+            -e AUTH_DISABLED=true \
+            -e ORIGIN=http://localhost:3000 \
+            "$APP" >/dev/null
+
+          fail() {
+            echo "  $1"
+            echo "--- app log"
+            docker logs smoke-app 2>&1 | tail -50
+            exit 1
+          }
+
+          meta=""
+          for i in $(seq 1 60); do
+            meta=$(curl -fsS http://127.0.0.1:3000/api/v1/meta 2>/dev/null) && break
+            [ "$(docker inspect -f '{{.State.Running}}' smoke-app)" = true ] || fail "the container exited"
+            sleep 1
+          done
+          [ -n "$meta" ] || fail "/api/v1/meta never answered"
+          echo "$meta" | jq -e --arg name "$NAME" '.app == $name and .apiVersion == 1' >/dev/null \
+            || fail "/api/v1/meta answered something else: $meta"
+          echo "  /api/v1/meta answers as $NAME, API version 1"
+
+          me=$(curl -fsS http://127.0.0.1:3000/api/v1/me) || fail "/api/v1/me failed"
+          echo "$me" | jq -e '.username == "admin"' >/dev/null || fail "/api/v1/me answered: $me"
+          echo "  migrations ran and /api/v1/me reads the first user"
+
+      - name: Stop the test containers
+        if: always()
+        run: docker rm -f smoke-app smoke-db >/dev/null 2>&1 || true
+
       - name: Summary
         run: |
           {

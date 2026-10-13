@@ -1287,3 +1287,17 @@ needs Open Library, which this environment cannot reach, so the 404 fix is
 checked by reading the query, not in a browser.
 
 **Next:** Jay's review of both PRs.
+
+## 2026-10-13 — API startup check in the image build
+
+- `publish.yml` now starts the published image against an empty Postgres
+  16, the way the VM runs it, and asks `/api/v1/meta` (must answer with this
+  app's name and API version 1) and `/api/v1/me` (must read the seeded
+  admin, so migrations and the first user ran). On failure it prints the
+  app's log.
+- Checked by running the same script against a local standalone build and a
+  fresh database, both passing and with a wrong app name to see it fail.
+  Docker Hub was rate-limited from the test environment, so the containers
+  themselves only run in Actions.
+- Catalogue adds through the API are still untested: the cloud environment's
+  network policy blocks the catalogue hosts.
