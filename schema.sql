@@ -63,9 +63,17 @@ CREATE TABLE users (
 );
 
 CREATE TABLE sessions (
-  id         text PRIMARY KEY,
-  user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  expires_at timestamptz NOT NULL
+  id           text PRIMARY KEY,
+  user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at   timestamptz NOT NULL,
+  -- 'cookie' for a browser, 'device' for a token the phone app holds (0007).
+  -- One table so revoking and "a new password signs everything else out"
+  -- cover both without a second mechanism.
+  kind         text NOT NULL DEFAULT 'cookie' CHECK (kind IN ('cookie', 'device')),
+  -- What the device called itself when it signed in, for the Settings list.
+  label        text,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  last_used_at timestamptz
 );
 
 CREATE INDEX sessions_user_idx ON sessions(user_id);

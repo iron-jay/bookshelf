@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
-import { invalidateOtherSessions, readSessionToken } from "@/lib/auth/session";
+import {
+  invalidateOtherSessions,
+  readSessionToken,
+  revokeDeviceSession,
+} from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 
@@ -100,4 +104,12 @@ export async function changePassword(
   }
 
   return { ok: true, message: "Password changed. Any other signed-in device has been signed out." };
+}
+
+/** Sign a phone out from here, for one that is lost or no longer yours. */
+export async function revokeDevice(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  if (id) await revokeDeviceSession(user.id, id);
+  revalidatePath("/settings");
 }

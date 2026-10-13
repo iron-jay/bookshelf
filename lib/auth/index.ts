@@ -6,7 +6,12 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 
-import { readSessionToken, validateSessionToken, type SessionUser } from "./session";
+import {
+  readBearerToken,
+  readSessionToken,
+  validateSessionToken,
+  type SessionUser,
+} from "./session";
 
 /**
  * Turns off sign-in entirely, for a single-user server on a network you trust.
@@ -56,9 +61,17 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     return assumedUser();
   }
 
-  const token = await readSessionToken();
-  if (!token) return null;
-  return validateSessionToken(token);
+  const cookie = await readSessionToken();
+  if (cookie) {
+    const user = await validateSessionToken(cookie, "cookie");
+    if (user) return user;
+  }
+
+  // The phone app's token. Checked here rather than only in the API routes so
+  // that covers and the export, which already ask this function, work for the
+  // phone without changes of their own.
+  const bearer = await readBearerToken();
+  return bearer ? validateSessionToken(bearer, "device") : null;
 });
 
 export async function requireUser(): Promise<SessionUser> {

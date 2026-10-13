@@ -1195,3 +1195,31 @@ Two changes from what the real data showed:
   pages answer 403 to anything but a browser, so it could not be checked.
   The issue's own `site_detail_url` from the API is now kept as the
   edition's link, and the work page links to that.
+
+## 2026-10-13 (API step 1, ported from gameshelf)
+
+Device tokens and sign-in for the companion phone app, the same as gameshelf's
+step 1 so one phone app talks to both servers the same way.
+
+- `0007_device_sessions`: `sessions` gains `kind` (`cookie` or `device`),
+  `label`, `created_at` and `last_used_at`. The defaults describe every
+  existing session, so a deploy signs nobody out (checked: a cookie made
+  before the migration still works after it).
+- Device tokens last 180 days and slide; cookies stay at 30. A cookie is never
+  accepted as a bearer token or the reverse. `getCurrentUser()` reads the
+  cookie, then `Authorization: Bearer`, so `/covers` and `/export` take a
+  device token with no change of their own.
+- Sign-in, from the web form and the API alike, goes through
+  `lib/auth/login.ts`, which adds a throttle: ten failures per username or per
+  client address in fifteen minutes (`lib/auth/throttle.ts`, in memory).
+- `/api/v1/meta`, `/me`, `POST` and `DELETE /auth/token`, all through
+  `lib/api`'s `withUser`/`publicRoute` with one error shape.
+- Settings lists signed-in devices with a sign-out button each.
+
+**Verified** with the production build on Postgres 16: each route, wrong and
+missing credentials, the throttle's 429 and Retry-After, a token against
+`/export`, a cookie refused as a bearer token and the reverse, signing a
+device out, and the Settings list.
+
+**Next:** move the shelf and entry logic into `lib/` for the read and write
+endpoints.
