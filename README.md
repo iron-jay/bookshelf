@@ -90,7 +90,10 @@ curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
 | `GET /api/v1/search?q=` | This server, Open Library and Hardcover merged as on the search page; an ISBN answers with the one edition. `catalogueError` says why remote results are missing |
 | `GET /api/v1/works/{slug}` | A work, its editions (with your entry on each), series and collection |
 | `GET /api/v1/editions/{id}` | An edition, its work, and your entry id if shelved |
-| `POST /api/v1/entries` | `{ editionId, shelf? }`. 201 when added, 200 when it was already there (its shelf is kept). Reading opens a read, Finished records one |
+| `GET /api/v1/catalogue/openlibrary/{olWorkKey}` | An Open Library work and its editions (newest first, each with `format`, language, ISBN, and your `editionId` if shelved), to pick one before adding |
+| `GET /api/v1/catalogue/comics?q=` | Comic Vine volumes. Needs `COMICVINE_API_KEY`; credit Comic Vine wherever these are shown |
+| `GET /api/v1/catalogue/comics/{volumeId}` | A volume's issues, each with the title it will have on the shelf |
+| `POST /api/v1/entries` | One of `{ editionId }`; `{ olWorkKey, olEditionKey?, format?, credit?, durationMinutes?, isbn? }` (no `olEditionKey` is "any edition"); `{ hardcoverId, format? }`; `{ comicvineIssueId }`. Each takes `shelf?` (default `tbr`); `format` is `book` (default) or `audiobook`. 201 when added, 200 when it was already there (its shelf is kept). Reading opens a read, Finished records one |
 | `GET /api/v1/entries/{id}` | One entry: its card plus review, flags, tags and reads |
 | `PATCH /api/v1/entries/{id}` | Any of `shelf`, `rating` (1–10 or null), `review`, `reviewHasSpoilers`, `isFavourite`, `isPrivate`. A shelf change follows the read rules |
 | `DELETE /api/v1/entries/{id}` | Takes it off your shelf with its rating, review, reads and tags. The book stays on the server |

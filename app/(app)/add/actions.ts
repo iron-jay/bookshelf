@@ -7,10 +7,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { addOpenLibraryBook, AddBookError } from "@/lib/books/add";
 import { addEdition, type WorkTarget } from "@/lib/books/add-edition";
-import { addFromCatalogue } from "@/lib/books/add-from-catalogue";
-import { parsePosition } from "@/lib/books/series";
-import { comicTitle, getIssue, getVolume } from "@/lib/comicvine";
-import { getBook } from "@/lib/hardcover";
+import { addFromCatalogue, comicBook, hardcoverBook } from "@/lib/books/add-from-catalogue";
 import { editionKind } from "@/lib/db/schema";
 import { parseIsbn } from "@/lib/isbn";
 import { isEditionKey, isWorkKey, OpenLibraryError } from "@/lib/openlibrary";
@@ -204,8 +201,7 @@ function positiveId(formData: FormData, name: string): number | null {
 
 /**
  * A book only Hardcover has, from search (§4b). The page sends its id; the
- * details are Hardcover's own answer, fetched here. It becomes a local work
- * with those details, as the import makes one.
+ * details are Hardcover's own answer, fetched here.
  */
 export async function addHardcoverBook(_prev: AddState, formData: FormData): Promise<AddState> {
   const user = await requireUser();
@@ -215,26 +211,12 @@ export async function addHardcoverBook(_prev: AddState, formData: FormData): Pro
   if (!id) return { error: "That link is broken. Search for the book again." };
   if (!isFormat(format)) return { error: "Choose Book or Audiobook." };
 
-  const book = await getBook(id);
+  const book = await hardcoverBook(id);
   if (!book) return { error: "Hardcover did not answer just now. Nothing was added; try again in a moment." };
 
-  // Hardcover often repeats the end of the title as the subtitle.
-  const subtitle = book.subtitle && !book.title.toLowerCase().endsWith(book.subtitle.toLowerCase()) ? book.subtitle : null;
   const result = await addFromCatalogue({
     userId: user.id,
-    book: {
-      key: { hardcoverId: book.id },
-      title: book.title,
-      subtitle,
-      authors: book.authors,
-      summary: book.description,
-      year: book.releaseYear,
-      series: book.series,
-      coverUrl: book.imageUrl,
-      coverSource: "hardcover",
-      pageUrl: null,
-      source: "local",
-    },
+    book,
     format,
     shelf: isShelf(shelf) ? shelf : "tbr",
   });
@@ -244,39 +226,19 @@ export async function addHardcoverBook(_prev: AddState, formData: FormData): Pro
   redirect(`/?${result.added ? "added" : "already"}=${result.entryId}`);
 }
 
-/**
- * A comic or graphic novel from Comic Vine: one issue, which may be a single
- * issue, a trade paperback or a graphic novel. Its volume is its series when
- * the volume has more than one issue, numbered by the issue.
- */
+/** A comic or graphic novel from Comic Vine: one issue (§4c). */
 export async function addComicBook(_prev: AddState, formData: FormData): Promise<AddState> {
   const user = await requireUser();
   const issueId = positiveId(formData, "issueId");
   const shelf = text(formData, "shelf");
   if (!issueId) return { error: "Choose which one to add." };
 
-  const issue = await getIssue(issueId);
-  const volume = issue?.volume ? await getVolume(issue.volume.id) : null;
-  if (!issue || !volume) return { error: "Comic Vine did not answer just now. Nothing was added; try again in a moment." };
+  const book = await comicBook(issueId);
+  if (!book) return { error: "Comic Vine did not answer just now. Nothing was added; try again in a moment." };
 
-  const position = issue.issueNumber ? parsePosition(issue.issueNumber) : null;
   const result = await addFromCatalogue({
     userId: user.id,
-    book: {
-      key: { comicvineIssueId: issue.id },
-      title: comicTitle(volume.name, issue, volume.issueCount),
-      subtitle: null,
-      authors: issue.authors,
-      summary: issue.description,
-      year: issue.year,
-      series:
-        volume.issueCount > 1 ? { name: volume.name, position: typeof position === "number" ? position : null } : null,
-      coverUrl: issue.coverUrl,
-      coverSource: "comicvine",
-      // Comic Vine's own address for it, from its answer; only on its host.
-      pageUrl: issue.pageUrl && /^https:\/\/comicvine\.gamespot\.com\//.test(issue.pageUrl) ? issue.pageUrl : null,
-      source: "comicvine",
-    },
+    book,
     format: "book",
     shelf: isShelf(shelf) ? shelf : "tbr",
   });

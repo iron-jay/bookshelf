@@ -1287,3 +1287,34 @@ needs Open Library, which this environment cannot reach, so the 404 fix is
 checked by reading the query, not in a browser.
 
 **Next:** Jay's review of both PRs.
+
+## 2026-10-13 — API startup check in the image build
+
+- `publish.yml` now starts the published image against an empty Postgres
+  16, the way the VM runs it, and asks `/api/v1/meta` (must answer with this
+  app's name and API version 1) and `/api/v1/me` (must read the seeded
+  admin, so migrations and the first user ran). On failure it prints the
+  app's log.
+- Checked by running the same script against a local standalone build and a
+  fresh database, both passing and with a wrong app name to see it fail.
+  Docker Hub was rate-limited from the test environment, so the containers
+  themselves only run in Actions.
+- Catalogue adds through the API are still untested: the cloud environment's
+  network policy blocks the catalogue hosts.
+
+## 2026-10-13 — Catalogue adds in the API
+
+- `POST /api/v1/entries` now also takes `{ olWorkKey, olEditionKey?, format?,
+  credit?, durationMinutes?, isbn? }`, `{ hardcoverId, format? }` and
+  `{ comicvineIssueId }`, through the same lib calls as the add pages.
+- New read-only routes to choose before adding:
+  `/api/v1/catalogue/openlibrary/{olWorkKey}` (editions) and
+  `/api/v1/catalogue/comics` (`?q=`, then `/{volumeId}` for issues).
+- The Hardcover and Comic Vine book mapping moved out of the add actions
+  into `lib/books/add-from-catalogue.ts` (`hardcoverBook`, `comicBook`), so
+  the web and the API share it.
+- Checked locally: every validation and "catalogue unreachable" answer, and
+  the Open Library add (audiobook with credit and length on Reading, then
+  again as 200, then "any edition" as a Book) against a cached work. Adds that
+  need the catalogues themselves are untested: the cloud environment blocks
+  their hosts.
