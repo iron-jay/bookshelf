@@ -75,7 +75,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
   ).map((c) => c.name);
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       {inCollection ? (
         <p className="font-narrow">
           <Link href={`/collection/${inCollection.slug}`} className="text-ink-dim underline hover:text-ink">
@@ -83,7 +83,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
           </Link>
         </p>
       ) : null}
-      <h1 className="text-2xl font-medium">{found.name}</h1>
+      <h1 className="font-display text-3xl">{found.name}</h1>
       <p className="mb-4 font-narrow text-ink-dim">
         {members.length} {members.length === 1 ? "book" : "books"}
         {finished > 0 ? ` · ${finished} finished` : ""}

@@ -39,12 +39,6 @@ function creditLabel(kind: string, format: string): string {
   return format === "audiobook" ? "Read by" : "Credit";
 }
 
-/** Selected by weight and a hairline, never colour: the app has none. */
-function choiceClass(selected: boolean): string {
-  return `-ml-px border px-3 py-1.5 font-narrow first:ml-0 ${
-    selected ? "relative border-ink text-ink" : "border-line text-ink-dim hover:text-ink"
-  }`;
-}
 
 /**
  * What you actually read: your shelf, rating out of ten, review and reads for
@@ -129,81 +123,58 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
     ] as [string, React.ReactNode][]
   ).filter(([, value]) => value !== null && value !== undefined && value !== "");
 
+  const coverUrl = edition.coverUrl ?? work.coverUrl;
+
   return (
-    <main className="flex-1 p-6">
-      <BackToShelf />
-      <div className="flex max-w-4xl flex-col gap-8 sm:flex-row">
-        <div className="flex w-40 shrink-0 flex-col gap-3">
-          <Cover
-            title={work.title}
-            author={author}
-            coverUrl={edition.coverUrl ?? work.coverUrl}
-          />
+    <main className="flex-1 pb-14">
+      <section className="bg-band px-4 pt-2 sm:px-10">
+        <BackToShelf />
+        <div className="flex items-end gap-4 sm:gap-8">
+          {/* The whole cover, standing on the plank below. */}
+          <div className="relative w-28 shrink-0 sm:w-44">
+            <Cover title={work.title} author={author} coverUrl={coverUrl} />
+            {entry?.rating ? <span className="sticker">{entry.rating}</span> : null}
+          </div>
+          <div className="min-w-0 pb-4">
+            <h1 className="font-serif text-[28px] leading-[1.05] font-semibold break-words sm:text-5xl">
+              {work.title}
+            </h1>
+            {author ? <p className="mt-2 text-lg [font-stretch:110%]">{author}</p> : null}
+            <p className="mt-1 font-narrow text-ink-dim">
+              <Link href={`/work/${work.slug}`} className="underline underline-offset-4 hover:text-ink">
+                {edition.name}
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+      <div className="plank" />
+
+      <div className="flex max-w-3xl flex-col gap-8 px-4 pt-4 sm:px-10">
+        {/* Under the cover, as they always were (§5). */}
+        <div className="flex flex-wrap gap-2">
           <ChangeCoverLink href={`/edition/${edition.id}/cover`} needsReview={edition.coverNeedsReview} />
           {/* Off the shelf, only the work's details are yours to edit. */}
           <SideLink href={entry ? `/edition/${edition.id}/edit` : `/work/${work.slug}/edit`}>Edit details</SideLink>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <div>
-            <h1 className="text-2xl font-medium">{work.title}</h1>
-            <p>
-              <Link href={`/work/${work.slug}`} className="underline hover:text-ink">
-                {edition.name}
-              </Link>
-              {author ? <span className="text-ink-dim"> · {author}</span> : null}
-            </p>
-          </div>
-
-          {facts.length > 0 ? (
-            <dl className="grid w-fit grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-narrow">
-              {facts.map(([label, value]) => (
-                <div key={label} className="contents">
-                  <dt className="text-ink-dim">{label}</dt>
-                  <dd>{value}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
-
-          <form action={setFormat} className="flex items-center gap-3">
+        {!entry ? (
+          <form action={addToShelf} className="flex flex-col gap-2">
             <input type="hidden" name="editionId" value={edition.id} />
-            <div className="flex">
-              {(["book", "audiobook"] as const).map((format) => (
-                <button
-                  key={format}
-                  type="submit"
-                  name="format"
-                  value={format}
-                  disabled={!entry}
-                  aria-pressed={edition.format === format}
-                  className={choiceClass(edition.format === format)}
-                >
-                  {format === "book" ? "Book" : "Audiobook"}
+            <span className="font-narrow text-ink-dim">Not on your shelf. Put it on:</span>
+            <div className="segmented text-[14px] sm:text-base">
+              {SHELVES.map((shelf) => (
+                <button key={shelf} type="submit" name="shelf" value={shelf}>
+                  {SHELF_LABELS[shelf]}
                 </button>
               ))}
             </div>
           </form>
-        </div>
-      </div>
-
-      <section className="mt-10 flex max-w-4xl flex-col gap-8">
-        {!entry ? (
-          <form action={addToShelf} className="flex flex-wrap items-center gap-3 font-narrow">
-            <input type="hidden" name="editionId" value={edition.id} />
-            <span className="text-ink-dim">Not on your shelf.</span>
-            {SHELVES.map((shelf) => (
-              <button key={shelf} type="submit" name="shelf" value={shelf} className={choiceClass(false)}>
-                {SHELF_LABELS[shelf]}
-              </button>
-            ))}
-          </form>
         ) : (
           <>
-            <form action={setShelf} className="flex flex-col gap-1.5">
+            <form action={setShelf} aria-label="Shelf">
               <input type="hidden" name="editionId" value={edition.id} />
-              <span className="font-narrow text-ink-dim">Shelf</span>
-              <div className="flex flex-wrap">
+              <div className="segmented text-[14px] sm:text-base">
                 {SHELVES.map((shelf) => (
                   <button
                     key={shelf}
@@ -211,7 +182,6 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
                     name="shelf"
                     value={shelf}
                     aria-pressed={entry.status === shelf}
-                    className={choiceClass(entry.status === shelf)}
                   >
                     {SHELF_LABELS[shelf]}
                   </button>
@@ -220,13 +190,17 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
             </form>
 
             {/* Ten whole numbers and nothing else (§5): no stars, no halves.
-                The chosen one clears it again. */}
-            <form action={setRating} className="flex flex-col gap-1.5">
-              <input type="hidden" name="editionId" value={edition.id} />
-              <span className="font-narrow text-ink-dim">
-                Rating{entry.rating ? ` · ${entry.rating}/10` : " · Unrated"}
-              </span>
-              <div className="flex flex-wrap">
+                Ten bars climbing left to right, filled up to the rating; the
+                chosen one clears it again. */}
+            <div>
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <h2 className="font-display text-xl">Rating</h2>
+                <span className="font-mono text-sm text-accent">
+                  {entry.rating ? `${entry.rating} / 10` : "Unrated"}
+                </span>
+              </div>
+              <form action={setRating} className="flex items-end gap-1">
+                <input type="hidden" name="editionId" value={edition.id} />
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                   <button
                     key={n}
@@ -235,30 +209,59 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
                     value={entry.rating === n ? "" : String(n)}
                     aria-pressed={entry.rating === n}
                     aria-label={entry.rating === n ? `Clear rating of ${n}` : `Rate ${n} out of 10`}
-                    className={`${choiceClass(entry.rating === n)} min-w-10`}
-                  >
-                    {n}
-                  </button>
+                    title={`${n} / 10`}
+                    className={`flex-1 hover:brightness-125 ${
+                      entry.rating && n <= entry.rating ? "bg-accent" : "bg-line"
+                    }`}
+                    style={{ height: `${18 + n * 4}px` }}
+                  />
                 ))}
-              </div>
-            </form>
+              </form>
+            </div>
 
-            {/* Free-form buckets beside the four shelves (§2). Plain text, not
-                chips in a colour: the app has none. */}
-            <div className="flex flex-col gap-1.5 font-narrow">
-              <span className="text-ink-dim">Tags</span>
-              <div className="flex flex-wrap items-center gap-2">
+            <div>
+              <h2 className="mb-2 font-display text-xl">Reads</h2>
+              {readRows.length === 0 ? (
+                <p className="mb-2 font-narrow text-ink-dim">
+                  No reads yet. Moving it to Reading or Finished records one.
+                </p>
+              ) : (
+                <ul className="mb-3 flex flex-col">
+                  {readRows.map((read) => (
+                    <ReadRow
+                      key={read.id}
+                      readId={read.id}
+                      startedOn={read.startedOn}
+                      finishedOn={read.finishedOn}
+                    />
+                  ))}
+                </ul>
+              )}
+              <form action={readAgainAction}>
+                <input type="hidden" name="editionId" value={edition.id} />
+                <button type="submit" className="btn btn-sm">
+                  {readRows.length ? "Read again" : "Start reading"}
+                </button>
+              </form>
+            </div>
+
+            <ReviewForm editionId={edition.id} review={entry.review} />
+
+            {/* Free-form buckets beside the four shelves (§2). */}
+            <div>
+              <h2 className="mb-2 font-display text-xl">Tags</h2>
+              <div className="flex flex-wrap items-center gap-2 font-narrow">
                 {entryTagRows.map((tag) => (
-                  <form key={tag.id} action={removeTag} className="flex items-center border border-line">
+                  <form key={tag.id} action={removeTag} className="flex items-center rounded-full border border-line-strong">
                     <input type="hidden" name="editionId" value={edition.id} />
                     <input type="hidden" name="tagId" value={tag.id} />
-                    <Link href={`/?tag=${encodeURIComponent(tag.slug)}`} className="px-2 py-1 hover:text-ink">
+                    <Link href={`/?tag=${encodeURIComponent(tag.slug)}`} className="py-1.5 pr-1 pl-3.5 hover:underline">
                       {tag.name}
                     </Link>
                     <button
                       type="submit"
                       aria-label={`Remove tag ${tag.name}`}
-                      className="border-l border-line px-2 py-1 text-ink-dim hover:text-ink"
+                      className="py-1.5 pr-3.5 pl-1.5 text-ink-dim hover:text-ink"
                     >
                       ×
                     </button>
@@ -272,54 +275,56 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
                     maxLength={60}
                     placeholder="Add a tag"
                     aria-label="Add a tag"
-                    className="w-40 border border-line bg-ground px-2 py-1 text-ink outline-none focus:border-ink-dim"
+                    className="field w-44 rounded-full px-4"
                   />
                   <datalist id="tag-names">
                     {allTags.map((tag) => (
                       <option key={tag.name} value={tag.name} />
                     ))}
                   </datalist>
-                  <button type="submit" className="text-ink-dim underline hover:text-ink">
+                  <button type="submit" className="btn btn-sm">
                     Add
                   </button>
                 </form>
               </div>
             </div>
-
-            <ReviewForm editionId={edition.id} review={entry.review} />
-
-            <div className="flex flex-col gap-2">
-              <div className="flex items-baseline gap-4">
-                <h2 className="font-medium">Reads</h2>
-                <form action={readAgainAction}>
-                  <input type="hidden" name="editionId" value={edition.id} />
-                  <button type="submit" className="font-narrow text-ink-dim underline hover:text-ink">
-                    {readRows.length ? "Read again" : "Start reading"}
-                  </button>
-                </form>
-              </div>
-              {readRows.length === 0 ? (
-                <p className="font-narrow text-ink-dim">
-                  No reads yet. Moving it to Reading or Finished records one.
-                </p>
-              ) : (
-                <ul className="flex flex-col">
-                  {readRows.map((read) => (
-                    <ReadRow
-                      key={read.id}
-                      readId={read.id}
-                      startedOn={read.startedOn}
-                      finishedOn={read.finishedOn}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <RemoveFromShelf editionId={edition.id} />
           </>
         )}
-      </section>
+
+        <div>
+          <h2 className="mb-2 font-display text-xl">This edition</h2>
+          <form action={setFormat} className="mb-4">
+            <input type="hidden" name="editionId" value={edition.id} />
+            <div className="segmented inline-flex">
+              {(["book", "audiobook"] as const).map((format) => (
+                <button
+                  key={format}
+                  type="submit"
+                  name="format"
+                  value={format}
+                  disabled={!entry}
+                  aria-pressed={edition.format === format}
+                >
+                  {format === "book" ? "Book" : "Audiobook"}
+                </button>
+              ))}
+            </div>
+          </form>
+
+          {facts.length > 0 ? (
+            <dl className="grid w-fit grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-narrow">
+              {facts.map(([label, value]) => (
+                <div key={label} className="contents">
+                  <dt className="text-ink-dim">{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+        </div>
+
+        {entry ? <RemoveFromShelf editionId={edition.id} /> : null}
+      </div>
     </main>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 const FIELD =
-  "w-full border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
+  "field";
 
 /** Title and authors for a book created by hand. */
 export function WorkFields({ defaultTitle = "" }: { defaultTitle?: string }) {

@@ -1,23 +1,59 @@
 @import "tailwindcss";
 
 /*
- * Section 5b. gameshelf's ground, so the two apps read as a pair. There is no
- * light mode — the ground is part of the design, not a user preference.
+ * Section 5b, "Living room", shared with gameshelf so the two read as a pair:
+ * a dark slate room, chunky Archivo for anything that is a name, and covers
+ * standing on planks. Sage where gameshelf has amber. There is no light mode.
  */
 @theme inline {
-  --color-ground: #2e3439;
-  --color-panel: #373e44;
-  --color-line: #464e55;
-  --color-ink: #e8e6e1;
-  --color-ink-dim: #98a1a8;
+  --color-ground: #263034;
+  /* A step up from the ground: the "Now playing" band, page headers. */
+  --color-band: #2f3b40;
+  /* A step down: the inside of a text box, a segmented control's track. */
+  --color-well: #1e272a;
+  /* Cover placeholders and anything that used to be a raised panel. */
+  --color-panel: #33424a;
+  --color-line: #3b474c;
+  /* Outlines that have to be seen against the band: secondary buttons. */
+  --color-line-strong: #55636a;
+  --color-ink: #f1ece2;
+  --color-ink-dim: #a3adb1;
+
+  /* bookshelf's colour. gameshelf's is amber; the two read as a pair because
+     everything else is the same. Fills and the active nav item. */
+  --color-accent: #c9d7b8;
+  --color-accent-ink: #263034;
+
+  --color-plank: #3b474c;
+  --color-plank-edge: #5a6970;
+  --color-plank-shadow: #1c2427;
+  --color-sticker: #f1ece2;
+
+  /* Destructive actions only, and only on hover or on the confirm page. */
+  --color-danger: #c0564b;
 
   --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-  --font-narrow: var(--font-archivo-narrow), var(--font-archivo), ui-sans-serif,
-    system-ui, sans-serif;
-  /* Reviews, summaries and the typeset placeholder covers. Nothing else. */
+  /* Reviews, summaries, book titles in the Reading now band, and the typeset
+     placeholder covers. */
   --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
-  /* Literal codes only: ISBNs, Open Library keys. */
+  /* Literal codes only: ISBNs, Open Library keys — and the number on a rating
+     sticker. */
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Archivo is one variable family across widths, so "narrow" is the same face
+   condensed rather than a second family — dense metadata at 87%, names at 125%. */
+@utility font-narrow {
+  font-family: var(--font-sans);
+  font-stretch: 87.5%;
+}
+
+@utility font-display {
+  font-family: var(--font-sans);
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
 }
 
 html {
@@ -30,14 +66,262 @@ body {
   font-family: var(--font-sans);
 }
 
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@layer components {
+  /* Buttons are pills: something to press, not a box to fill in. 40px tall so
+     a thumb finds them; the primary one is the app's colour. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-ink);
+    font-stretch: 87.5%;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .btn:hover {
+    border-color: var(--color-ink-dim);
+  }
+  .btn:disabled {
+    color: var(--color-ink-dim);
+    cursor: default;
+  }
+  /* A choice that is currently on: a level of finished, a flag, a tag. */
+  .btn[aria-pressed="true"] {
+    border-color: var(--color-accent);
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .btn-primary {
+    border-color: transparent;
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    font-weight: 700;
+  }
+  .btn-primary:hover {
+    border-color: transparent;
+    filter: brightness(1.08);
+  }
+  .btn-primary:disabled {
+    color: var(--color-accent-ink);
+    opacity: 0.6;
+  }
+  /* Only on a page whose whole purpose is confirming a deletion. */
+  .btn-danger {
+    border-color: transparent;
+    background: var(--color-danger);
+    font-weight: 700;
+  }
+  .btn-danger:hover {
+    border-color: transparent;
+    filter: brightness(1.1);
+  }
+  .btn-sm {
+    min-height: 2rem;
+    padding: 0 0.75rem;
+  }
+
+  /* A row of choices where exactly one is current: the shelf a game is on. */
+  .segmented {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 24px;
+    background: var(--color-well);
+  }
+  .segmented > button,
+  .segmented > a {
+    flex: 1 1 0;
+    min-width: max-content;
+    min-height: 2.5rem;
+    padding: 0 0.5rem;
+    border-radius: 20px;
+    color: var(--color-ink-dim);
+    font-stretch: 87.5%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  @media (min-width: 640px) {
+    .segmented > button,
+    .segmented > a {
+      padding: 0 0.9rem;
+    }
+  }
+  .segmented > :hover {
+    color: var(--color-ink);
+  }
+  .segmented > [aria-pressed="true"],
+  .segmented > [aria-current="page"] {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    font-weight: 700;
+  }
+
+  .field {
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    background: var(--color-well);
+    color: var(--color-ink);
+    outline: none;
+  }
+  .field:focus {
+    border-color: var(--color-ink-dim);
+  }
+  select.field {
+    width: auto;
+    max-width: 100%;
+    font-stretch: 87.5%;
+  }
+
+  /* A raised box for settings sections and confirmations. */
+  .card {
+    border-radius: 12px;
+    background: var(--color-band);
+    padding: 1.25rem;
+  }
+
+  /*
+   * The plank a row of covers stands on: a lit front edge, the board, and the
+   * shadow it throws on the wall. Drawn as backgrounds so it costs no markup
+   * and stretches with whatever it sits under.
+   */
+  .plank {
+    height: 20px;
+    background:
+      linear-gradient(var(--color-plank-edge), var(--color-plank-edge)) top / 100% 2px no-repeat,
+      linear-gradient(var(--color-plank), var(--color-plank)) top / 100% 14px no-repeat,
+      linear-gradient(var(--color-plank-shadow), transparent) bottom / 100% 6px no-repeat;
+  }
+
+  /* The rating, stuck on the cover like a price sticker. */
+  .sticker {
+    position: absolute;
+    top: 10px;
+    right: -6px;
+    z-index: 15;
+    padding: 2px 7px;
+    transform: rotate(6deg);
+    background: var(--color-sticker);
+    color: var(--color-accent-ink);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    pointer-events: none;
+  }
+}
+
 /*
- * The one orchestrated moment in the app: the shelf grid resolving as covers
- * load. Everything else moves only in answer to an action.
+ * A shelf of covers with a plank under every row, whatever the window width.
+ *
+ * The column count comes from the container's own width, so the planks can be
+ * drawn per tile: each tile carries its piece of the board and a full row
+ * joins them into one. The last row is usually short, and the list's own
+ * bottom plank runs on under the gap so it still reads as one shelf.
+ */
+.shelf-wall {
+  container-type: inline-size;
+}
+
+.shelf-rows {
+  --cols: 3;
+  --gutter: 10px;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  padding-bottom: 0;
+  background: linear-gradient(var(--color-plank-edge), var(--color-plank-edge)) left bottom 18px /
+      100% 2px no-repeat,
+    linear-gradient(var(--color-plank), var(--color-plank)) left bottom 6px / 100% 12px no-repeat,
+    linear-gradient(var(--color-plank-shadow), transparent) left bottom / 100% 6px no-repeat;
+}
+
+@container (min-width: 480px) {
+  .shelf-rows {
+    --cols: 4;
+    --gutter: 14px;
+  }
+}
+@container (min-width: 680px) {
+  .shelf-rows {
+    --cols: 5;
+  }
+}
+@container (min-width: 860px) {
+  .shelf-rows {
+    --cols: 6;
+  }
+}
+@container (min-width: 1060px) {
+  .shelf-rows {
+    --cols: 7;
+  }
+}
+@container (min-width: 1260px) {
+  .shelf-rows {
+    --cols: 8;
+  }
+}
+@container (min-width: 1500px) {
+  .shelf-rows {
+    --cols: 10;
+  }
+}
+
+.shelf-rows > li {
+  padding: 18px calc(var(--gutter) / 2) 20px;
+  background: linear-gradient(var(--color-plank-edge), var(--color-plank-edge)) left bottom 18px /
+      100% 2px no-repeat,
+    linear-gradient(var(--color-plank), var(--color-plank)) left bottom 6px / 100% 12px no-repeat,
+    linear-gradient(var(--color-plank-shadow), transparent) left bottom / 100% 6px no-repeat;
+}
+
+/* A single shelf that scrolls sideways: the home page's one row per shelf. */
+.shelf-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 14px 12px 0;
+  scroll-padding-inline: 12px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.shelf-strip::-webkit-scrollbar {
+  display: none;
+}
+.shelf-strip > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+/*
+ * The one orchestrated moment in the app: the shelf resolving as covers load.
+ * Everything else moves only in answer to an action.
  */
 @keyframes shelf-tile-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;

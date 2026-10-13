@@ -9,7 +9,7 @@ import { fillFromHardcoverBatch, listHardcoverCandidates, type FillOutcome } fro
 import { COVER_CHUNK } from "./import-limits";
 
 const BUTTON =
-  "w-fit border border-line bg-panel px-3 py-2 font-narrow hover:border-ink-dim disabled:text-ink-dim";
+  "w-fit btn";
 
 type Progress = { done: number; total: number; filled: number; none: number; stopped: boolean; finished: boolean };
 
@@ -91,7 +91,7 @@ export function HardcoverFill({ pending }: { pending: number }) {
         </div>
       ) : null}
       {progress ? (
-        <div className="border border-line p-4 tabular-nums">
+        <div className="card tabular-nums">
           <p>
             {progress.done} of {progress.total} · {progress.filled} filled in · {progress.none} not on Hardcover
           </p>

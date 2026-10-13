@@ -4,7 +4,7 @@
  */
 export default function Loading() {
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <p className="font-narrow text-ink-dim">Asking Open Library for editions…</p>
     </main>
   );

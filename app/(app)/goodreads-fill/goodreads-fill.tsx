@@ -11,7 +11,7 @@ import { applyGoodreads, previewGoodreads, type Preview } from "./actions";
 
 const GOODREADS = "https://www.goodreads.com";
 const BUTTON =
-  "w-fit border border-line bg-panel px-4 py-2 font-medium hover:border-ink-dim disabled:text-ink-dim";
+  "w-fit btn btn-primary";
 
 /**
  * Receives a Goodreads book page's details from the bookmarklet (lib/
@@ -244,7 +244,7 @@ function Picker({
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter by title or author"
           aria-label="Filter by title or author"
-          className="w-72 max-w-full border border-line bg-panel px-3 py-2 text-ink placeholder:text-ink-dim"
+          className="field w-72 max-w-full"
         />
         {needing > 0 ? (
           <button type="button" onClick={() => setAll(!all)} className="text-ink-dim underline hover:text-ink">

@@ -125,9 +125,9 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
   }
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <BackToShelf />
-      <h1 className="text-2xl font-medium">{found.name}</h1>
+      <h1 className="font-display text-3xl">{found.name}</h1>
       <p className="mb-6 font-narrow text-ink-dim">
         {members.length} {members.length === 1 ? "book" : "books"}
         {orderedSeries.length > 0
@@ -144,7 +144,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
         <div className="flex max-w-3xl flex-col gap-8">
           {orderedSeries.map((s) => (
             <section key={s.id}>
-              <h2 className="mb-1 font-medium">
+              <h2 className="mb-1 font-display text-xl">
                 <Link href={`/series/${s.slug}`} className="underline hover:text-ink">
                   {s.name}
                 </Link>
@@ -157,7 +157,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
           ))}
           {onTheirOwn.length > 0 ? (
             <section>
-              <h2 className="mb-1 font-medium">{orderedSeries.length > 0 ? "Not in a series" : "Books"}</h2>
+              <h2 className="mb-1 font-display text-xl">{orderedSeries.length > 0 ? "Not in a series" : "Books"}</h2>
               {rows(onTheirOwn, false)}
             </section>
           ) : null}

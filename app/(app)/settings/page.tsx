@@ -69,12 +69,12 @@ export default async function SettingsPage() {
     .orderBy(asc(works.title));
 
   return (
-    <main className="flex-1 p-6">
-      <h1 className="mb-6 text-xl font-medium">Settings</h1>
+    <main className="flex-1 px-4 py-6 sm:px-10">
+      <h1 className="mb-6 font-display text-3xl">Settings</h1>
 
       <div className="flex max-w-2xl flex-col gap-10">
         <section>
-          <h2 className="mb-2 font-medium">Account</h2>
+          <h2 className="mb-2 font-display text-xl">Account</h2>
           <p className="font-narrow text-ink-dim">
             Signed in as {user.username}
             {user.isAdmin ? " · admin" : ""}
@@ -93,7 +93,7 @@ export default async function SettingsPage() {
         </section>
 
         <section>
-          <h2 className="mb-2 font-medium">Signed-in devices</h2>
+          <h2 className="mb-2 font-display text-xl">Signed-in devices</h2>
           {devices.length === 0 ? (
             <p className="font-narrow text-ink-dim">
               No phones signed in. A device appears here when the app signs in to this server.
@@ -125,7 +125,7 @@ export default async function SettingsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-medium">Cover art</h2>
+          <h2 className="mb-1 font-display text-xl">Cover art</h2>
           <p className="font-narrow text-ink-dim">
             {flaggedCovers === 0
               ? "No covers waiting for review."
@@ -145,7 +145,7 @@ export default async function SettingsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-medium">Import from Goodreads</h2>
+          <h2 className="mb-1 font-display text-xl">Import from Goodreads</h2>
           <p className="font-narrow text-ink-dim">
             On Goodreads: My Books → Import and export → Export Library, then download the .csv.
             Books are matched by ISBN, then by title and author; anything that matches nothing is
@@ -186,7 +186,7 @@ export default async function SettingsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-medium">Export</h2>
+          <h2 className="mb-1 font-display text-xl">Export</h2>
           <p className="mb-3 font-narrow text-ink-dim">
             {entryTotal.n} {entryTotal.n === 1 ? "entry" : "entries"}. Plain downloads you could curl
             too. Open Library’s raw data is left out: it is theirs and can be fetched again.
@@ -194,10 +194,10 @@ export default async function SettingsPage() {
           {/* Route handlers returning attachments: next/link would navigate
               client-side and never start a download. */}
           <p className="flex gap-3">
-            <a href="/export/json" download className="border border-line bg-panel px-3 py-2 font-narrow hover:border-ink-dim">
+            <a href="/export/json" download className="btn">
               Download JSON
             </a>
-            <a href="/export/csv" download className="border border-line bg-panel px-3 py-2 font-narrow hover:border-ink-dim">
+            <a href="/export/csv" download className="btn">
               Download CSV
             </a>
           </p>

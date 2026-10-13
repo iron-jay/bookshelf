@@ -5,9 +5,8 @@ import { useActionState, useState } from "react";
 import { deleteRead, removeFromShelf, saveRead, saveReview, type FormState } from "./actions";
 
 const INITIAL: FormState = { error: null, saved: false };
-const BUTTON =
-  "w-fit border border-line bg-panel px-3 py-1.5 font-narrow hover:border-ink-dim disabled:text-ink-dim";
-const FIELD = "border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
+const BUTTON = "btn btn-sm w-fit";
+const FIELD = "field";
 
 function Status({ state }: { state: FormState }) {
   if (state.error) {
@@ -35,13 +34,13 @@ export function ReviewForm({ editionId, review }: { editionId: string; review: s
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="editionId" value={editionId} />
       <label className="flex flex-col gap-1.5">
-        <span className="font-narrow text-ink-dim">Review</span>
+        <span className="font-display text-xl">Review</span>
         <textarea
           name="review"
           defaultValue={review ?? ""}
           rows={8}
           maxLength={50_000}
-          className={`${FIELD} max-w-prose font-serif text-lg leading-relaxed`}
+          className={`${FIELD} font-serif text-lg leading-relaxed`}
         />
       </label>
       <div className="flex items-center gap-3">
@@ -105,7 +104,7 @@ export function RemoveFromShelf({ editionId }: { editionId: string }) {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="font-narrow text-ink-dim underline hover:text-ink"
+        className="self-start font-narrow text-ink-dim underline underline-offset-4 hover:text-danger"
       >
         Remove from shelf
       </button>
@@ -116,7 +115,7 @@ export function RemoveFromShelf({ editionId }: { editionId: string }) {
     <form action={removeFromShelf} className="flex flex-wrap items-center gap-3 font-narrow">
       <input type="hidden" name="editionId" value={editionId} />
       <span>Remove it, with its rating, review and reads?</span>
-      <button type="submit" className={BUTTON}>
+      <button type="submit" className="btn btn-sm btn-danger">
         Remove
       </button>
       <button type="button" onClick={() => setConfirming(false)} className="text-ink-dim underline hover:text-ink">

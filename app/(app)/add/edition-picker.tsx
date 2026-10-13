@@ -88,7 +88,7 @@ export function EditionPicker({
             onChange={(event) => setFilter(event.target.value)}
             placeholder="Filter by format, year, language or ISBN"
             aria-label="Filter editions"
-            className="mt-2 w-full max-w-md border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim"
+            className="mt-2 w-full max-w-md field"
           />
           <p className="font-narrow text-ink-dim">
             {shown.length === ofFormat.length

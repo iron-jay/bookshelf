@@ -14,7 +14,7 @@ import { CoverPicker } from "./cover-picker";
 import { FilePicker } from "./file-picker";
 
 const BUTTON =
-  "w-fit border border-line bg-panel px-3 py-1.5 font-narrow hover:border-ink-dim disabled:text-ink-dim";
+  "w-fit btn";
 const LINK = "font-narrow text-ink-dim underline hover:text-ink disabled:no-underline";
 
 /** Which cover, and where to go once it has changed. */
@@ -78,12 +78,12 @@ export function CoverEditor({
       ) : null}
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Covers found</h2>
+        <h2 className="font-display text-xl">Covers found</h2>
         <CoverPicker kind={kind} id={id} seedTerm={seedTerm} back={back} />
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Your own image</h2>
+        <h2 className="font-display text-xl">Your own image</h2>
         <form action={upload} onSubmit={() => setLast("upload")} className="flex flex-wrap items-center gap-3">
           <Target kind={kind} id={id} back={back} />
           <FilePicker name="cover" accept="image/jpeg,image/png,image/webp" label="Choose image" />
@@ -99,7 +99,7 @@ export function CoverEditor({
             type="url"
             placeholder="https://… image address"
             aria-label="Image address"
-            className="w-72 border border-line bg-ground px-3 py-1.5 text-ink outline-none focus:border-ink-dim"
+            className="w-72 field"
           />
           <button type="submit" disabled={busy} className={BUTTON}>
             {fetching ? "Fetching…" : "Use this image"}

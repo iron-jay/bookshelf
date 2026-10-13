@@ -93,7 +93,7 @@ export function AddForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-fit border border-line bg-panel px-4 py-2 font-medium hover:border-ink-dim disabled:text-ink-dim"
+        className="w-fit btn btn-primary"
       >
         {pending ? "Adding…" : "Add to shelf"}
       </button>

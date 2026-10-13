@@ -8,7 +8,7 @@ import { AddTabs, ComicVineCredit } from "../add-tabs";
 
 export const dynamic = "force-dynamic";
 
-const FIELD = "w-full max-w-md border border-line bg-panel px-3 py-2 text-ink outline-none focus:border-ink-dim";
+const FIELD = "w-full max-w-md field";
 
 /**
  * Door A for comics: search Comic Vine's volumes (runs and collected
@@ -22,8 +22,8 @@ export default async function AddComicPage({ searchParams }: { searchParams: Pro
   const volumes = enabled && term ? await searchVolumes(term) : [];
 
   return (
-    <main className="flex-1 p-6">
-      <h1 className="mb-4 text-xl font-medium">Add a comic or graphic novel</h1>
+    <main className="flex-1 px-4 py-6 sm:px-10">
+      <h1 className="mb-4 font-display text-3xl">Add a comic or graphic novel</h1>
       <AddTabs current="comic" />
 
       {!enabled ? (
@@ -53,7 +53,7 @@ export default async function AddComicPage({ searchParams }: { searchParams: Pro
               autoFocus
               className={FIELD}
             />
-            <button type="submit" className="border border-line bg-panel px-4 py-2 font-medium hover:border-ink-dim">
+            <button type="submit" className="btn btn-primary">
               Search
             </button>
           </form>
@@ -88,7 +88,7 @@ export default async function AddComicPage({ searchParams }: { searchParams: Pro
                 </div>
                 <Link
                   href={`/add/comic/${v.id}`}
-                  className="ml-auto shrink-0 border border-line px-3 py-1.5 font-narrow hover:border-ink-dim"
+                  className="ml-auto shrink-0 btn btn-sm"
                 >
                   {v.issueCount === 1 ? "Add" : "Choose"}
                 </Link>

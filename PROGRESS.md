@@ -1261,3 +1261,29 @@ container, so search was checked for its local half and its
 `catalogueError`.
 
 **Next:** a smoke test for `/api/v1/meta` in the image build.
+
+## 2026-10-13 — "Living room" redesign
+
+The same redesign as gameshelf (its PROGRESS.md has the detail), with sage
+`#C9D7B8` for amber and Newsreader for book titles. CLAUDE.md §5b rewritten.
+
+- System: `app/globals.css` tokens and `.btn`, `.segmented`, `.field`,
+  `.card`, `.plank`, `.sticker`; Archivo as one variable family. Every page's
+  ad hoc button and input classes now use them.
+- Shelves (`/`): "Reading now" band with Finished it and Did not finish, then
+  a strip per shelf on a plank. The wall moved to `/?show=all` (any shelf or
+  tag also shows it), a plank under every row.
+- Edition and work pages: whole cover on a plank beside the title, shelf as a
+  segmented control, rating as ten climbing bars, reads above the review.
+- Phones: bottom tab bar, one sideways-scrolling filter row.
+- **Fixed**: "Already on your shelf" on the add-a-book page linked
+  `/edition/{entry id}`, a 404. It now links the edition.
+- `GAMESHELF_URL` (optional) links across to gameshelf in the header.
+
+Checked in Chromium at 1280 and 390 wide against seeded data: shelves, wall,
+edition, work. Finished it in the band closes the read today (checked in the
+database). `next build`, lint and `check:actions` pass. The add-a-book page
+needs Open Library, which this environment cannot reach, so the 404 fix is
+checked by reading the query, not in a browser.
+
+**Next:** Jay's review of both PRs.

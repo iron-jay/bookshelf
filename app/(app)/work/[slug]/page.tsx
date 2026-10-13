@@ -90,20 +90,33 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
   ).map((c) => c.name);
 
   return (
-    <main className="flex-1 p-6">
-      <BackToShelf />
-      <div className="flex max-w-4xl flex-col gap-8 sm:flex-row">
-        <div className="flex w-40 shrink-0 flex-col gap-3">
-          <Cover title={work.title} author={author} coverUrl={work.coverUrl} />
+    <main className="flex-1 pb-14">
+      <section className="bg-band px-4 pt-2 sm:px-10">
+        <BackToShelf />
+        <div className="flex items-end gap-4 sm:gap-8">
+          {/* The whole cover, standing on the plank below. */}
+          <div className="w-28 shrink-0 sm:w-44">
+            <Cover title={work.title} author={author} coverUrl={work.coverUrl} />
+          </div>
+          <div className="min-w-0 pb-4">
+            <h1 className="font-serif text-[28px] leading-[1.05] font-semibold break-words sm:text-5xl">
+              {work.title}
+            </h1>
+            {work.subtitle ? <p className="mt-1 text-ink-dim">{work.subtitle}</p> : null}
+            {author ? <p className="mt-2 text-lg [font-stretch:110%]">{author}</p> : null}
+          </div>
+        </div>
+      </section>
+      <div className="plank" />
+
+      <div className="flex max-w-4xl flex-col gap-8 px-4 pt-4 sm:px-10">
+        <div className="flex flex-wrap gap-2">
           <ChangeCoverLink href={`/work/${work.slug}/cover`} needsReview={work.coverNeedsReview} />
           <SideLink href={`/work/${work.slug}/edit`}>Edit details</SideLink>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-3">
-          <div>
-            <h1 className="text-2xl font-medium">{work.title}</h1>
-            {work.subtitle ? <p className="text-ink-dim">{work.subtitle}</p> : null}
-            {author ? <p className="mt-1">{author}</p> : null}
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="font-narrow">
             {inCollection ? (
               <p>
                 <Link href={`/collection/${inCollection.slug}`} className="underline hover:text-ink">
@@ -176,14 +189,13 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
             </p>
           ) : null}
         </div>
-      </div>
 
-      <section className="mt-10 max-w-4xl">
+      <section>
         <div className="mb-3 flex flex-wrap items-baseline gap-4">
-          <h2 className="font-medium">Editions</h2>
+          <h2 className="font-display text-xl">Editions</h2>
           <Link
             href={`/add?work=${work.id}`}
-            className="border border-line px-3 py-1.5 font-narrow hover:border-ink-dim"
+            className="btn btn-sm"
           >
             Add edition
           </Link>
@@ -206,7 +218,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
               edition.credit,
             ].filter(Boolean);
             return (
-              <li key={edition.id} className="flex items-center gap-4 border-b border-line py-2">
+              <li key={edition.id} className="flex items-center gap-4 border-b border-line py-3">
                 <div className="w-12 shrink-0">
                   <Cover
                     title={work.title}
@@ -215,7 +227,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
                   />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate">
+                  <p className="truncate font-semibold">
                     {edition.entryId ? (
                       <Link href={`/edition/${edition.id}`} className="underline hover:text-ink">
                         {edition.name}
@@ -238,6 +250,7 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
           })}
         </ul>
       </section>
+      </div>
     </main>
   );
 }

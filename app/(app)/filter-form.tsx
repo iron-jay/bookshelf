@@ -70,13 +70,14 @@ export function FilterForm({
       ref={form}
       action="/"
       onChange={apply}
-      className="mb-6 flex flex-wrap items-center gap-3 font-narrow"
+      // One row on a phone that scrolls sideways; it wraps where there is room.
+      className="-mx-4 mb-6 flex items-center gap-3 overflow-x-auto px-4 pb-1 font-narrow sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
     >
       {children}
       {scripted ? null : (
         <button
           type="submit"
-          className="border border-line bg-panel px-3 py-1.5 hover:border-ink-dim"
+          className="btn"
         >
           Apply
         </button>

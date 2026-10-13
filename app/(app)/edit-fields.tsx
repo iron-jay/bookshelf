@@ -15,8 +15,8 @@ import { languageOptions } from "@/lib/languages";
 
 export type EditState = { error: string | null };
 
-const FIELD = "w-full border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
-const BUTTON = "border border-line bg-panel px-4 py-2 font-medium hover:border-ink-dim disabled:text-ink-dim";
+const FIELD = "field";
+const BUTTON = "btn btn-primary";
 
 function Field({ label, className = "", children }: { label: string; className?: string; children: React.ReactNode }) {
   return (

@@ -24,13 +24,13 @@ export default async function EditWorkPage({ params }: { params: Promise<{ slug:
   const back = `/work/${work.slug}`;
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <p className="mb-2 font-narrow">
         <Link href={back} className="text-ink-dim underline hover:text-ink">
           Back to {work.title}
         </Link>
       </p>
-      <h1 className="mb-2 text-xl font-medium">Edit {work.title}</h1>
+      <h1 className="mb-2 font-display text-3xl">Edit {work.title}</h1>
       <p className="mb-6 max-w-2xl font-narrow text-ink-dim">
         These are the book’s details, shared by every edition of it. An edition’s own name, language and
         the rest are edited from that edition’s page.

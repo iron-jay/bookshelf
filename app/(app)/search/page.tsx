@@ -82,7 +82,7 @@ export default async function SearchPage({
   }
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <form className="mb-6 flex gap-2" action="/search">
         <input
           name="q"
@@ -91,11 +91,11 @@ export default async function SearchPage({
           placeholder="Title, author or ISBN"
           aria-label="Search"
           autoFocus
-          className="w-full max-w-md border border-line bg-panel px-3 py-2 text-ink outline-none focus:border-ink-dim"
+          className="w-full max-w-md field"
         />
         <button
           type="submit"
-          className="border border-line bg-panel px-4 py-2 font-medium hover:border-ink-dim"
+          className="btn btn-primary"
         >
           Search
         </button>
@@ -220,7 +220,7 @@ function AddLink({ href, again }: { href: string; again: boolean }) {
   return (
     <Link
       href={href}
-      className="ml-auto shrink-0 border border-line px-3 py-1.5 font-narrow hover:border-ink-dim"
+      className="ml-auto shrink-0 btn btn-sm"
     >
       {again ? "Add another edition" : "Add"}
     </Link>
