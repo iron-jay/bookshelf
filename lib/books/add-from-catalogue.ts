@@ -3,15 +3,17 @@ import { randomUUID } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { authorSortFor } from "@/lib/authors";
+import { comicTitle, getIssue, getVolume } from "@/lib/comicvine";
 import { downloadCover } from "@/lib/covers";
 import { db } from "@/lib/db";
 import { editions, entries, works } from "@/lib/db/schema";
+import { getBook } from "@/lib/hardcover";
 import type { Shelf } from "@/lib/shelves";
 import { slugify } from "@/lib/slug";
 
 import { ensurePlainEdition } from "./add";
 import { setCover } from "./covers";
-import { setWorkSeries } from "./series";
+import { parsePosition, setWorkSeries } from "./series";
 import { shelveEdition } from "./shelving";
 
 /**
@@ -37,7 +39,7 @@ export type CatalogueBook = {
   source: "local" | "comicvine";
 };
 
-export type CatalogueAddResult = { entryId: string; added: boolean };
+export type CatalogueAddResult = { editionId: string; entryId: string; added: boolean };
 
 /**
  * The work (found, or created from the book), its plain Book or Audiobook
@@ -94,14 +96,14 @@ export async function addFromCatalogue(input: {
         .where(and(eq(editions.id, edition.id), isNull(editions.url)));
     }
     const shelved = await shelveEdition(tx, input.userId, edition.id, input.shelf);
-    return { workId, created, ...shelved };
+    return { workId, created, editionId: edition.id, ...shelved };
   });
 
   if (outcome.created && book.coverUrl) {
     const stored = await downloadCover(book.coverUrl);
     if (stored.ok) await setCover({ kind: "work", id: outcome.workId }, stored.path, book.coverSource, false);
   }
-  return { entryId: outcome.entryId, added: outcome.added };
+  return { editionId: outcome.editionId, entryId: outcome.entryId, added: outcome.added };
 }
 
 /** Whether you already have this catalogue book on your shelf, in any edition — for the add page to say so. */
@@ -118,4 +120,58 @@ export async function shelvedEntryFor(
     .where(match)
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * A book only Hardcover has (§4b), from Hardcover's own answer for its id. It
+ * becomes a local work with those details, as the import makes one. Null when
+ * Hardcover did not answer, or has no such book.
+ */
+export async function hardcoverBook(id: number): Promise<CatalogueBook | null> {
+  const book = await getBook(id);
+  if (!book) return null;
+
+  // Hardcover often repeats the end of the title as the subtitle.
+  const subtitle = book.subtitle && !book.title.toLowerCase().endsWith(book.subtitle.toLowerCase()) ? book.subtitle : null;
+  return {
+    key: { hardcoverId: book.id },
+    title: book.title,
+    subtitle,
+    authors: book.authors,
+    summary: book.description,
+    year: book.releaseYear,
+    series: book.series,
+    coverUrl: book.imageUrl,
+    coverSource: "hardcover",
+    pageUrl: null,
+    source: "local",
+  };
+}
+
+/**
+ * A comic or graphic novel from Comic Vine (§4c): one issue, which may be a
+ * single issue, a trade paperback or a graphic novel. Its volume is its series
+ * when the volume has more than one issue, numbered by the issue.
+ */
+export async function comicBook(issueId: number): Promise<CatalogueBook | null> {
+  const issue = await getIssue(issueId);
+  const volume = issue?.volume ? await getVolume(issue.volume.id) : null;
+  if (!issue || !volume) return null;
+
+  const position = issue.issueNumber ? parsePosition(issue.issueNumber) : null;
+  return {
+    key: { comicvineIssueId: issue.id },
+    title: comicTitle(volume.name, issue, volume.issueCount),
+    subtitle: null,
+    authors: issue.authors,
+    summary: issue.description,
+    year: issue.year,
+    series:
+      volume.issueCount > 1 ? { name: volume.name, position: typeof position === "number" ? position : null } : null,
+    coverUrl: issue.coverUrl,
+    coverSource: "comicvine",
+    // Comic Vine's own address for it, from its answer; only on its host.
+    pageUrl: issue.pageUrl && /^https:\/\/comicvine\.gamespot\.com\//.test(issue.pageUrl) ? issue.pageUrl : null,
+    source: "comicvine",
+  };
 }
