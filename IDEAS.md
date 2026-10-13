@@ -6,7 +6,8 @@ are not quietly built.
 - **Authors table and author pages.** Authors are `text[]` + `author_sort` on
   the work until author pages are a real want (brief §2).
 - Social features, reading challenges, page-by-page progress, quotes and
-  highlights, recommendations, stats dashboards, a mobile app (brief §5).
+  highlights, recommendations, stats dashboards (brief §5). A mobile app was
+  here until 2026-10-13; it is now being built against the JSON API.
 
 ## Left over from v1 scope
 

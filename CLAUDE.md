@@ -318,8 +318,12 @@ form. Used for web serials, zines, ARCs, out-of-print things.
 6. **Settings** — account name and password, export, import, cover art review.
 
 Out of scope for v1: social features, reading challenges, page-by-page progress
-tracking, quotes/highlights, recommendations, stats dashboards, mobile app.
+tracking, quotes/highlights, recommendations, stats dashboards.
 Note them in `IDEAS.md` and move on.
+
+A companion phone app is in scope as of 2026-10-13, shared with gameshelf. It
+talks to a JSON API under `app/api/v1` (README, "JSON API"), which calls the
+same `lib/` code the server actions do and adds no rules of its own.
 
 ### Reads
 

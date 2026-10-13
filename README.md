@@ -65,6 +65,49 @@ an agent in the environment. Start it with the detection variables unset:
 env -u AI_AGENT -u CLAUDECODE -u CLAUDE_CODE -u CLAUDE_CODE_IS_COWORK npm run dev -- -p 3001
 ```
 
+### JSON API
+
+The companion phone app talks to `/api/v1`, the same contract as gameshelf's.
+It signs in once and keeps a device token, sent as
+`Authorization: Bearer <token>`; covers and the export accept the same token,
+so it also works for scripts:
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/auth/token \
+  -H 'content-type: application/json' \
+  -d '{"username":"admin","password":"…","deviceName":"curl"}'
+curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
+```
+
+| Route | |
+|---|---|
+| `GET /api/v1/meta` | App name, shelves, whether sign-in is required. No token needed. |
+| `POST /api/v1/auth/token` | Username and password in, `{ token, user }` out |
+| `DELETE /api/v1/auth/token` | Signs the calling device out |
+| `GET /api/v1/me` | The signed-in user |
+| `GET /api/v1/shelf` | Shelf cards. `shelf`, `tag` (slug), `sort` (`added`, `title`, `author`, `rated`, `finished`), `limit` (1–500, default 100), `offset`. Returns `{ total, limit, offset, items }` |
+| `GET /api/v1/tags` | Your tags with how many entries carry each |
+| `GET /api/v1/search?q=` | This server, Open Library and Hardcover merged as on the search page; an ISBN answers with the one edition. `catalogueError` says why remote results are missing |
+| `GET /api/v1/works/{slug}` | A work, its editions (with your entry on each), series and collection |
+| `GET /api/v1/editions/{id}` | An edition, its work, and your entry id if shelved |
+| `POST /api/v1/entries` | `{ editionId, shelf? }`. 201 when added, 200 when it was already there (its shelf is kept). Reading opens a read, Finished records one |
+| `GET /api/v1/entries/{id}` | One entry: its card plus review, flags, tags and reads |
+| `PATCH /api/v1/entries/{id}` | Any of `shelf`, `rating` (1–10 or null), `review`, `reviewHasSpoilers`, `isFavourite`, `isPrivate`. A shelf change follows the read rules |
+| `DELETE /api/v1/entries/{id}` | Takes it off your shelf with its rating, review, reads and tags. The book stays on the server |
+| `POST /api/v1/entries/{id}/reads` | Read again: a new read started today, back on Reading |
+| `PATCH /api/v1/reads/{id}` | `startedOn`, `finishedOn` (`YYYY-MM-DD` or null) |
+| `DELETE /api/v1/reads/{id}` | Removes one read |
+| `PUT /api/v1/entries/{id}/tags/{name}` | Adds a tag, creating it if new. Returns `{ tags }` |
+| `DELETE /api/v1/entries/{id}/tags/{name}` | Removes a tag; one left on nothing is deleted. Returns `{ tags }` |
+
+Errors are `{ "error": { "code", "message" } }` with a matching status; a
+missing or expired token is a 401. Device tokens last 180 days from last use
+and are listed in Settings, where each can be signed out. Changing your
+password signs every device out. Ten failed sign-ins for one username or from
+one address in fifteen minutes block further attempts, on the web form too.
+
+With `AUTH_DISABLED=true` the API needs no token either, the same as the web.
+
 ## Deployment
 
 Same shape as gameshelf, and it can share gameshelf's Debian VM: its own

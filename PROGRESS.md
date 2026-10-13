@@ -1196,6 +1196,72 @@ Two changes from what the real data showed:
   The issue's own `site_detail_url` from the API is now kept as the
   edition's link, and the work page links to that.
 
+## 2026-10-13 (API step 1, ported from gameshelf)
+
+Device tokens and sign-in for the companion phone app, the same as gameshelf's
+step 1 so one phone app talks to both servers the same way.
+
+- `0007_device_sessions`: `sessions` gains `kind` (`cookie` or `device`),
+  `label`, `created_at` and `last_used_at`. The defaults describe every
+  existing session, so a deploy signs nobody out (checked: a cookie made
+  before the migration still works after it).
+- Device tokens last 180 days and slide; cookies stay at 30. A cookie is never
+  accepted as a bearer token or the reverse. `getCurrentUser()` reads the
+  cookie, then `Authorization: Bearer`, so `/covers` and `/export` take a
+  device token with no change of their own.
+- Sign-in, from the web form and the API alike, goes through
+  `lib/auth/login.ts`, which adds a throttle: ten failures per username or per
+  client address in fifteen minutes (`lib/auth/throttle.ts`, in memory).
+- `/api/v1/meta`, `/me`, `POST` and `DELETE /auth/token`, all through
+  `lib/api`'s `withUser`/`publicRoute` with one error shape.
+- Settings lists signed-in devices with a sign-out button each.
+
+**Verified** with the production build on Postgres 16: each route, wrong and
+missing credentials, the throttle's 429 and Retry-After, a token against
+`/export`, a cookie refused as a bearer token and the reverse, signing a
+device out, and the Settings list.
+
+**Next:** move the shelf and entry logic into `lib/` for the read and write
+endpoints.
+
+## 2026-10-13 (API steps 2 to 4, ported from gameshelf)
+
+Everything the phone needs to read and change the shelf, on the same contract
+as gameshelf's API so one app talks to both.
+
+**Logic moved into `lib/books`, pages unchanged.** The edition page's actions
+are now thin wrappers over `lib/books/entries.ts` (rating, review, shelf with
+its read rules, reads, tags, removing an entry); the shelf query and tag
+counts moved to `lib/books/shelf.ts`; the search page's local search and its
+merge with Open Library and Hardcover moved to `lib/books/search.ts` and
+`lib/books/search-results.ts`. Checked by building before and after: the
+shelf's `<main>` is byte-identical for 12 views, search for 6 queries, and the
+same 22 edition-page form posts leave the database identical.
+
+One behaviour change: removing a book from the shelf now also deletes any tag
+left on nothing, the rule untagging already followed. Before, such a tag stayed
+in the table, though nothing showed it.
+
+**Routes**, listed in the README: shelf, tags, search, works, editions,
+entries (add, read, change, remove), reads (read again, change dates, delete)
+and tags by name. The card has gameshelf's top-level fields, with
+`versionId` meaning the edition and book-only fields under `extra`.
+
+**Not done:** adding from Open Library or Hardcover. Both need an edition
+chosen first, which the web's add pages do; a search result carries the
+`webPath` to that page. `POST /entries` adds any edition already on the server.
+
+**Verified** on Postgres 16 with the production build and a device token:
+each route, every 422 and 404, 401 without a token, the read rules through
+PATCH (Reading opens one read however often it is chosen, Finished closes it),
+read dates rejected out of order or not real days, tags created, matched by
+slug and dropped when empty, an entry removed with its reads and tags then
+added back (201, then 200). Open Library could not be reached from the test
+container, so search was checked for its local half and its
+`catalogueError`.
+
+**Next:** a smoke test for `/api/v1/meta` in the image build.
+
 ## 2026-10-13 — "Living room" redesign
 
 The same redesign as gameshelf (its PROGRESS.md has the detail), with sage
