@@ -1318,3 +1318,20 @@ checked by reading the query, not in a browser.
   again as 200, then "any edition" as a Book) against a cached work. Adds that
   need the catalogues themselves are untested: the cloud environment blocks
   their hosts.
+
+## 2026-10-13 — Catalogue adds tested live through the API
+
+With the catalogue hosts allowed, against a local Postgres:
+
+- Open Library: search, an edition list (58 editions, 6 audiobooks), an
+  audiobook edition on Finished (read recorded, cover from Open Library),
+  "any edition" as a plain Book, an edition of another work refused (422).
+- Hardcover: a book only Hardcover has, with its series and cover; again as 200.
+- Comic Vine: volume search, a volume's issues, an issue added with its
+  series, cover and Comic Vine link; the volume then shows it as shelved.
+- **Fixed**: an ISBN search's `isbn.remote` gave only the work, so the phone
+  could not add the edition the ISBN names. It now carries `olEditionKey`,
+  `format` and `isbn` too (checked: added as "Paperback, 1991" with the ISBN).
+- Google Books: the key is accepted, but Google refuses requests from the
+  cloud test environment ("Cannot determine user location"), so the cover
+  fallback could not be seen working from there. Not a code problem.
