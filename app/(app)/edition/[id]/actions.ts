@@ -1,17 +1,33 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
-import { dateFrom } from "@/lib/books/edit-fields";
-import { changeShelf, readAgain, shelveEdition } from "@/lib/books/shelving";
-import { cleanTagName, ensureTag, tagEntries, untagEntries } from "@/lib/books/tags";
+import {
+  deleteRead as deleteOwnRead,
+  editionExists,
+  ownEntry,
+  ownRead,
+  ownTag,
+  readAgainFor,
+  removeEntry,
+  REVIEW_MAX,
+  reviewFrom,
+  tagEntry,
+  untagEntry,
+  updateEntry,
+  updateRead,
+} from "@/lib/books/entries";
+import { shelveEdition } from "@/lib/books/shelving";
 import { db } from "@/lib/db";
-import { editions, entries, reads, tags } from "@/lib/db/schema";
+import { editions } from "@/lib/db/schema";
 import { isShelf } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
+
+// The rules live in lib/books, shared with the phone's API. These read the
+// form, check the row is yours, and refresh the pages that show the result.
 
 export type FormState = { error: string | null; saved: boolean };
 
@@ -23,32 +39,19 @@ function text(formData: FormData, name: string): string {
 /** The edition id from the form, if it names an edition that exists. */
 async function editionFrom(formData: FormData): Promise<string | null> {
   const id = text(formData, "editionId");
-  if (!isUuid(id)) return null;
-  const [row] = await db.select({ id: editions.id }).from(editions).where(eq(editions.id, id));
-  return row?.id ?? null;
+  return isUuid(id) && (await editionExists(id)) ? id : null;
 }
 
-/**
- * Your entry for an edition. Every change below goes through this, so nothing
- * posted from a form can reach someone else's shelf row.
- */
-async function ownEntry(userId: string, editionId: string): Promise<string | null> {
-  const [row] = await db
-    .select({ id: entries.id })
-    .from(entries)
-    .where(and(eq(entries.userId, userId), eq(entries.editionId, editionId)));
-  return row?.id ?? null;
+/** Your entry for the form's edition. Nothing posted can reach someone else's row. */
+async function entryFrom(userId: string, formData: FormData) {
+  const editionId = await editionFrom(formData);
+  const entryId = editionId ? await ownEntry(userId, editionId) : null;
+  return editionId && entryId ? { editionId, entryId } : null;
 }
 
-/** A read, only if it belongs to one of your entries. */
-async function ownRead(userId: string, readId: string): Promise<{ id: string; editionId: string } | null> {
-  if (!isUuid(readId)) return null;
-  const [row] = await db
-    .select({ id: reads.id, editionId: entries.editionId })
-    .from(reads)
-    .innerJoin(entries, eq(entries.id, reads.entryId))
-    .where(and(eq(reads.id, readId), eq(entries.userId, userId)));
-  return row ?? null;
+async function readFrom(userId: string, formData: FormData) {
+  const readId = text(formData, "readId");
+  return isUuid(readId) ? ownRead(userId, readId) : null;
 }
 
 function refresh(editionId: string): void {
@@ -67,27 +70,23 @@ export async function addToShelf(formData: FormData): Promise<void> {
 
 export async function setShelf(formData: FormData): Promise<void> {
   const user = await requireUser();
-  const editionId = await editionFrom(formData);
   const shelf = text(formData, "shelf");
-  if (!editionId || !isShelf(shelf)) return;
-  const entryId = await ownEntry(user.id, editionId);
-  if (!entryId) return;
-  await db.transaction((tx) => changeShelf(tx, entryId, shelf));
-  refresh(editionId);
+  const entry = await entryFrom(user.id, formData);
+  if (!entry || !isShelf(shelf)) return;
+  await updateEntry(entry.entryId, { shelf });
+  refresh(entry.editionId);
 }
 
 /** 1–10, or "" to clear. Whole numbers only: there are no halves (§5). */
 export async function setRating(formData: FormData): Promise<void> {
   const user = await requireUser();
-  const editionId = await editionFrom(formData);
-  if (!editionId) return;
   const raw = text(formData, "rating");
   const rating = raw === "" ? null : Number(raw);
   if (rating !== null && (!Number.isInteger(rating) || rating < 1 || rating > 10)) return;
-  const entryId = await ownEntry(user.id, editionId);
-  if (!entryId) return;
-  await db.update(entries).set({ rating }).where(eq(entries.id, entryId));
-  refresh(editionId);
+  const entry = await entryFrom(user.id, formData);
+  if (!entry) return;
+  await updateEntry(entry.entryId, { rating });
+  refresh(entry.editionId);
 }
 
 export async function saveReview(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -97,56 +96,46 @@ export async function saveReview(_prev: FormState, formData: FormData): Promise<
   const entryId = await ownEntry(user.id, editionId);
   if (!entryId) return { error: "Add it to your shelf first.", saved: false };
 
-  // Not trimmed: leading indentation and trailing blank lines can be
-  // deliberate in prose. Only a review that is nothing but space is empty.
   const raw = formData.get("review");
-  const review = typeof raw === "string" && raw.trim() ? raw : null;
-  if (review && review.length > 50_000) {
+  const review = reviewFrom(typeof raw === "string" ? raw : null);
+  if (review && review.length > REVIEW_MAX) {
     return { error: "That review is longer than this server keeps (50,000 characters).", saved: false };
   }
 
-  await db.update(entries).set({ review }).where(eq(entries.id, entryId));
+  await updateEntry(entryId, { review });
   refresh(editionId);
   return { error: null, saved: true };
 }
 
 export async function readAgainAction(formData: FormData): Promise<void> {
   const user = await requireUser();
-  const editionId = await editionFrom(formData);
-  if (!editionId) return;
-  const entryId = await ownEntry(user.id, editionId);
-  if (!entryId) return;
-  await db.transaction((tx) => readAgain(tx, entryId));
-  refresh(editionId);
+  const entry = await entryFrom(user.id, formData);
+  if (!entry) return;
+  await readAgainFor(entry.entryId);
+  refresh(entry.editionId);
 }
 
 /** "YYYY-MM-DD" that is a real day, "" for none, or "invalid". */
 export async function saveRead(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
-  const read = await ownRead(user.id, text(formData, "readId"));
+  const read = await readFrom(user.id, formData);
   if (!read) return { error: "That read is no longer here.", saved: false };
 
-  const startedOn = dateFrom(text(formData, "startedOn"));
-  const finishedOn = dateFrom(text(formData, "finishedOn"));
-  if (startedOn === "invalid" || finishedOn === "invalid") {
-    return { error: "Dates should be real days.", saved: false };
-  }
-  // The same rule as the reads_date_order constraint, said in words rather
-  // than surfacing as a 500.
-  if (startedOn && finishedOn && finishedOn < startedOn) {
-    return { error: "It cannot finish before it started.", saved: false };
-  }
+  const error = await updateRead(read.id, {
+    startedOn: text(formData, "startedOn"),
+    finishedOn: text(formData, "finishedOn"),
+  });
+  if (error) return { error, saved: false };
 
-  await db.update(reads).set({ startedOn, finishedOn }).where(eq(reads.id, read.id));
   refresh(read.editionId);
   return { error: null, saved: true };
 }
 
 export async function deleteRead(formData: FormData): Promise<void> {
   const user = await requireUser();
-  const read = await ownRead(user.id, text(formData, "readId"));
+  const read = await readFrom(user.id, formData);
   if (!read) return;
-  await db.delete(reads).where(eq(reads.id, read.id));
+  await deleteOwnRead(read.id);
   refresh(read.editionId);
 }
 
@@ -167,29 +156,21 @@ export async function setFormat(formData: FormData): Promise<void> {
 
 export async function addTag(formData: FormData): Promise<void> {
   const user = await requireUser();
-  const editionId = await editionFrom(formData);
-  const name = cleanTagName(text(formData, "tag"));
-  if (!editionId || !name) return;
-  const entryId = await ownEntry(user.id, editionId);
-  if (!entryId) return;
-  await db.transaction(async (tx) => tagEntries(tx, await ensureTag(tx, user.id, name), [entryId]));
-  refresh(editionId);
+  const entry = await entryFrom(user.id, formData);
+  if (!entry) return;
+  if (await tagEntry(user.id, entry.entryId, text(formData, "tag"))) refresh(entry.editionId);
 }
 
 export async function removeTag(formData: FormData): Promise<void> {
   const user = await requireUser();
-  const editionId = await editionFrom(formData);
   const tagId = text(formData, "tagId");
-  if (!editionId || !isUuid(tagId)) return;
-  const entryId = await ownEntry(user.id, editionId);
+  if (!isUuid(tagId)) return;
+  const entry = await entryFrom(user.id, formData);
   // Your tag only: a tag id from someone else's shelf does nothing here.
-  const [tag] = await db
-    .select({ id: tags.id })
-    .from(tags)
-    .where(and(eq(tags.id, tagId), eq(tags.userId, user.id)));
-  if (!entryId || !tag) return;
-  await db.transaction((tx) => untagEntries(tx, tag.id, [entryId]));
-  refresh(editionId);
+  const tag = await ownTag(user.id, { id: tagId });
+  if (!entry || !tag) return;
+  await untagEntry(tag, entry.entryId);
+  refresh(entry.editionId);
 }
 
 /**
@@ -199,10 +180,8 @@ export async function removeTag(formData: FormData): Promise<void> {
  */
 export async function removeFromShelf(formData: FormData): Promise<void> {
   const user = await requireUser();
-  const editionId = await editionFrom(formData);
-  if (!editionId) return;
-  const entryId = await ownEntry(user.id, editionId);
-  if (entryId) await db.delete(entries).where(eq(entries.id, entryId));
+  const entry = await entryFrom(user.id, formData);
+  if (entry) await removeEntry(entry.entryId);
   revalidatePath("/");
   redirect("/");
 }
