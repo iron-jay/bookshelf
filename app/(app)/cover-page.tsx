@@ -39,13 +39,13 @@ export function CoverPage({
   backLabel: string;
 }) {
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <p className="mb-2 font-narrow">
         <Link href={backHref} className="text-ink-dim underline hover:text-ink">
           Back to {backLabel}
         </Link>
       </p>
-      <h1 className="mb-6 text-xl font-medium">Cover for {title}</h1>
+      <h1 className="mb-6 font-display text-3xl">Cover for {title}</h1>
       <div className="flex flex-col gap-8 sm:flex-row">
         <div className="w-56 shrink-0">
           <Cover title={title} author={author} coverUrl={coverUrl} />
@@ -72,7 +72,7 @@ export function CoverPage({
  */
 export function SideLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="border border-line bg-panel px-3 py-1.5 text-center font-narrow hover:border-ink-dim">
+    <Link href={href} className="btn btn-sm">
       {children}
     </Link>
   );
@@ -85,10 +85,10 @@ export function ChangeCoverLink({ href, needsReview }: { href: string; needsRevi
 /** Top of a book's page: back to the shelf, at the place you left it. */
 export function BackToShelf() {
   return (
-    <p className="mb-4">
+    <p className="mb-3">
       <ShelfLink
         restoreScroll
-        className="inline-block border border-line bg-panel px-3 py-1.5 font-narrow hover:border-ink-dim"
+        className="inline-flex min-h-11 items-center font-narrow text-ink-dim underline underline-offset-4 hover:text-ink"
       >
         Back to shelf
       </ShelfLink>

@@ -7,7 +7,7 @@ import { login, type LoginState } from "./actions";
 const INITIAL: LoginState = { error: null };
 
 const FIELD =
-  "w-full border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
+  "field";
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(login, INITIAL);
@@ -47,7 +47,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="border border-line bg-panel px-3 py-2 font-medium hover:border-ink-dim disabled:text-ink-dim"
+        className="btn btn-primary"
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>

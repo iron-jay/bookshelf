@@ -101,7 +101,7 @@ export default async function AddBookPage({
   // reachable.
   if (!heading) {
     return (
-      <main className="flex-1 p-6">
+      <main className="flex-1 px-4 py-6 sm:px-10">
         <p role="status" className="max-w-2xl border-l-2 border-ink-dim pl-3 font-narrow">
           {failure}, and this work is not on your server yet, so there is nothing to add it
           from. Try again in a moment.
@@ -112,7 +112,9 @@ export default async function AddBookPage({
 
   const mine = local
     ? await db
-        .select({ id: entries.id, olEditionKey: editions.olEditionKey, name: editions.name })
+        // The edition's id, not the entry's: the links below go to /edition/{id},
+        // and an entry id there was a 404.
+        .select({ id: editions.id, olEditionKey: editions.olEditionKey, name: editions.name })
         .from(entries)
         .innerJoin(editions, eq(editions.id, entries.editionId))
         .where(and(eq(entries.userId, user.id), eq(editions.workId, local.id)))
@@ -148,7 +150,7 @@ export default async function AddBookPage({
   const isbn = query.isbn ? parseIsbn(query.isbn) : null;
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <header className="mb-8 flex items-start gap-4">
         <div className="h-24 w-16 shrink-0 bg-panel">
           {heading.cover ? (
@@ -163,7 +165,7 @@ export default async function AddBookPage({
           ) : null}
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl font-medium">{heading.title}</h1>
+          <h1 className="font-display text-3xl">{heading.title}</h1>
           {heading.authors.length > 0 ? <p>{heading.authors.join(", ")}</p> : null}
           <p className="font-narrow text-ink-dim">
             {[heading.year, local ? "Saved on this server" : "Open Library"]

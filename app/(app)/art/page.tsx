@@ -79,8 +79,8 @@ export default async function ArtPage() {
   ];
 
   return (
-    <main className="flex-1 p-6">
-      <h1 className="text-xl font-medium">Cover art to review</h1>
+    <main className="flex-1 px-4 py-6 sm:px-10">
+      <h1 className="font-display text-3xl">Cover art to review</h1>
       <p className="mb-6 max-w-2xl font-narrow text-ink-dim">
         Covers found by title rather than by ISBN, so they may belong to a different book. Approve
         the ones that are right; open the others to upload, paste or remove.
@@ -101,7 +101,7 @@ export default async function ArtPage() {
                 <form action={approveCover}>
                   <input type="hidden" name="targetKind" value={item.kind} />
                   <input type="hidden" name="targetId" value={item.id} />
-                  <button type="submit" className="border border-line bg-panel px-3 py-1.5 hover:border-ink-dim">
+                  <button type="submit" className="btn">
                     It’s right
                   </button>
                 </form>

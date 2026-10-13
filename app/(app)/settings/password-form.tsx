@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { changePassword, type PasswordState } from "./actions";
 
 const FIELD =
-  "w-full border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
+  "field";
 
 export function PasswordForm() {
   const [state, action, pending] = useActionState<PasswordState, FormData>(changePassword, null);
@@ -56,7 +56,7 @@ export function PasswordForm() {
       <button
         type="submit"
         disabled={pending}
-        className="self-start border border-line bg-panel px-3 py-2 font-narrow hover:border-ink-dim disabled:text-ink-dim"
+        className="self-start btn"
       >
         {pending ? "Changing…" : "Change password"}
       </button>

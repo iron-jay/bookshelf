@@ -63,6 +63,8 @@ services:
       COVERS_DIR: /data/covers
       # The session cookie's Secure flag is derived from this.
       ORIGIN: ${ORIGIN:-http://localhost:3001}
+      # Optional: gameshelf's address, for the link across in the header.
+      GAMESHELF_URL: ${GAMESHELF_URL:-}
     volumes:
       # The container runs as uid 1001; the host directory must match.
       - ../bookshelf-data/covers:/data/covers

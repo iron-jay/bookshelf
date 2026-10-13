@@ -10,7 +10,9 @@ import { isShelf, SHELF_LABELS, SHELVES, type Shelf } from "@/lib/shelves";
 import { FilterForm } from "./filter-form";
 import { RememberShelfView } from "./remember-shelf-view";
 import type { ShelfCard } from "./shelf-card";
-import { ShelfGrid, type ShelfSection } from "./shelf-grid";
+import { ReadingNow } from "./reading-now";
+import { ResolveOnce } from "./resolve-once";
+import { ShelfGrid, Tile, type ShelfSection } from "./shelf-grid";
 import { preferencesFrom, SHELF_VIEW_COOKIE } from "./shelf-view";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +58,8 @@ type Params = {
   sort?: string;
   groupBy?: string;
   view?: string;
+  /** "all" for the whole wall; otherwise a bare "/" is the shelves overview. */
+  show?: string;
   added?: string;
   already?: string;
 };
@@ -67,7 +71,7 @@ function isKeyOf<T extends object>(table: T, value: string | undefined): value i
 /** The URL-state part of the params: not the one-off added/already notice. */
 function queryFor(params: Params): string {
   const query = new URLSearchParams();
-  for (const key of ["status", "tag", "sort", "groupBy", "view"] as const) {
+  for (const key of ["status", "tag", "sort", "groupBy", "view", "show"] as const) {
     const value = params[key];
     if (value) query.set(key, value);
   }
@@ -79,7 +83,16 @@ function hrefWith(current: Params, patch: Params): string {
   return qs ? `/?${qs}` : "/";
 }
 
-const SELECT = "border border-line bg-panel px-2 py-1.5 text-ink";
+const SELECT = "field";
+
+/** The overview's rows, in the order you look for things: next, done, gave up. */
+const ROOMS: ReadonlyArray<{ shelf: Shelf; title: string }> = [
+  { shelf: "tbr", title: "To read" },
+  { shelf: "finished", title: "Recently finished" },
+  { shelf: "dnf", title: "Did not finish" },
+];
+/** A strip is a glimpse; "See all" is the whole shelf. */
+const STRIP_LENGTH = 24;
 
 type Row = typeof entryCards.$inferSelect;
 
@@ -292,43 +305,122 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   const landedId = params.added ?? params.already;
   const landed = landedId ? rows.find((row) => row.entryId === landedId) : undefined;
 
+  const notice = landed ? (
+    <p role="status" className="mb-4 border-l-2 border-accent pl-3 font-narrow">
+      {params.added ? "Added" : "Already on your shelf"}: {landed.workTitle}, {landed.editionName}.
+    </p>
+  ) : null;
+
+  // A bare "/" is the room: the reading band, then a strip per shelf. Asking
+  // for a shelf, a tag or the whole wall is asking for the wall.
+  if (!status && !tag && params.show !== "all") {
+    const cards = rows.map(toCard);
+    const rooms = ROOMS.map((room) => {
+      const all = cards.filter((card) => card.status === room.shelf);
+      // Finished reads newest-finished first: what you last put down is what
+      // you came to rate or talk about.
+      if (room.shelf === "finished") {
+        all.sort((a, b) => (b.lastFinishedOn ?? "").localeCompare(a.lastFinishedOn ?? ""));
+      }
+      return { ...room, count: all.length, cards: all.slice(0, STRIP_LENGTH) };
+    }).filter((room) => room.count > 0);
+
+    let tileIndex = 0;
+
+    return (
+      <main className="flex-1">
+        <RememberShelfView query={queryFor(params)} />
+        {notice ? <div className="px-4 pt-4 sm:px-10">{notice}</div> : null}
+        <ReadingNow cards={cards.filter((card) => card.status === "reading")} />
+
+        <ResolveOnce>
+          <div className="px-4 pb-14 sm:px-10">
+            {rooms.map((room) => (
+              <section key={room.shelf} className="mt-8">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="font-display text-2xl sm:text-[26px]">{room.title}</h2>
+                  <span className="text-ink-dim">{room.count}</span>
+                  <div className="flex-1" />
+                  <Link
+                    href={hrefWith({}, { status: room.shelf })}
+                    className="font-narrow text-ink-dim underline underline-offset-4 hover:text-ink"
+                  >
+                    See all {room.count}
+                  </Link>
+                </div>
+                <ul className="shelf-strip">
+                  {room.cards.map((card) => (
+                    <Tile key={card.entryId} card={card} index={tileIndex++} className="w-[28vw] max-w-32 sm:w-32" />
+                  ))}
+                </ul>
+                <div className="plank" />
+              </section>
+            ))}
+
+            {everything === 0 ? (
+              <p className="mt-8 font-narrow text-ink-dim">
+                Nothing on your shelf yet.{" "}
+                <Link href="/search" className="underline hover:text-ink">
+                  Search for a book
+                </Link>{" "}
+                to start one.
+              </p>
+            ) : (
+              <p className="mt-10 font-narrow text-ink-dim">
+                {/* The entire stats feature (§5). There is no stats page. */}
+                {finished > 0 ? `${finished} finished in ${year}. ` : ""}
+                {everything} {everything === 1 ? "book" : "books"} on your shelves.{" "}
+                <Link href="/?show=all" className="underline underline-offset-4 hover:text-ink">
+                  See them all, with filters
+                </Link>
+              </p>
+            )}
+          </div>
+        </ResolveOnce>
+      </main>
+    );
+  }
+
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 pt-4 pb-14 sm:px-10">
       <RememberShelfView query={queryFor(params)} />
+      {notice}
 
-      {landed ? (
-        <p role="status" className="mb-4 border-l-2 border-ink-dim pl-3 font-narrow">
-          {params.added ? "Added" : "Already on your shelf"}: {landed.workTitle},{" "}
-          {landed.editionName}.
-        </p>
-      ) : null}
-
-      <nav className="mb-4 flex flex-wrap items-baseline gap-x-5 gap-y-2 font-narrow">
-        <Link
-          href={hrefWith(params, { status: undefined })}
-          className={status ? "text-ink-dim hover:text-ink" : "font-medium"}
-        >
-          All <span className="text-ink-dim">{everything}</span>
-        </Link>
-        {SHELVES.map((shelf) => (
-          <Link
-            key={shelf}
-            href={hrefWith(params, { status: shelf })}
-            className={status === shelf ? "font-medium" : "text-ink-dim hover:text-ink"}
-          >
-            {SHELF_LABELS[shelf]} <span className="text-ink-dim">{countOf(shelf)}</span>
-          </Link>
-        ))}
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h1 className="font-display text-3xl sm:text-4xl">{status ? SHELF_LABELS[status] : "All books"}</h1>
         {/* The entire stats feature (§5). There is no stats page. */}
         {finished > 0 ? (
-          <span className="ml-auto text-ink-dim">
+          <span className="text-ink-dim">
             {finished} finished in {year}
           </span>
         ) : null}
+      </div>
+
+      {/* One row on a phone, scrolled sideways, rather than wrapping into
+          rows of tabs above the first cover. */}
+      <nav className="-mx-4 mb-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="segmented inline-flex">
+          <Link
+            href={hrefWith(params, { status: undefined, show: "all" })}
+            aria-current={status ? undefined : "page"}
+          >
+            All {everything}
+          </Link>
+          {SHELVES.map((shelf) => (
+            <Link
+              key={shelf}
+              href={hrefWith(params, { status: shelf, show: undefined })}
+              aria-current={status === shelf ? "page" : undefined}
+            >
+              {SHELF_LABELS[shelf]} {countOf(shelf)}
+            </Link>
+          ))}
+        </div>
       </nav>
 
       <FilterForm defaults={{ sort: "added", groupBy: "none", view: "grid" }}>
         {status ? <input type="hidden" name="status" value={status} /> : null}
+        {!status ? <input type="hidden" name="show" value="all" /> : null}
 
         {tagOptions.length > 0 ? (
           <select name="tag" defaultValue={tag?.slug ?? ""} aria-label="Tag" className={SELECT}>

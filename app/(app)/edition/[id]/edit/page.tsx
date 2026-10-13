@@ -42,13 +42,13 @@ export default async function EditEditionPage({ params }: { params: Promise<{ id
   const back = `/edition/${edition.id}`;
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <p className="mb-2 font-narrow">
         <Link href={back} className="text-ink-dim underline hover:text-ink">
           Back to {heading}
         </Link>
       </p>
-      <h1 className="mb-6 text-xl font-medium">Edit {heading}</h1>
+      <h1 className="mb-6 font-display text-3xl">Edit {heading}</h1>
       <EditForm action={saveEditionDetails} hidden={{ editionId: edition.id }} backHref={back}>
         <WorkFields
           work={workFields(work)}

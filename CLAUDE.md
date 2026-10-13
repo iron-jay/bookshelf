@@ -293,7 +293,8 @@ form. Used for web serials, zines, ARCs, out-of-print things.
 
 ## 5. Screens (v1 scope)
 
-1. **Shelf** — the home page. Grid or list, filter by shelf and tag, group by
+1. **Shelf** — the home page: the shelves overview (§5b), and the full wall at
+   `/?show=all`. Grid or list, filter by shelf and tag, group by
    shelf / collection / series / author / year finished / year added / year published /
    book-or-audiobook. Year added is the entry's date (Goodreads' Date Added
    for an import).
@@ -428,60 +429,61 @@ automatically afterwards — gameshelf tried that and reverted it within a day.
 
 ## 5b. Visual design
 
-Same system as gameshelf, so the two apps read as a pair. The differences below
-are deliberate.
+"Living room", chosen 2026-10-13 with gameshelf to replace the flat-slate
+look, which read as too blank. The same system in both apps, sage here where
+gameshelf has amber, so they read as a pair. gameshelf's CLAUDE.md §5b is the
+full description; the differences are below. The one firm rule is that it
+must never look like a generic AI product.
 
-### Tokens
+### Tokens (`app/globals.css`)
 
-```
---ground    #2E3439   mid-slate page, as gameshelf
---panel     #373E44
---line      #464E55
---ink       #E8E6E1
---ink-dim   #98A1A8
-```
-
-No chromatic value at all. `--label` (verdigris, gameshelf's ochre's
-counterpart) existed only to mark fan translations and went with them on
-2026-10-11. Selection, warnings and tags are marked by weight, position and
-hairlines, never colour.
+As gameshelf: ground `#263034`, band `#2F3B40`, well `#1E272A`, panel
+`#33424A`, line `#3B474C`, line-strong `#55636A`, ink `#F1ECE2`, ink-dim
+`#A3ADB1`, plank `#3B474C` / `#5A6970` / `#1C2427`, sticker `#F1ECE2`, danger
+`#C0564B`. The accent is **sage `#C9D7B8`**. There is no `--label`: the band
+marked fan translations, which are gone (§1).
 
 ### Type
 
-- **Archivo** and **Archivo Narrow** for the interface, as gameshelf.
-- **Newsreader** (serif, 400 and 500, italic for titles in running text) for two
-  things only: reviews and summaries — long-form prose meant to be read — and
-  the typeset placeholder covers. Not headings, not nav.
-- Mono only for literal codes: ISBNs, Open Library keys.
-- Two weights. Sentence case. No all-caps, no tracked eyebrows.
+- **Archivo**, one variable family across its width axis: `font-display`
+  (125%, 800) for headings, `font-narrow` (87.5%) for metadata.
+- **Newsreader** for book titles on the edition and work pages and in the
+  Reading now band, reviews, summaries, and the typeset placeholder covers.
+- **Plex Mono** for ISBNs, Open Library keys and the rating sticker.
+- Sentence case. No all-caps, no tracked eyebrows.
 
 ### Layout
 
-Covers flush in a dense grid, 4px gaps (gameshelf settled on 4px, not 1px). No
-radius, no shadows, no hover lift. Metadata on selection. On hover, the title and
-author.
-
-Book covers are 2:3 and often inconsistent in ratio. `object-fit: cover` into a
-fixed 2:3 cell; do not letterbox.
+- **Shelves** (`/`): the "Reading now" band (cover, title, Finished it, Did
+  not finish), then a sideways strip per shelf (To read, Recently finished,
+  Did not finish) on a plank, with "See all". The "N finished in 2026" line
+  sits at the bottom.
+- **The wall** (`/?show=all`, any shelf, or a tag; `view` stays grid/list):
+  2:3 covers in a grid whose columns come from its own width, a plank under
+  every row. Filters in one sideways-scrolling row on a phone.
+- **Edition and work pages**: the whole cover standing on a plank beside the
+  title; Change cover and Edit details directly beneath; the shelf as a
+  segmented control; rating as ten bars climbing left to right.
+- Covers are always whole, at every size: no spines, no cropped banners.
+- On hover-capable screens a tile shows its name and shelf on hover; on a
+  phone a cover is a plain tap.
+- **Phones**: a bottom tab bar (Shelves, Search, Add, More). `GAMESHELF_URL`
+  puts a link across to gameshelf in the header.
 
 ### The typeset placeholder
 
-A book with no art gets a generated cover, not a grey box: `--panel` ground, the
-title in Newsreader set large and left-aligned, the author beneath in Archivo
-Narrow `--ink-dim`, a single `--line` rule between them. Rendered as HTML in the
-cell, not a stored image, so it follows title edits. A good placeholder makes a
-shelf of books no catalogue has look like a shelf rather than a gap.
-
-No band, badge or marker on any cover: gameshelf's label band is for its
-community versions, and bookshelf no longer has any. No icon per format.
+A book with no art gets a generated cover, not a grey box: `--panel` ground,
+the title in Newsreader set large and left-aligned, the author beneath in
+narrow Archivo `--ink-dim`, a single `--line` rule between them. Rendered as
+HTML in the cell, not a stored image, so it follows title edits. No band,
+badge or marker on any cover beyond the rating sticker. No icon per format.
 
 ### Motion and don'ts
 
-Unchanged from gameshelf §5b. One orchestrated moment as the grid resolves;
-otherwise motion only answers an action. No cream-and-terracotta, no
-near-black-and-acid, no rounded cards with soft shadows, no arrows on buttons.
-
----
+As gameshelf §5b. One orchestrated moment as the shelf resolves, on arrival
+only; otherwise motion only answers an action. No cream-and-terracotta, no
+near-black-and-acid, no gradient washes, no soft-shadow cards, no emoji or
+icon sets, no arrows on buttons.
 
 ## 6. Development
 
@@ -541,8 +543,8 @@ differences.
 - First user defaults to `admin`; name and password changeable in Settings.
 - Env vars: `DATABASE_URL`, `SESSION_SECRET`, `ORIGIN`, `ADMIN_USERNAME`,
   `ADMIN_PASSWORD`, `AUTH_DISABLED`, `COVERS_DIR`, `OPENLIBRARY_CONTACT`,
-  optional `GOOGLE_BOOKS_API_KEY`, `HARDCOVER_API_TOKEN` and
-  `COMICVINE_API_KEY`.
+  optional `GOOGLE_BOOKS_API_KEY`, `HARDCOVER_API_TOKEN`, `COMICVINE_API_KEY`
+  and `GAMESHELF_URL`.
 - `pg_dump` nightly via cron alongside gameshelf's.
 
 ---

@@ -21,8 +21,8 @@ export default async function LoginPage() {
 
   return (
     <main className="flex flex-1 items-center justify-center p-8">
-      <div className="w-full max-w-xs border border-line bg-panel p-6">
-        <h1 className="mb-6 text-xl font-medium">bookshelf</h1>
+      <div className="card w-full max-w-xs">
+        <h1 className="mb-6 font-display text-3xl">bookshelf</h1>
 
         {row.n === 0 ? (
           // A self-hosted app with nobody in it would otherwise answer every

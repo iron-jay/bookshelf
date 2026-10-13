@@ -15,9 +15,9 @@ import { WorkFields } from "./work-fields";
 
 const INITIAL: AddState = { error: null };
 const FIELD =
-  "w-full border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
+  "field";
 const BUTTON =
-  "w-fit border border-line bg-panel px-4 py-2 font-medium hover:border-ink-dim disabled:text-ink-dim";
+  "w-fit btn btn-primary";
 
 /** An edition already here, as a candidate base for a new one. */
 export type SourceEdition = { id: string; name: string; language: string | null };
@@ -112,7 +112,7 @@ export function EditionForm({
                 <select
                   value={doorBKind}
                   onChange={(event) => setDoorBKind(event.target.value)}
-                  className="w-fit border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim"
+                  className="w-fit field"
                 >
                   {KINDS.map((k) => (
                     <option key={k.value} value={k.value}>

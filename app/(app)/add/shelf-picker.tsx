@@ -11,7 +11,7 @@ export function ShelfPicker({ defaultValue = "tbr" }: { defaultValue?: Shelf }) 
       <select
         name="shelf"
         defaultValue={defaultValue}
-        className="w-fit border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim"
+        className="w-fit field"
       >
         {SHELVES.map((shelf) => (
           <option key={shelf} value={shelf}>

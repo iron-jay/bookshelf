@@ -7,9 +7,9 @@ import Link from "next/link";
  */
 export default function NotFound() {
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <div className="flex max-w-xl flex-col gap-4">
-        <h1 className="text-xl font-medium">Nothing here</h1>
+        <h1 className="font-display text-3xl">Nothing here</h1>
         <p className="font-narrow text-ink-dim">
           This page does not exist, or what it pointed at has been removed.
         </p>

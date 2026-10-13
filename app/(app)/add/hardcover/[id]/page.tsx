@@ -22,7 +22,7 @@ export default async function AddHardcoverPage({ params }: { params: Promise<{ i
   const book = await getBook(id);
   if (!book) {
     return (
-      <main className="flex-1 p-6">
+      <main className="flex-1 px-4 py-6 sm:px-10">
         <p className="font-narrow">
           Hardcover did not answer just now, or has no such book.{" "}
           <Link href="/search" className="underline hover:text-ink">
@@ -37,7 +37,7 @@ export default async function AddHardcoverPage({ params }: { params: Promise<{ i
   const remembered = (await cookies()).get(FORMAT_COOKIE)?.value;
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <header className="mb-8 flex items-start gap-4">
         <div className="h-36 w-24 shrink-0 bg-panel">
           {book.imageUrl ? (
@@ -45,7 +45,7 @@ export default async function AddHardcoverPage({ params }: { params: Promise<{ i
           ) : null}
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl font-medium">{book.title}</h1>
+          <h1 className="font-display text-3xl">{book.title}</h1>
           {book.authors.length > 0 ? <p>{book.authors.join(", ")}</p> : null}
           <p className="font-narrow text-ink-dim">
             {[

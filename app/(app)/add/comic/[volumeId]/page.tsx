@@ -27,7 +27,7 @@ export default async function AddComicVolumePage({ params }: { params: Promise<{
   const issues = volume ? await volumeIssues(volume.id) : [];
   if (!volume || issues.length === 0) {
     return (
-      <main className="flex-1 p-6">
+      <main className="flex-1 px-4 py-6 sm:px-10">
         <p className="font-narrow">
           Comic Vine did not answer just now, or lists no issues for this.{" "}
           <Link href="/add/comic" className="underline hover:text-ink">
@@ -48,8 +48,8 @@ export default async function AddComicVolumePage({ params }: { params: Promise<{
   const single = issues.length === 1 ? issues[0] : null;
 
   return (
-    <main className="flex-1 p-6">
-      <h1 className="mb-4 text-xl font-medium">Add a comic or graphic novel</h1>
+    <main className="flex-1 px-4 py-6 sm:px-10">
+      <h1 className="mb-4 font-display text-3xl">Add a comic or graphic novel</h1>
       <AddTabs current="comic" />
 
       <header className="mb-6">

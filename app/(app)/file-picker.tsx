@@ -26,7 +26,7 @@ export function FilePicker({
 
   return (
     <span className="flex flex-wrap items-center gap-3">
-      <label className="cursor-pointer border border-line bg-panel px-3 py-2 font-narrow hover:border-ink-dim focus-within:border-ink">
+      <label className="cursor-pointer btn focus-within:border-ink">
         {label}
         <input
           name={name}

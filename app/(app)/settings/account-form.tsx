@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { updateAccount, type AccountState } from "./actions";
 
 const FIELD =
-  "w-full border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
+  "field";
 
 export function AccountForm({
   username,
@@ -50,7 +50,7 @@ export function AccountForm({
       <button
         type="submit"
         disabled={pending}
-        className="self-start border border-line bg-panel px-3 py-2 font-narrow hover:border-ink-dim disabled:text-ink-dim"
+        className="self-start btn"
       >
         {pending ? "Saving…" : "Save"}
       </button>

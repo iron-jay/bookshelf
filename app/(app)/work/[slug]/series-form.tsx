@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { saveSeries, type SeriesState } from "./actions";
 
 const INITIAL: SeriesState = { error: null, saved: false };
-const FIELD = "border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
+const FIELD = "field";
 
 /**
  * Name and position. The names already here are offered as you type, so
@@ -57,7 +57,7 @@ export function SeriesForm({
         <button
           type="submit"
           disabled={pending}
-          className="border border-line bg-panel px-3 py-2 hover:border-ink-dim disabled:text-ink-dim"
+          className="btn"
         >
           {pending ? "Saving…" : "Save"}
         </button>

@@ -48,11 +48,11 @@ export default function ErrorPage({
   }, []);
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 px-4 py-6 sm:px-10">
       <div className="flex max-w-xl flex-col gap-4">
         {database === "down" ? (
           <>
-            <h1 className="text-xl font-medium">bookshelf cannot reach its database</h1>
+            <h1 className="font-display text-3xl">bookshelf cannot reach its database</h1>
             <p className="font-narrow text-ink-dim">
               Nothing on your shelf is lost — the app simply has nothing to read from. Postgres
               restarting takes a moment to replay its log, and this clears on its own when it
@@ -66,7 +66,7 @@ export default function ErrorPage({
           </>
         ) : (
           <>
-            <h1 className="text-xl font-medium">Something went wrong</h1>
+            <h1 className="font-display text-3xl">Something went wrong</h1>
             <p className="font-narrow text-ink-dim">
               {database === "checking"
                 ? "Checking whether the database is answering…"
@@ -95,7 +95,7 @@ export default function ErrorPage({
                 reset();
               })
             }
-            className="border border-line bg-panel px-4 py-2 font-medium hover:border-ink-dim disabled:text-ink-dim"
+            className="btn btn-primary"
           >
             {retrying ? "Trying…" : "Try again"}
           </button>

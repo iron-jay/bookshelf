@@ -1,7 +1,7 @@
 "use client";
 
 const FIELD =
-  "border border-line bg-ground px-3 py-2 text-ink outline-none focus:border-ink-dim";
+  "field";
 
 /**
  * One free-text credit per edition, labelled by what the edition is (schema:

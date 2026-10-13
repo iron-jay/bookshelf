@@ -12,9 +12,8 @@ import { haystackOf, headlineOf, ratingLabel, type ShelfCard } from "./shelf-car
 
 export type ShelfSection = { label: string; cards: ShelfCard[] };
 
-const BUTTON =
-  "border border-line bg-panel px-3 py-1.5 font-narrow hover:border-ink-dim disabled:text-ink-dim";
-const FIELD = "border border-line bg-ground px-2 py-1.5 text-ink outline-none focus:border-ink-dim";
+const BUTTON = "btn";
+const FIELD = "field";
 
 /**
  * Whether the shelf has already resolved in this tab. The grid's fade-in is
@@ -91,7 +90,7 @@ export function ShelfGrid({
 
   return (
     <div className={resolving ? "shelf-resolving" : undefined}>
-      <div className="mb-4 flex flex-wrap items-center gap-4 font-narrow">
+      <div className="mb-6 flex flex-wrap items-center gap-3 font-narrow">
         <label className="flex-1 basis-64">
           <span className="sr-only">Filter this shelf</span>
           <input
@@ -99,7 +98,7 @@ export function ShelfGrid({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Filter by title or author"
-            className="w-full max-w-md border border-line bg-panel px-3 py-2 text-ink outline-none focus:border-ink-dim"
+            className="field max-w-md rounded-full px-4"
           />
         </label>
         {/* Silent at zero, where the sentence below says it better. */}
@@ -138,7 +137,7 @@ export function ShelfGrid({
       </div>
 
       {selecting ? (
-        <form className="mb-6 flex flex-wrap items-end gap-3 border border-line p-3 font-narrow">
+        <form className="card mb-6 flex flex-wrap items-end gap-3 font-narrow">
           {/* The selection, as fields: hidden inputs survive the reset React
               does when a form action resolves, because a reset restores exactly
               the value rendered here. */}
@@ -220,17 +219,16 @@ export function ShelfGrid({
       ) : null}
 
       {shown.map((section) => (
-        <section key={section.label || "all"} className="mb-8">
+        <section key={section.label || "all"} className="shelf-wall mb-10">
           {grouped ? (
-            <h2 className="mb-2 flex items-baseline gap-3 font-medium">
-              {section.label}
-              <span className="font-narrow text-ink-dim">{section.cards.length}</span>
+            <h2 className="mb-1 flex items-baseline gap-3">
+              <span className="font-display text-2xl">{section.label}</span>
+              <span className="text-ink-dim">{section.cards.length}</span>
             </h2>
           ) : null}
 
           {view === "grid" ? (
-            // 4px, not gameshelf's first 1px: settled there after launch.
-            <ul className="grid gap-1 [grid-template-columns:repeat(auto-fill,minmax(128px,1fr))]">
+            <ul className="shelf-rows">
               {section.cards.map((card) => (
                 <Tile
                   key={card.entryId}
@@ -280,55 +278,57 @@ function SelectOverlay({ card, title, checked, onToggle }: { card: ShelfCard; ti
       aria-checked={checked}
       aria-label={title}
       onClick={() => onToggle(card.entryId)}
-      className="absolute inset-0 z-10 flex items-start p-2"
+      className="absolute inset-0 z-30 flex items-start p-2"
     >
-      <span className={`size-5 border border-ink ${checked ? "bg-ink" : "bg-ground/80"}`} />
+      <span className={`size-6 rounded-full border-2 ${checked ? "border-accent bg-accent" : "border-ink bg-ground/70"}`} />
     </button>
   );
 }
 
-function Tile({ card, index, selecting, checked, onToggle }: { card: ShelfCard; index: number } & Selectable) {
+/**
+ * A book standing on the shelf: the whole cover, a rating sticker when it has
+ * one, and its name and shelf on hover where hovering exists. On a phone a
+ * cover is a plain tap through to the book.
+ */
+export function Tile({
+  card,
+  index,
+  selecting = false,
+  checked = false,
+  onToggle = () => {},
+  className = "",
+}: { card: ShelfCard; index: number; className?: string } & Partial<Selectable>) {
   const { title, subtitle } = headlineOf(card);
-
-  if (selecting) {
-    return (
-      <li
-        className={`relative${checked ? " outline-2 -outline-offset-2 outline-ink" : ""}`}
-        style={{ "--tile-index": index } as React.CSSProperties}
-      >
-        <Cover
-          title={card.workTitle}
-          author={card.authors.join(", ") || null}
-          coverUrl={card.coverUrl}
-        />
-        <SelectOverlay card={card} title={title} checked={checked} onToggle={onToggle} />
-      </li>
-    );
-  }
 
   return (
     <li
-      className="shelf-tile group relative"
+      className={`shelf-tile group relative ${className}`}
       style={{ "--tile-index": index } as React.CSSProperties}
     >
-      <Link href={`/edition/${card.editionId}`} className="block focus:outline-none">
-        <span className="sr-only">{title}</span>
-        <Cover
-          title={card.workTitle}
-          author={card.authors.join(", ") || null}
-          coverUrl={card.coverUrl}
-        />
-        {/* Metadata on hover or focus rather than under every cover, so the
-            grid stays a wall of books. pointer-events-none so the overlay never
-            takes the click meant for the link beneath it. */}
-        <div className="pointer-events-none absolute inset-0 flex flex-col justify-end bg-ground/92 p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-          <p className="font-medium leading-snug">{title}</p>
-          {subtitle ? <p className="font-narrow text-ink-dim">{subtitle}</p> : null}
-          <p className="mt-1 font-narrow text-ink-dim">
-            {SHELF_LABELS[card.status]} · {ratingLabel(card.rating)}
-          </p>
-        </div>
-      </Link>
+      <div className={`relative${checked ? " outline outline-3 outline-offset-2 outline-accent" : ""}`}>
+        {selecting ? (
+          <SelectOverlay card={card} title={title} checked={checked} onToggle={onToggle} />
+        ) : (
+          <Link href={`/edition/${card.editionId}`} className="absolute inset-0 z-10">
+            <span className="sr-only">{title}</span>
+          </Link>
+        )}
+        <Cover title={card.workTitle} author={card.authors.join(", ") || null} coverUrl={card.coverUrl} />
+        {card.rating !== null ? (
+          <span className="sticker" aria-label={`Rated ${card.rating} out of 10`}>
+            {card.rating}
+          </span>
+        ) : null}
+        {selecting ? null : (
+          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-end bg-ground/92 p-2.5 opacity-0 transition-opacity [@media(hover:hover)]:group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
+            <p className="font-semibold leading-snug">{title}</p>
+            {subtitle ? <p className="font-narrow text-sm text-ink-dim">{subtitle}</p> : null}
+            <p className="mt-1 font-narrow text-sm text-ink-dim">
+              {SHELF_LABELS[card.status]} · {ratingLabel(card.rating)}
+            </p>
+          </div>
+        )}
+      </div>
     </li>
   );
 }
@@ -351,9 +351,9 @@ function Row({ card, selecting, checked, onToggle }: { card: ShelfCard } & Selec
           role="checkbox"
           aria-checked={checked}
           onClick={() => onToggle(card.entryId)}
-          className="flex w-full items-center gap-4 py-2 text-left hover:bg-panel"
+          className="flex w-full items-center gap-4 py-2 text-left hover:bg-band"
         >
-          <span className={`size-5 shrink-0 border border-ink ${checked ? "bg-ink" : ""}`} />
+          <span className={`size-6 shrink-0 rounded-full border-2 ${checked ? "border-accent bg-accent" : "border-ink"}`} />
           <span className="min-w-0">
             <span className="block truncate">{title}</span>
             {subtitle ? <span className="block truncate font-narrow">{subtitle}</span> : null}
@@ -365,7 +365,7 @@ function Row({ card, selecting, checked, onToggle }: { card: ShelfCard } & Selec
 
   return (
     <li className="border-b border-line">
-      <Link href={`/edition/${card.editionId}`} className="flex items-center gap-4 py-2 hover:bg-panel">
+      <Link href={`/edition/${card.editionId}`} className="flex items-center gap-4 py-2 hover:bg-band">
         <div className="w-12 shrink-0">
           <Cover
             title={card.workTitle}
@@ -374,7 +374,7 @@ function Row({ card, selecting, checked, onToggle }: { card: ShelfCard } & Selec
           />
         </div>
         <div className="min-w-0">
-          <p className="truncate">{title}</p>
+          <p className="truncate font-semibold">{title}</p>
           {subtitle ? <p className="truncate font-narrow">{subtitle}</p> : null}
           <p className="truncate font-narrow text-ink-dim">{details.join(" · ")}</p>
         </div>

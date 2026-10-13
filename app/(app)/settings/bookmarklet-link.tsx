@@ -49,7 +49,7 @@ export function BookmarkletLink() {
         <a
           ref={ref}
           onClick={(event) => event.preventDefault()}
-          className="w-fit cursor-grab border border-line bg-panel px-3 py-2 font-narrow hover:border-ink-dim"
+          className="w-fit cursor-grab btn"
           title="Drag me to your bookmarks bar"
         >
           bookshelf ← Goodreads
@@ -57,7 +57,7 @@ export function BookmarkletLink() {
         <button
           type="button"
           onClick={() => void copy()}
-          className="border border-line bg-panel px-3 py-2 font-narrow hover:border-ink-dim disabled:text-ink-dim"
+          className="btn"
         >
           {copied === "yes" ? "Copied" : "Copy it, for a phone"}
         </button>
@@ -74,7 +74,7 @@ export function BookmarkletLink() {
             value={code}
             rows={4}
             onFocus={(event) => event.currentTarget.select()}
-            className="w-full max-w-xl border border-line bg-ground px-3 py-2 font-mono text-xs text-ink"
+            className="field max-w-xl font-mono text-xs"
           />
         </label>
       ) : null}

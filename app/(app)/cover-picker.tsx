@@ -9,7 +9,7 @@ import type { CoverCandidate } from "@/lib/books/cover-candidates";
 import { applyCoverCandidate, listCoverCandidates, searchCoverCandidates, type CoverState } from "./cover-actions";
 
 const BUTTON =
-  "w-fit border border-line bg-panel px-3 py-1.5 font-narrow hover:border-ink-dim disabled:text-ink-dim";
+  "w-fit btn";
 
 /**
  * Pick a cover from what the lookups can see, as gameshelf's art picker does,
@@ -70,7 +70,7 @@ export function CoverPicker({
           value={term}
           onChange={(event) => setTerm(event.target.value)}
           aria-label="Search for covers"
-          className="w-64 border border-line bg-ground px-3 py-1.5 text-ink outline-none focus:border-ink-dim"
+          className="field w-64"
         />
         <button type="submit" disabled={loading} className={BUTTON}>
           {loading ? "Searching…" : "Search"}

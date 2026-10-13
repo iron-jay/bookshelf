@@ -62,8 +62,8 @@ export default async function AddPage({
   const remembered = (await cookies()).get(FORMAT_COOKIE)?.value;
 
   return (
-    <main className="flex-1 p-6">
-      <h1 className="mb-6 text-xl font-medium">
+    <main className="flex-1 px-4 py-6 sm:px-10">
+      <h1 className="mb-6 font-display text-3xl">
         {fixedWork ? (
           <>
             Add an edition of{" "}

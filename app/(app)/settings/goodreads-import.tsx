@@ -12,7 +12,7 @@ import { importGoodreadsBatch, parseGoodreadsUpload, type ParseState } from "./i
 import { IMPORT_CHUNK } from "./import-limits";
 
 const BUTTON =
-  "w-fit border border-line bg-panel px-3 py-2 font-narrow hover:border-ink-dim disabled:text-ink-dim";
+  "w-fit btn";
 
 type Progress = {
   done: number;
@@ -131,7 +131,7 @@ export function GoodreadsImport() {
       ) : null}
 
       {parsed ? (
-        <div className="border border-line p-4 font-narrow">
+        <div className="card font-narrow">
           <p>
             {parsed.rows.length} {parsed.rows.length === 1 ? "book" : "books"}:{" "}
             {shelfCounts.map(([shelf, n]) => `${n} ${SHELF_LABELS[shelf].toLowerCase()}`).join(", ")}.
@@ -162,7 +162,7 @@ export function GoodreadsImport() {
       ) : null}
 
       {progress ? (
-        <div className="border border-line p-4 font-narrow tabular-nums">
+        <div className="card font-narrow tabular-nums">
           <p>
             {progress.done} of {progress.total} · {progress.added} added
             {progress.local > 0 ? ` (${progress.local} as local works)` : ""} · {progress.already} already here
