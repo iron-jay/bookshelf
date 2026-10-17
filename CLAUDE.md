@@ -77,8 +77,9 @@ proposed feature blurs these, the feature is wrong, not the model.
 
 Consequences to honour in the UI:
 
-- A series page is an ordered list of works with your shelf state beside each.
-  That is the whole feature.
+- A series page is an ordered list of works with your shelf state beside each,
+  plus one button for having read the whole run (below, "Reads"). That is
+  the whole feature.
 - Shelf grouping includes **collection** (series by series, each in order),
   **series** (in order) and **author**.
 - A collection page lists its series, each in order, then its books with no
@@ -275,7 +276,12 @@ it that tab says how to get one and offers "create it by hand".
   when no writer is; never the "other" staff credits). One plain "Book" edition; covers are
   `cover_source = 'comicvine'`.
 - Search `/add/comic?q=` lists volumes; `/add/comic/{volumeId}` its issues
-  (the first hundred) to pick from. The issue is fetched again by id on add.
+  (the first hundred) to pick from — one, several, or "Choose all"
+  (2026-10-17: a run read in one go). Each issue is fetched again by id on
+  add; the page sends them five at a time, as the import batches, and on
+  Finished asks once for the day, starting at today. Issues already on the
+  shelf are left as they are, as any add leaves them. Several land on the
+  series page.
 - All access through `lib/comicvine/`, serialised a second apart: its terms
   allow 200 requests per resource an hour and block bursts. Non-commercial use
   only, and **a link back wherever its data is shown**: the add pages credit
@@ -313,8 +319,8 @@ form. Used for web serials, zines, ARCs, out-of-print things.
    cover" and "Edit details". Details are their own page: `/work/{slug}/edit`
    for the book, `/edition/{id}/edit` for the book and that edition together,
    one Save, back to the book.
-5. **Series page** — ordered works, your shelf state for each, and the
-   series' collection. **Collection page** — its series and books, as above.
+5. **Series page** — ordered works, your shelf state for each, the
+   series' collection, and "Mark all N finished" on a day. **Collection page** — its series and books, as above.
 6. **Settings** — account name and password, export, import, cover art review.
 
 Out of scope for v1: social features, reading challenges, page-by-page progress
@@ -339,6 +345,13 @@ the Goodreads export carries it, so reads stay visible — but minimal:
 - **Did not finish** and **to read** leave reads alone; an abandoned read stays
   open, which is what did-not-finish means.
 - "Read again" adds a new read. No page counts, no percentages, no hours.
+- **A series read** (2026-10-17, asked for comics, offered on every series):
+  the series page finishes every book in it on one day you give, starting
+  at today — asked up front because a run is logged after the fact.
+  Already finished is left alone (so twice changes nothing); otherwise your
+  entry goes to Finished by the rules above (the one you are reading first);
+  a book of the series not on your shelf goes on it in its first edition. An
+  open read started after that day finishes the day it started.
 - The shelf can sort by last finished. A single line on the shelf — "31 finished
   in 2026" — is the entire stats feature. No stats page.
 
@@ -352,7 +365,7 @@ Door A — "Add" in the top bar: "Add book" | "Add comic or graphic novel"
                         Book | Audiobook → pick edition from their list, or
                         "any edition" which creates a plain one named
                         "Book" or "Audiobook"; or "Create it manually"
-  └ Comic             → Comic Vine search → pick volume → pick issue (§4c)
+  └ Comic             → Comic Vine search → pick volume → pick issues (§4c)
 
 Door B — "Add edition" on an existing work page
   work already known; straight to kind + details

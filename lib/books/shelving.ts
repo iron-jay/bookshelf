@@ -6,7 +6,7 @@ import type { Shelf } from "@/lib/shelves";
 import type { Tx } from "./works";
 
 /** Today where the server is. The date is editable afterwards (brief §5). */
-function today(): string {
+export function today(): string {
   return new Date().toLocaleDateString("en-CA");
 }
 
@@ -22,6 +22,7 @@ export async function shelveEdition(
   userId: string,
   editionId: string,
   shelf: Shelf,
+  on: string = today(),
 ): Promise<{ entryId: string; added: boolean }> {
   const [inserted] = await tx
     .insert(entries)
@@ -38,9 +39,9 @@ export async function shelveEdition(
   }
 
   if (shelf === "reading") {
-    await tx.insert(reads).values({ entryId: inserted.id, startedOn: today() });
+    await tx.insert(reads).values({ entryId: inserted.id, startedOn: on });
   } else if (shelf === "finished") {
-    await tx.insert(reads).values({ entryId: inserted.id, finishedOn: today() });
+    await tx.insert(reads).values({ entryId: inserted.id, finishedOn: on });
   }
 
   return { entryId: inserted.id, added: true };
@@ -60,9 +61,10 @@ export async function shelveEdition(
  * undated past read — Goodreads' Read Count imports as those — and must never
  * be closed with today's date.
  *
- * Shared by the edition page and, in step 9, the shelf's bulk change.
+ * Shared by the edition page, the shelf's bulk change and a series read, which
+ * alone passes `on`: the day a whole run was finished, given once for all of it.
  */
-export async function changeShelf(tx: Tx, entryId: string, shelf: Shelf): Promise<void> {
+export async function changeShelf(tx: Tx, entryId: string, shelf: Shelf, on: string = today()): Promise<void> {
   // Choosing the shelf it is already on changes nothing — otherwise a second
   // click on Finished would record a second finish.
   const [current] = await tx
@@ -75,18 +77,21 @@ export async function changeShelf(tx: Tx, entryId: string, shelf: Shelf): Promis
   if (shelf !== "reading" && shelf !== "finished") return;
 
   const [open] = await tx
-    .select({ id: reads.id })
+    .select({ id: reads.id, startedOn: reads.startedOn })
     .from(reads)
     .where(and(eq(reads.entryId, entryId), isNotNull(reads.startedOn), isNull(reads.finishedOn)))
     .orderBy(desc(reads.createdAt))
     .limit(1);
 
   if (shelf === "reading") {
-    if (!open) await tx.insert(reads).values({ entryId, startedOn: today() });
+    if (!open) await tx.insert(reads).values({ entryId, startedOn: on });
   } else if (open) {
-    await tx.update(reads).set({ finishedOn: today() }).where(eq(reads.id, open.id));
+    // A date given for a whole run can fall before one book's start; the read
+    // then finishes the day it started rather than breaking reads_date_order.
+    const finishedOn = open.startedOn && open.startedOn > on ? open.startedOn : on;
+    await tx.update(reads).set({ finishedOn }).where(eq(reads.id, open.id));
   } else {
-    await tx.insert(reads).values({ entryId, finishedOn: today() });
+    await tx.insert(reads).values({ entryId, finishedOn: on });
   }
 }
 

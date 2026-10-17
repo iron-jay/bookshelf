@@ -1335,3 +1335,35 @@ With the catalogue hosts allowed, against a local Postgres:
 - Google Books: the key is accepted, but Google refuses requests from the
   cloud test environment ("Cannot determine user location"), so the cover
   fallback could not be seen working from there. Not a code problem.
+
+## 2026-10-17 — Series read, for comics
+
+Jay asked for "a series read option for comics". Comics are one work per
+issue, so a run read over a summer was fifty adds and fifty Finished clicks.
+
+- **Adding a run**: `/add/comic/{volumeId}` picks issues with checkboxes, with
+  "Choose all" (those not on your shelf) and Clear. On Finished it asks once
+  for the day, starting at today. The page sends five issues per request
+  (`addComicIssues`), as the import batches, and fetches the volume once per
+  batch instead of once per issue. One issue lands on the shelf as before;
+  several land on the series page. A graphic novel (a volume of one) keeps
+  the old form.
+- **Finishing a series**: the series page has "Mark all N finished" on a day
+  (`lib/books/series-read.ts`), on every series, not only comics. Finished
+  books are left alone; the rest go through `changeShelf`, which now takes
+  the day; a book of the series not on your shelf goes on it in its first
+  edition. An open read started after the day finishes the day it started,
+  rather than breaking `reads_date_order`.
+- **API**: `GET /api/v1/series/{slug}`, `POST /api/v1/series/{slug}/read`
+  `{ finishedOn? }`, and `finishedOn?` on `POST /api/v1/entries` for a
+  Finished add (the phone adds a run issue by issue with it).
+- Checked against a local Postgres and live Comic Vine: Saga's twelve trade
+  paperbacks added as Finished on 2025-08-01 in one go (twelve reads with that
+  day, covers downloaded); the series button at phone width finishing two To
+  read and one not on the shelf; the API finishing To read, Reading (started
+  after the day, so finished on its start) and Did not finish, then a second
+  run changing nothing; a bad date is a 422. Comic Vine answered one 403 on
+  the first page load and was fine after.
+
+**Next:** the phone app (shelf-mobile) has no series screen yet; it could use
+the two new routes.

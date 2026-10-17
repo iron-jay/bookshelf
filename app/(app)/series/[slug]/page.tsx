@@ -3,12 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { today } from "@/lib/books/shelving";
 import { db } from "@/lib/db";
 import { collections, editions, entries, series, works } from "@/lib/db/schema";
 import { SHELF_LABELS } from "@/lib/shelves";
 
 import { CollectionForm } from "../../collection-form";
 import { Cover } from "../../cover";
+import { SeriesReadForm } from "./series-read-form";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +90,11 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
         {members.length} {members.length === 1 ? "book" : "books"}
         {finished > 0 ? ` · ${finished} finished` : ""}
       </p>
+      {members.length - finished > 0 ? (
+        <div className="mb-4">
+          <SeriesReadForm seriesId={found.id} today={today()} left={members.length - finished} />
+        </div>
+      ) : null}
       <div className="mb-6">
         <CollectionForm
           targetKind="series"
