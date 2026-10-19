@@ -1,4 +1,5 @@
 import type { EntryDetail } from "@/lib/books/read";
+import type { Run } from "@/lib/books/runs";
 import type { ShelfRow } from "@/lib/books/shelf";
 
 /**
@@ -23,6 +24,11 @@ export type Card = {
   addedAt: string | null;
   lastFinishedOn: string | null;
   series: { name: string; position: number | null } | null;
+  /**
+   * Set only on a folded comic run (GET /shelf?runs=fold): many finished
+   * entries standing as one card, which opens GET /series/{seriesSlug}.
+   */
+  run: { seriesSlug: string; issueCount: number } | null;
   extra: {
     authors: string[];
     format: "book" | "audiobook";
@@ -34,9 +40,9 @@ export type Card = {
   };
 };
 
-export function cardFrom(row: ShelfRow): Card {
+export function cardFrom(row: ShelfRow, run: Run | null = null): Card {
   const authors = row.authors ?? [];
-  return {
+  const card: Card = {
     id: row.entryId ?? "",
     versionId: row.editionId ?? "",
     workSlug: row.workSlug ?? "",
@@ -53,6 +59,7 @@ export function cardFrom(row: ShelfRow): Card {
     addedAt: row.addedAt ? row.addedAt.toISOString() : null,
     lastFinishedOn: row.lastFinishedOn,
     series: row.seriesName ? { name: row.seriesName, position: row.seriesPosition } : null,
+    run: null,
     extra: {
       authors,
       format: row.format ?? "book",
@@ -62,6 +69,18 @@ export function cardFrom(row: ShelfRow): Card {
       collectionName: row.collectionName,
       coverNeedsReview: row.coverNeedsReview ?? false,
     },
+  };
+  if (!run) return card;
+  // As the web's run tile: the series' name, its first issue's cover, the
+  // latest finish, and no rating, since each issue has its own.
+  return {
+    ...card,
+    id: `run:${run.seriesId}`,
+    title: run.name,
+    subtitle: `${run.issueCount} issues`,
+    rating: null,
+    isFavourite: false,
+    run: { seriesSlug: run.slug, issueCount: run.issueCount },
   };
 }
 

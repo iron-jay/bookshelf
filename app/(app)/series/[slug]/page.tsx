@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { countRunIfMissing } from "@/lib/books/runs";
 import { today } from "@/lib/books/shelving";
 import { db } from "@/lib/db";
 import { collections, editions, entries, series, works } from "@/lib/db/schema";
@@ -22,11 +23,19 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
   const user = await requireUser();
   const { slug } = await params;
 
-  const [found] = await db
+  const [first] = await db
     .select()
     .from(series)
     .where(eq(series.slug, decodeURIComponent(slug)));
-  if (!found) notFound();
+  if (!first) notFound();
+
+  // A comic run added before issue counts were kept learns its count here,
+  // once, so it can fold on the shelf when read to the end.
+  let found = first;
+  if (found.issueCount === null) {
+    await countRunIfMissing(found.id);
+    [found] = await db.select().from(series).where(eq(series.id, first.id));
+  }
 
   // Unnumbered works go last rather than first: a series page reads in order,
   // and "somewhere in it" is the least ordered thing there is.
@@ -87,7 +96,9 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
       ) : null}
       <h1 className="font-display text-3xl">{found.name}</h1>
       <p className="mb-4 font-narrow text-ink-dim">
-        {members.length} {members.length === 1 ? "book" : "books"}
+        {found.issueCount && found.issueCount > 1
+          ? `${members.length} of ${found.issueCount} issues here`
+          : `${members.length} ${members.length === 1 ? "book" : "books"}`}
         {finished > 0 ? ` · ${finished} finished` : ""}
       </p>
       {members.length - finished > 0 ? (

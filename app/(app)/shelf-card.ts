@@ -13,7 +13,17 @@ export type ShelfCard = {
   rating: number | null;
   coverUrl: string | null;
   lastFinishedOn: string | null;
+  /**
+   * A comic run read to the end, standing as one tile (lib/books/runs.ts): it
+   * opens the series page, and is not selectable, since it is many entries.
+   */
+  run: { slug: string; issueCount: number } | null;
 };
+
+/** Where a card goes: the edition, or for a run the series that lists its issues. */
+export function hrefOf(card: ShelfCard): string {
+  return card.run ? `/series/${card.run.slug}` : `/edition/${card.editionId}`;
+}
 
 /** The two lines a card leads with: the book, then who wrote it. */
 export function headlineOf(card: ShelfCard): { title: string; subtitle: string | null } {

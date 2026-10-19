@@ -106,6 +106,8 @@ export const series = pgTable(
     slug: text("slug").notNull().unique("series_slug_key"),
     notes: text("notes"),
     collectionId: uuid("collection_id").references(() => collections.id, { onDelete: "set null" }),
+    comicvineVolumeId: integer("comicvine_volume_id"),
+    issueCount: integer("issue_count"),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

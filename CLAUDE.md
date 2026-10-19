@@ -282,6 +282,17 @@ it that tab says how to get one and offers "create it by hand".
   Finished asks once for the day, starting at today. Issues already on the
   shelf are left as they are, as any add leaves them. Several land on the
   series page.
+- **A run read to the end is one tile** (Jay, 2026-10-19). Each volume gets
+  its own series, carrying `comicvine_volume_id` and Comic Vine's
+  `issue_count` (refreshed when an issue is added again; for a series from
+  before, looked up once when its page opens). Same-named volumes — Saga's
+  issues and its trade paperbacks — are told apart as "Saga (2012)", else
+  "Saga (Comic Vine 46568)". When you have finished at least that many of the
+  series' works, the shelf (strips and wall, not under a tag filter) stacks
+  their Finished entries into one tile: the series' name, the lowest issue's
+  cover, the latest finish, no rating, opening the series page, where each
+  issue is itself. A run only partly added or partly read never folds.
+  `lib/books/runs.ts`; the API does the same with `GET /shelf?runs=fold`.
 - All access through `lib/comicvine/`, serialised a second apart: its terms
   allow 200 requests per resource an hour and block bursts. Non-commercial use
   only, and **a link back wherever its data is shown**: the add pages credit
@@ -493,7 +504,9 @@ A book with no art gets a generated cover, not a grey box: `--panel` ground,
 the title in Newsreader set large and left-aligned, the author beneath in
 narrow Archivo `--ink-dim`, a single `--line` rule between them. Rendered as
 HTML in the cell, not a stored image, so it follows title edits. No band,
-badge or marker on any cover beyond the rating sticker. No icon per format.
+badge or marker on any cover beyond the rating sticker and a folded comic
+run's stack: two hard-edged issue edges behind its cover (`.run-stack`), the
+shelf's own physics rather than a label. No icon per format.
 
 ### Motion and don'ts
 

@@ -85,7 +85,7 @@ curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
 | `POST /api/v1/auth/token` | Username and password in, `{ token, user }` out |
 | `DELETE /api/v1/auth/token` | Signs the calling device out |
 | `GET /api/v1/me` | The signed-in user |
-| `GET /api/v1/shelf` | Shelf cards. `shelf`, `tag` (slug), `sort` (`added`, `title`, `author`, `rated`, `finished`), `limit` (1–500, default 100), `offset`. Returns `{ total, limit, offset, items }` |
+| `GET /api/v1/shelf` | Shelf cards. `shelf`, `tag` (slug), `sort` (`added`, `title`, `author`, `rated`, `finished`), `limit` (1–500, default 100), `offset`, and `runs=fold` to stack each comic run read to the end into one card (its `run` is `{ seriesSlug, issueCount }`; every other card's is null; not with `tag`). Returns `{ total, limit, offset, items }` |
 | `GET /api/v1/tags` | Your tags with how many entries carry each |
 | `GET /api/v1/search?q=` | This server, Open Library and Hardcover merged as on the search page; an ISBN answers with the one edition (`isbn.remote` carries `olWorkKey`, `olEditionKey`, `format` and `isbn`, ready for `POST /entries`). `catalogueError` says why remote results are missing |
 | `GET /api/v1/works/{slug}` | A work, its editions (with your entry on each), series and collection |

@@ -8,7 +8,7 @@ import { SHELF_LABELS, SHELVES } from "@/lib/shelves";
 
 import { changeSelectedShelf, tagSelected, untagSelected, type BulkState } from "./bulk-actions";
 import { Cover } from "./cover";
-import { haystackOf, headlineOf, ratingLabel, type ShelfCard } from "./shelf-card";
+import { haystackOf, headlineOf, hrefOf, ratingLabel, type ShelfCard } from "./shelf-card";
 
 export type ShelfSection = { label: string; cards: ShelfCard[] };
 
@@ -76,7 +76,8 @@ export function ShelfGrid({
 
   const total = sections.reduce((sum, section) => sum + section.cards.length, 0);
   const matching = shown.reduce((sum, section) => sum + section.cards.length, 0);
-  const visibleIds = shown.flatMap((section) => section.cards.map((card) => card.entryId));
+  // A run is many entries standing as one, so it is not one to select.
+  const visibleIds = shown.flatMap((section) => section.cards.filter((card) => !card.run).map((card) => card.entryId));
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
 
   // One stagger across the whole grid rather than per section, so it still
@@ -306,14 +307,18 @@ export function Tile({
       style={{ "--tile-index": index } as React.CSSProperties}
     >
       <div className={`relative${checked ? " outline outline-3 outline-offset-2 outline-accent" : ""}`}>
-        {selecting ? (
+        {selecting && !card.run ? (
           <SelectOverlay card={card} title={title} checked={checked} onToggle={onToggle} />
-        ) : (
-          <Link href={`/edition/${card.editionId}`} className="absolute inset-0 z-10">
+        ) : selecting ? null : (
+          <Link href={hrefOf(card)} className="absolute inset-0 z-10">
             <span className="sr-only">{title}</span>
           </Link>
         )}
-        <Cover title={card.workTitle} author={card.authors.join(", ") || null} coverUrl={card.coverUrl} />
+        {/* A run stands as a short stack of its issues: the shelf's own
+            physics rather than a badge on the art (§5b). */}
+        <div className={card.run ? "run-stack" : undefined}>
+          <Cover title={card.workTitle} author={card.authors.join(", ") || null} coverUrl={card.coverUrl} />
+        </div>
         {card.rating !== null ? (
           <span className="sticker" aria-label={`Rated ${card.rating} out of 10`}>
             {card.rating}
@@ -324,7 +329,9 @@ export function Tile({
             <p className="font-semibold leading-snug">{title}</p>
             {subtitle ? <p className="font-narrow text-sm text-ink-dim">{subtitle}</p> : null}
             <p className="mt-1 font-narrow text-sm text-ink-dim">
-              {SHELF_LABELS[card.status]} · {ratingLabel(card.rating)}
+              {card.run
+                ? `All ${card.run.issueCount} issues finished`
+                : `${SHELF_LABELS[card.status]} · ${ratingLabel(card.rating)}`}
             </p>
           </div>
         )}
@@ -335,15 +342,17 @@ export function Tile({
 
 function Row({ card, selecting, checked, onToggle }: { card: ShelfCard } & Selectable) {
   const { title, subtitle } = headlineOf(card);
-  const details = [
-    card.editionName,
-    card.format === "audiobook" ? "Audiobook" : null,
-    SHELF_LABELS[card.status],
-    card.rating === null ? null : ratingLabel(card.rating),
-    card.lastFinishedOn ? `finished ${card.lastFinishedOn}` : null,
-  ].filter(Boolean);
+  const details = card.run
+    ? [`All ${card.run.issueCount} issues finished`, card.lastFinishedOn ? `the last ${card.lastFinishedOn}` : null].filter(Boolean)
+    : [
+        card.editionName,
+        card.format === "audiobook" ? "Audiobook" : null,
+        SHELF_LABELS[card.status],
+        card.rating === null ? null : ratingLabel(card.rating),
+        card.lastFinishedOn ? `finished ${card.lastFinishedOn}` : null,
+      ].filter(Boolean);
 
-  if (selecting) {
+  if (selecting && !card.run) {
     return (
       <li className="border-b border-line">
         <button
@@ -365,8 +374,8 @@ function Row({ card, selecting, checked, onToggle }: { card: ShelfCard } & Selec
 
   return (
     <li className="border-b border-line">
-      <Link href={`/edition/${card.editionId}`} className="flex items-center gap-4 py-2 hover:bg-band">
-        <div className="w-12 shrink-0">
+      <Link href={hrefOf(card)} className="flex items-center gap-4 py-2 hover:bg-band">
+        <div className={`w-12 shrink-0${card.run ? " run-stack" : ""}`}>
           <Cover
             title={card.workTitle}
             author={card.authors.join(", ") || null}

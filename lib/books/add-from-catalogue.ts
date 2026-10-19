@@ -13,6 +13,7 @@ import { slugify } from "@/lib/slug";
 
 import { ensurePlainEdition } from "./add";
 import { setCover } from "./covers";
+import { recordRun, runSeries, type RunVolume } from "./runs";
 import { parsePosition, setWorkSeries } from "./series";
 import { shelveEdition } from "./shelving";
 
@@ -30,7 +31,12 @@ export type CatalogueBook = {
   authors: string[];
   summary: string | null;
   year: number | null;
-  series: { name: string; position: number | null } | null;
+  series: {
+    name: string;
+    position: number | null;
+    /** A comic run: its Comic Vine volume and issue count, so a run read to the end folds into one tile. */
+    run?: RunVolume;
+  } | null;
   coverUrl: string | null;
   coverSource: "hardcover" | "comicvine";
   /** The book's page on the catalogue, kept as its edition's link — Comic Vine asks for one back. */
@@ -83,8 +89,16 @@ export async function addFromCatalogue(input: {
         source: book.source,
         createdBy: input.userId,
       });
-      if (book.series) await setWorkSeries(tx, workId, book.series.name, book.series.position, input.userId);
+      if (book.series?.run) {
+        const seriesId = await runSeries(tx, book.series.name, book.series.run, input.userId);
+        await tx.update(works).set({ seriesId, seriesPosition: book.series.position }).where(eq(works.id, workId));
+      } else if (book.series) {
+        await setWorkSeries(tx, workId, book.series.name, book.series.position, input.userId);
+      }
     }
+    // A new work's series was counted as it joined; one already here may
+    // have gained issues on Comic Vine since.
+    if (!created && book.series?.run) await recordRun(tx, workId, book.series.run);
 
     const edition = await ensurePlainEdition(
       tx,
@@ -176,7 +190,13 @@ export async function comicBook(issueId: number, knownVolume?: ComicVolume): Pro
     summary: issue.description,
     year: issue.year,
     series:
-      volume.issueCount > 1 ? { name: volume.name, position: typeof position === "number" ? position : null } : null,
+      volume.issueCount > 1
+        ? {
+            name: volume.name,
+            position: typeof position === "number" ? position : null,
+            run: { comicvineVolumeId: volume.id, issueCount: volume.issueCount, startYear: volume.startYear },
+          }
+        : null,
     coverUrl: issue.coverUrl,
     coverSource: "comicvine",
     // Comic Vine's own address for it, from its answer; only on its host.

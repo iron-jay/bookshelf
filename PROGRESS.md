@@ -1367,3 +1367,28 @@ issue, so a run read over a summer was fifty adds and fifty Finished clicks.
 
 **Next:** the phone app (shelf-mobile) has no series screen yet; it could use
 the two new routes.
+
+## 2026-10-19 — A comic run read to the end is one tile
+
+Jay: "can a run be condensed to one entry", against Comic Vine's issue count.
+
+- Migration `0008`: `series.comicvine_volume_id` and `series.issue_count`.
+  Filled on a comic add (refreshed when an issue is added again), or looked
+  up once (two Comic Vine requests) when a series page opens without one.
+- **One series per volume** now: Saga's issues and its trade paperbacks are
+  both "Saga, 2012" on Comic Vine and used to share a series, which would
+  have measured one against the other's count. A volume takes its own series,
+  else one of its name no volume has claimed, else "Name (year)", else
+  "Name (Comic Vine id)". Series that already mix two volumes stay mixed;
+  moving those issues is a manual fix on their work pages.
+- The shelf (strips and wall, grid and list; not under a tag filter) folds
+  the Finished entries of a complete run into one tile with a two-edge stack
+  behind the cover, opening the series page, which now says "12 of 12
+  issues here". Not selectable. The strip's count counts tiles; the shelf
+  tabs still count books.
+- API: `GET /api/v1/shelf?runs=fold`; cards gain `run` (null unless folded),
+  so the phone can adopt it when it wants.
+- Checked locally with live Comic Vine: Saga's 12 trade paperbacks backfilled
+  and folded (desktop, phone, list, hover, click through to the series); one
+  set back to To read unfolds it; Saga #1 of the 72-issue run went into its
+  own "Saga (2012)" series.
