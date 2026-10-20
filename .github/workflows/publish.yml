@@ -138,3 +138,56 @@ jobs:
             echo
             echo "Deploy with \`docker compose pull && docker compose up -d\`."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Rolls the new image out on the VM, through a self-hosted runner installed
+  # there (README, "Deploying on push"). Off until the repository variable
+  # DEPLOY_DIR names the deployment's directory, so a fork or a VM without a
+  # runner never sits with a job queued for a machine that does not exist.
+  deploy:
+    needs: publish
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_DIR != ''
+    runs-on: [self-hosted, shelf-vm]
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+
+    steps:
+      # The compose file comes from this commit rather than the VM's own clone,
+      # so the VM needs no credentials for a private repository and never
+      # drifts behind. --project-directory keeps .env, the project name and
+      # the ../<app>-data bind mounts where they have always been.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: docker-compose.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Pull and restart
+        env:
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+        run: |
+          compose() { docker compose -f "$GITHUB_WORKSPACE/docker-compose.yml" --project-directory "$DEPLOY_DIR" "$@"; }
+          compose pull app
+          compose up -d --remove-orphans
+          # Every pull leaves the last image behind, and a full root disk takes
+          # Postgres down with it.
+          docker image prune -f >/dev/null
+
+      # The container migrates before it serves, so an answer here means the
+      # migrations went through too.
+      - name: Wait for it to answer
+        env:
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+        run: |
+          compose() { docker compose -f "$GITHUB_WORKSPACE/docker-compose.yml" --project-directory "$DEPLOY_DIR" "$@"; }
+          addr=$(compose port app 3000)
+          addr=${addr/0.0.0.0/127.0.0.1}
+          for i in $(seq 1 90); do
+            if curl -fsS "http://$addr/api/v1/meta" >/dev/null 2>&1; then
+              echo "  answering on $addr"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "  no answer from $addr after three minutes"
+          compose logs --tail 80 app
+          exit 1

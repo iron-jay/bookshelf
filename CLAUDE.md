@@ -598,6 +598,9 @@ differences.
 
 - Image built by GitHub Actions and published to `ghcr.io/iron-jay/bookshelf`.
   The VM only pulls. One image; it applies migrations on start before serving.
+- A self-hosted runner on the VM (label `shelf-vm`) deploys each `main`
+  build: the `deploy` job in `publish.yml`, off until the repository variable
+  `DEPLOY_DIR` is set (README, "Deploying on push").
 - Can share gameshelf's Debian VM. App on `3001`, its own Postgres container, its
   own `../bookshelf-data/` for `pgdata` and `covers`. If it gets its own VM
   instead: the Debian cloud image root partition is ~3 GB regardless of the
