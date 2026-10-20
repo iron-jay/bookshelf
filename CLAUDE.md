@@ -484,8 +484,10 @@ marked fan translations, which are gone (§1).
 
 - **Shelves** (`/`): the "Reading now" band (cover, title, Finished it, Did
   not finish), then a sideways strip per shelf (To read, Recently finished,
-  Did not finish) on a plank, with "See all". The "N finished in 2026" line
-  sits at the bottom.
+  Did not finish) on a plank, with "See all". Finished it asks for a rating
+  out of ten on the way, which can be skipped (Jay, 2026-10-20), and Recently
+  finished runs newest finish first. The "N finished in 2026" line sits at
+  the bottom.
 - **The wall** (`/?show=all`, any shelf, or a tag; `view` stays grid/list):
   2:3 covers in a grid whose columns come from its own width, a plank under
   every row. Filters in one sideways-scrolling row on a phone.

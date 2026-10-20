@@ -292,12 +292,19 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   // for a shelf, a tag or the whole wall is asking for the wall.
   if (!status && !tag && params.show !== "all") {
     const cards = folded.map(toCard);
+    const finishedKey = new Map(
+      folded.map(({ row }) => [
+        row.entryId ?? "",
+        `${row.lastFinishedOn ?? ""} ${row.updatedAt?.toISOString() ?? ""}`,
+      ]),
+    );
     const rooms = ROOMS.map((room) => {
       const all = cards.filter((card) => card.status === room.shelf);
       // Finished reads newest-finished first: what you last put down is what
-      // you came to rate or talk about.
+      // you came to rate or talk about. Finishes are dates, so two on one day
+      // go by which entry changed last, and the one you just finished leads.
       if (room.shelf === "finished") {
-        all.sort((a, b) => (b.lastFinishedOn ?? "").localeCompare(a.lastFinishedOn ?? ""));
+        all.sort((a, b) => (finishedKey.get(b.entryId) ?? "").localeCompare(finishedKey.get(a.entryId) ?? ""));
       }
       return { ...room, count: all.length, cards: all.slice(0, STRIP_LENGTH) };
     }).filter((room) => room.count > 0);

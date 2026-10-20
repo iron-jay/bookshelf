@@ -29,7 +29,7 @@ const ORDER_BY: Readonly<Record<ShelfSort, SQL>> = {
   title: sql`lower(work_title), edition_name, added_at desc`,
   author: sql`lower(author_sort) nulls last, lower(work_title), added_at desc`,
   rated: sql`rating desc nulls last, added_at desc`,
-  finished: sql`last_finished_on desc nulls last, added_at desc`,
+  finished: sql`last_finished_on desc nulls last, updated_at desc, added_at desc`,
 };
 
 export type ShelfRow = typeof entryCards.$inferSelect;
