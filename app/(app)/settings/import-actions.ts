@@ -4,13 +4,15 @@ import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
 import { GoodreadsFormatError, parseGoodreads, type GoodreadsRow } from "@/lib/import/goodreads";
+import { parseRestore, RestoreFormatError, toRestoreRow, type RestoreRow } from "@/lib/import/restore";
+import { restoreRow } from "@/lib/import/restore-run";
 import { importGoodreadsRow, type RowOutcome } from "@/lib/import/run";
 import { isShelf } from "@/lib/shelves";
 
 import { IMPORT_CHUNK } from "./import-limits";
 
-export type ParseState =
-  | { ok: true; rows: GoodreadsRow[]; skipped: { line: number; reason: string }[] }
+export type ParseState<R = GoodreadsRow> =
+  | { ok: true; rows: R[]; skipped: { line: number; reason: string }[] }
   | { ok: false; message: string }
   | null;
 
@@ -96,6 +98,57 @@ export async function importGoodreadsBatch(rows: unknown): Promise<RowOutcome[]>
     } catch (error) {
       console.error(`[import] row ${row.line}`, error);
       outcomes.push({ line: row.line, title: row.rawTitle, result: "failed", message: "Something went wrong on this row; the server log has it." });
+    }
+  }
+  revalidatePath("/");
+  return outcomes;
+}
+
+/**
+ * bookshelf's own JSON export, to restore a library or move it to another
+ * server. Read once and handed to the page, as the Goodreads file is.
+ */
+export async function parseRestoreUpload(
+  _prev: ParseState<RestoreRow>,
+  formData: FormData,
+): Promise<ParseState<RestoreRow>> {
+  await requireUser();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "Choose a bookshelf export first — the .json file." };
+  }
+  if (file.size > 20 * 1024 * 1024) return { ok: false, message: "That file is larger than 20 MB." };
+
+  try {
+    const { rows, skipped } = parseRestore(await file.text());
+    if (rows.length === 0) return { ok: false, message: "That export has no books in it." };
+    return { ok: true, rows, skipped };
+  } catch (error) {
+    if (error instanceof RestoreFormatError) return { ok: false, message: error.message };
+    return { ok: false, message: "That file could not be read as a bookshelf export." };
+  }
+}
+
+/** One batch of a restore. The rows come back from the page, so they are checked again. */
+export async function restoreBatch(rows: unknown): Promise<RowOutcome[]> {
+  const user = await requireUser();
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+  if (rows.length > IMPORT_CHUNK) throw new Error(`At most ${IMPORT_CHUNK} rows at a time`);
+
+  const outcomes: RowOutcome[] = [];
+  for (const value of rows) {
+    const line = typeof (value as { line?: unknown })?.line === "number" ? (value as { line: number }).line : 0;
+    const row = toRestoreRow(value, line);
+    if (typeof row === "string") {
+      outcomes.push({ line, title: "?", result: "failed", message: `Not a row this import produced (${row}).` });
+      continue;
+    }
+    try {
+      outcomes.push(await restoreRow(user.id, row));
+    } catch (error) {
+      console.error(`[restore] entry ${row.line}`, error);
+      outcomes.push({ line: row.line, title: row.work.title, result: "failed", message: "Something went wrong on this one; the server log has it." });
     }
   }
   revalidatePath("/");
