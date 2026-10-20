@@ -527,6 +527,14 @@ badge or marker on any cover beyond the rating sticker and a folded comic
 run's stack: two hard-edged issue edges behind its cover (`.run-stack`), the
 shelf's own physics rather than a label. No icon per format.
 
+### Icons
+
+The rating sticker as the icon (Jay, 2026-10-20): a sage sticker, tilted
+left, with a heavy Archivo "B" in `--ground`, on a ground tile. gameshelf's
+is an amber "G" tilted right; the phone app overlaps the two. `app/icon.svg`
+is the source; `favicon.ico`, `apple-icon.png` and `public/icons/` (the
+`manifest.ts` icons) are drawn from it. Redraw all of them together.
+
 ### Motion and don'ts
 
 As gameshelf §5b. One orchestrated moment as the shelf resolves, on arrival
