@@ -11,6 +11,7 @@ import { isUuid } from "@/lib/uuid";
 import { AddTabs } from "./add-tabs";
 import { EditionForm, type FixedWork } from "./edition-form";
 import { FORMAT_COOKIE, isFormat } from "./format";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,14 @@ export const dynamic = "force-dynamic";
  * "Add edition" on a work page, which is this page with `?work=` — the same
  * form, with the work already decided.
  */
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ work?: string }> }): Promise<Metadata> {
+  await requireUser();
+  const { work } = await searchParams;
+  if (work === undefined || !isUuid(work)) return { title: "Add a book" };
+  const [row] = await db.select({ title: works.title }).from(works).where(eq(works.id, work));
+  return { title: row ? `Add an edition of ${row.title}` : "Add a book" };
+}
+
 export default async function AddPage({
   searchParams,
 }: {

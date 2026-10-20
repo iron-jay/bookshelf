@@ -9,6 +9,8 @@ import { SHELF_LABELS } from "@/lib/shelves";
 
 import { BackToShelf } from "../../cover-page";
 import { Cover } from "../../cover";
+import type { Metadata } from "next";
+import { collectionTitle } from "../../page-titles";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,10 @@ type Member = {
  * books on their own by year too. Your shelf state beside each, as on a series
  * page.
  */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return collectionTitle((await params).slug);
+}
+
 export default async function CollectionPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await requireUser();
   const { slug } = await params;

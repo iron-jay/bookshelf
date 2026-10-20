@@ -11,8 +11,14 @@ import { isUuid } from "@/lib/uuid";
 import { RemovalSummary } from "../../../removal-summary";
 import { deleteFromEdition } from "./actions";
 import { DeleteChoice } from "./delete-choice";
+import type { Metadata } from "next";
+import { editionTitle } from "../../../page-titles";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  return editionTitle((await params).id, "Delete");
+}
 
 export default async function DeleteEditionPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser();

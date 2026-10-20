@@ -9,10 +9,16 @@ import { works } from "@/lib/db/schema";
 import { EditForm, WorkFields } from "../../../edit-fields";
 import { workFields } from "../../../edit-work-fields";
 import { saveWorkDetails } from "./actions";
+import type { Metadata } from "next";
+import { workTitle } from "../../../page-titles";
 
 export const dynamic = "force-dynamic";
 
 /** A work's details on a page of their own: reached by "Edit details" on the work page. */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return workTitle((await params).slug, "Edit");
+}
+
 export default async function EditWorkPage({ params }: { params: Promise<{ slug: string }> }) {
   await requireUser();
   const { slug } = await params;

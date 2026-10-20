@@ -16,8 +16,11 @@ import { HardcoverFill } from "./hardcover-fill";
 import { MissingCovers } from "./missing-covers";
 import { PasswordForm } from "./password-form";
 import { RestoreImport } from "./restore-import";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const user = await requireUser();

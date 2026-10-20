@@ -10,10 +10,13 @@ import { getBook, hardcoverEnabled } from "@/lib/hardcover";
 import { addHardcoverBook } from "../../actions";
 import { CatalogueAddForm } from "../../catalogue-add-form";
 import { FORMAT_COOKIE, isFormat } from "../../format";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
 /** A book only Hardcover has, from search: what it is, then shelf and format. */
+export const metadata: Metadata = { title: "Add a book" };
+
 export default async function AddHardcoverPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const id = Number((await params).id);

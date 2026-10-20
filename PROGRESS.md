@@ -1550,3 +1550,16 @@ looked up again rather than restored.
   compose config` with `--project-directory` resolves `.env`, the project name
   and the `../<app>-data` mounts against the deploy directory. Not yet run on
   the VM.
+
+## 2026-10-20 — tab titles
+
+- Every page's tab said only "bookshelf". The root layout now has a title
+  template, "%s · bookshelf", and each page names itself: the book's title on
+  its work and edition pages ("Edit …", "Delete …", "Cover for …" on theirs),
+  a series or collection by name, the wall by its heading ("All shelves",
+  "All books", a shelf or a tag), "Search: dune", "Add a book", "Settings"
+  and so on. The overview stays plain "bookshelf". Lookups are in
+  `app/(app)/page-titles.ts`; each checks the session first. Same change in
+  gameshelf.
+- Checked on a local database: every page's `<title>`, a missing book falls
+  back to "bookshelf". tsc, lint and `check:actions` pass.

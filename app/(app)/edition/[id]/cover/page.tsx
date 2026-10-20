@@ -7,8 +7,14 @@ import { editions, works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
 
 import { backFor, CoverPage } from "../../../cover-page";
+import type { Metadata } from "next";
+import { editionTitle } from "../../../page-titles";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  return editionTitle((await params).id, "Cover for");
+}
 
 export default async function EditionCoverPage({
   params,

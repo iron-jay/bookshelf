@@ -1,10 +1,13 @@
 import { requireUser } from "@/lib/auth";
 
 import { GoodreadsFill } from "./goodreads-fill";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
 /** Opened by the Goodreads bookmarklet; see lib/goodreads-bookmarklet. */
+export const metadata: Metadata = { title: "Fill in from Goodreads" };
+
 export default async function GoodreadsFillPage() {
   await requireUser();
   return (
