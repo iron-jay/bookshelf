@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { today } from "@/lib/books/shelving";
 import { comicTitle, comicvineEnabled, getVolume, volumeIssues } from "@/lib/comicvine";
 import { db } from "@/lib/db";
 import { editions, entries, works } from "@/lib/db/schema";
@@ -11,12 +12,13 @@ import { editions, entries, works } from "@/lib/db/schema";
 import { addComicBook } from "../../actions";
 import { AddTabs, ComicVineCredit } from "../../add-tabs";
 import { CatalogueAddForm } from "../../catalogue-add-form";
+import { ComicIssuesForm } from "./comic-issues-form";
 
 export const dynamic = "force-dynamic";
 
 /**
- * One Comic Vine volume: pick the issue to shelve. A graphic novel is a
- * volume of one, so there is nothing to pick.
+ * One Comic Vine volume: pick the issues to shelve — one, or a run read in
+ * one go. A graphic novel is a volume of one, so there is nothing to pick.
  */
 export default async function AddComicVolumePage({ params }: { params: Promise<{ volumeId: string }> }) {
   const user = await requireUser();
@@ -65,13 +67,13 @@ export default async function AddComicVolumePage({ params }: { params: Promise<{
         </p>
       </header>
 
-      <CatalogueAddForm
-        action={addComicBook}
-        hidden={single ? { issueId: String(single.id) } : {}}
-        withFormat={false}
-        defaultFormat="book"
-      >
-        {single ? (
+      {single ? (
+        <CatalogueAddForm
+          action={addComicBook}
+          hidden={{ issueId: String(single.id) }}
+          withFormat={false}
+          defaultFormat="book"
+        >
           <div className="flex items-start gap-4">
             <div className="h-36 w-24 shrink-0 bg-panel">
               {single.thumbUrl ? (
@@ -83,40 +85,20 @@ export default async function AddComicVolumePage({ params }: { params: Promise<{
               {single.year ? <span className="ml-2 text-ink-dim">{single.year}</span> : null}
             </p>
           </div>
-        ) : (
-          <fieldset>
-            <legend className="mb-2 font-narrow text-ink-dim">Which one</legend>
-            <ul className="grid gap-1 [grid-template-columns:repeat(auto-fill,minmax(120px,1fr))]">
-              {issues.map((issue, index) => (
-                <li key={issue.id}>
-                  <label className="group block cursor-pointer">
-                    <input
-                      type="radio"
-                      name="issueId"
-                      value={issue.id}
-                      required
-                      defaultChecked={index === 0 && !onShelf.has(issue.id)}
-                      className="peer sr-only"
-                    />
-                    <span className="relative block aspect-[2/3] w-full overflow-hidden border-2 border-transparent bg-panel group-hover:border-line peer-checked:border-ink">
-                      {issue.thumbUrl ? (
-                        <Image src={issue.thumbUrl} alt="" fill sizes="160px" className="object-cover" unoptimized />
-                      ) : null}
-                    </span>
-                    <span className="block truncate font-narrow">
-                      {issue.issueNumber ? `#${issue.issueNumber}` : ""}
-                      {issue.name ? ` ${issue.name}` : ""}
-                    </span>
-                    <span className="block truncate font-narrow text-ink-dim">
-                      {[issue.year, onShelf.has(issue.id) ? "On your shelf" : null].filter(Boolean).join(" · ") || " "}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </fieldset>
-        )}
-      </CatalogueAddForm>
+        </CatalogueAddForm>
+      ) : (
+        <ComicIssuesForm
+          volumeId={volume.id}
+          today={today()}
+          issues={issues.map((issue) => ({
+            id: issue.id,
+            label: [issue.issueNumber ? `#${issue.issueNumber}` : "", issue.name ?? ""].filter(Boolean).join(" ") || "Untitled",
+            year: issue.year,
+            thumbUrl: issue.thumbUrl,
+            onShelf: onShelf.has(issue.id),
+          }))}
+        />
+      )}
 
       {single && onShelf.has(single.id) ? (
         <p className="mt-4 font-narrow text-ink-dim">

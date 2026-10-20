@@ -1335,3 +1335,60 @@ With the catalogue hosts allowed, against a local Postgres:
 - Google Books: the key is accepted, but Google refuses requests from the
   cloud test environment ("Cannot determine user location"), so the cover
   fallback could not be seen working from there. Not a code problem.
+
+## 2026-10-17 — Series read, for comics
+
+Jay asked for "a series read option for comics". Comics are one work per
+issue, so a run read over a summer was fifty adds and fifty Finished clicks.
+
+- **Adding a run**: `/add/comic/{volumeId}` picks issues with checkboxes, with
+  "Choose all" (those not on your shelf) and Clear. On Finished it asks once
+  for the day, starting at today. The page sends five issues per request
+  (`addComicIssues`), as the import batches, and fetches the volume once per
+  batch instead of once per issue. One issue lands on the shelf as before;
+  several land on the series page. A graphic novel (a volume of one) keeps
+  the old form.
+- **Finishing a series**: the series page has "Mark all N finished" on a day
+  (`lib/books/series-read.ts`), on every series, not only comics. Finished
+  books are left alone; the rest go through `changeShelf`, which now takes
+  the day; a book of the series not on your shelf goes on it in its first
+  edition. An open read started after the day finishes the day it started,
+  rather than breaking `reads_date_order`.
+- **API**: `GET /api/v1/series/{slug}`, `POST /api/v1/series/{slug}/read`
+  `{ finishedOn? }`, and `finishedOn?` on `POST /api/v1/entries` for a
+  Finished add (the phone adds a run issue by issue with it).
+- Checked against a local Postgres and live Comic Vine: Saga's twelve trade
+  paperbacks added as Finished on 2025-08-01 in one go (twelve reads with that
+  day, covers downloaded); the series button at phone width finishing two To
+  read and one not on the shelf; the API finishing To read, Reading (started
+  after the day, so finished on its start) and Did not finish, then a second
+  run changing nothing; a bad date is a 422. Comic Vine answered one 403 on
+  the first page load and was fine after.
+
+**Next:** the phone app (shelf-mobile) has no series screen yet; it could use
+the two new routes.
+
+## 2026-10-19 — A comic run read to the end is one tile
+
+Jay: "can a run be condensed to one entry", against Comic Vine's issue count.
+
+- Migration `0008`: `series.comicvine_volume_id` and `series.issue_count`.
+  Filled on a comic add (refreshed when an issue is added again), or looked
+  up once (two Comic Vine requests) when a series page opens without one.
+- **One series per volume** now: Saga's issues and its trade paperbacks are
+  both "Saga, 2012" on Comic Vine and used to share a series, which would
+  have measured one against the other's count. A volume takes its own series,
+  else one of its name no volume has claimed, else "Name (year)", else
+  "Name (Comic Vine id)". Series that already mix two volumes stay mixed;
+  moving those issues is a manual fix on their work pages.
+- The shelf (strips and wall, grid and list; not under a tag filter) folds
+  the Finished entries of a complete run into one tile with a two-edge stack
+  behind the cover, opening the series page, which now says "12 of 12
+  issues here". Not selectable. The strip's count counts tiles; the shelf
+  tabs still count books.
+- API: `GET /api/v1/shelf?runs=fold`; cards gain `run` (null unless folded),
+  so the phone can adopt it when it wants.
+- Checked locally with live Comic Vine: Saga's 12 trade paperbacks backfilled
+  and folded (desktop, phone, list, hover, click through to the series); one
+  set back to To read unfolds it; Saga #1 of the 72-issue run went into its
+  own "Saga (2012)" series.

@@ -1,4 +1,4 @@
-import { ApiError, json, readObject, withUser } from "@/lib/api";
+import { ApiError, json, optionalDate, readObject, withUser } from "@/lib/api";
 import { entryJson } from "@/lib/api/cards";
 import { refreshEntryPages } from "@/lib/api/refresh";
 import { addOpenLibraryBook, AddBookError } from "@/lib/books/add";
@@ -45,7 +45,7 @@ function openLibraryFailure(error: OpenLibraryError): ApiError {
 }
 
 /** Open Library's work, and the edition chosen from GET /catalogue/openlibrary/{key}, or "any edition". */
-async function addFromOpenLibrary(userId: string, body: Record<string, unknown>, shelf: Shelf) {
+async function addFromOpenLibrary(userId: string, body: Record<string, unknown>, shelf: Shelf, on: string | undefined) {
   const olWorkKey = body.olWorkKey;
   if (typeof olWorkKey !== "string" || !isWorkKey(olWorkKey)) {
     throw new ApiError("invalid", "olWorkKey is an Open Library work key, like OL45804W.", {
@@ -82,6 +82,7 @@ async function addFromOpenLibrary(userId: string, body: Record<string, unknown>,
       credit: audio ? optionalText(body.credit, "credit", 200) : null,
       durationMinutes: audio ? durationMinutes : null,
       isbn: isbn.kind === "isbn" ? isbn.isbn : null,
+      on,
     });
   } catch (error) {
     if (error instanceof AddBookError) throw new ApiError("invalid", error.message);
@@ -102,7 +103,9 @@ async function addFromOpenLibrary(userId: string, body: Record<string, unknown>,
  * - `{ comicvineIssueId, shelf? }` for a comic or graphic novel.
  *
  * The same lib code as the web's add pages, so the same rules: the shelf's
- * read rules apply, `format` defaults to book. 201 when added, 200 when it
+ * read rules apply, `format` defaults to book. `finishedOn` sets the day of
+ * the read a Finished add records (today if left out), so a run of comics
+ * read last summer can be added issue by issue with that day. 201 when added, 200 when it
  * was already there; an entry already on the shelf keeps its shelf.
  */
 export const POST = withUser(async (request, { user }) => {
@@ -117,6 +120,8 @@ export const POST = withUser(async (request, { user }) => {
     }
     shelf = body.shelf;
   }
+  const finishedOn = optionalDate(body.finishedOn, "finishedOn");
+  const on = shelf === "finished" ? finishedOn : undefined;
 
   let entryId: string;
   let added: boolean;
@@ -128,22 +133,22 @@ export const POST = withUser(async (request, { user }) => {
       throw new ApiError("not_found", "No such edition.");
     }
     editionId = id;
-    ({ entryId, added } = await db.transaction((tx) => shelveEdition(tx, user.id, id, shelf)));
+    ({ entryId, added } = await db.transaction((tx) => shelveEdition(tx, user.id, id, shelf, on)));
   } else if (body.olWorkKey !== undefined) {
-    ({ editionId, entryId, added } = await addFromOpenLibrary(user.id, body, shelf));
+    ({ editionId, entryId, added } = await addFromOpenLibrary(user.id, body, shelf, on));
   } else if (body.hardcoverId !== undefined) {
     const id = catalogueId(body.hardcoverId, "hardcoverId");
     const format = formatFrom(body);
     if (!hardcoverEnabled()) throw new ApiError("upstream", "This server has no Hardcover token.");
     const book = await hardcoverBook(id);
     if (!book) throw new ApiError("upstream", "Hardcover did not answer, or has no such book. Nothing was added.");
-    ({ editionId, entryId, added } = await addFromCatalogue({ userId: user.id, book, format, shelf }));
+    ({ editionId, entryId, added } = await addFromCatalogue({ userId: user.id, book, format, shelf, on }));
   } else if (body.comicvineIssueId !== undefined) {
     const id = catalogueId(body.comicvineIssueId, "comicvineIssueId");
     if (!comicvineEnabled()) throw new ApiError("upstream", "This server has no Comic Vine key.");
     const book = await comicBook(id);
     if (!book) throw new ApiError("upstream", "Comic Vine did not answer, or has no such issue. Nothing was added.");
-    ({ editionId, entryId, added } = await addFromCatalogue({ userId: user.id, book, format: "book", shelf }));
+    ({ editionId, entryId, added } = await addFromCatalogue({ userId: user.id, book, format: "book", shelf, on }));
   } else {
     throw new ApiError("invalid", "Send an editionId, olWorkKey, hardcoverId or comicvineIssueId.", {
       fields: {

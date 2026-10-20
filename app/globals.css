@@ -214,6 +214,15 @@ body {
       linear-gradient(var(--color-plank-shadow), transparent) bottom / 100% 6px no-repeat;
   }
 
+  /* A comic run read to the end: its first cover with two more issues'
+     edges peeking out behind, up and to the right, as a stack on a shelf
+     does. Hard edges in the plank's colours, never a soft shadow. */
+  .run-stack {
+    box-shadow:
+      3px -3px 0 -1px var(--color-plank-edge),
+      6px -6px 0 -2px var(--color-line-strong);
+  }
+
   /* The rating, stuck on the cover like a price sticker. */
   .sticker {
     position: absolute;

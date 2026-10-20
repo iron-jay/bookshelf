@@ -31,6 +31,8 @@ export type AddBookInput = {
   durationMinutes: number | null;
   /** The ISBN that led here, when one did — preferred over the record's first. */
   isbn: Isbn | null;
+  /** The day its read starts or finishes, for Reading or Finished; today if not given. */
+  on?: string;
 };
 
 export type AddBookResult = {
@@ -96,7 +98,7 @@ export async function addOpenLibraryBook(input: AddBookInput): Promise<AddBookRe
         ? await insertOpenLibraryEdition(tx, input, work.id, editionFetch)
         : await ensurePlainEdition(tx, input, work.id);
 
-    const { entryId, added } = await shelveEdition(tx, input.userId, edition.id, input.shelf);
+    const { entryId, added } = await shelveEdition(tx, input.userId, edition.id, input.shelf, input.on);
     return { work, edition, entryId, added };
   });
 

@@ -11,6 +11,7 @@ import {
   type ShelfRow,
   type ShelfSort,
 } from "@/lib/books/shelf";
+import { completeRuns, foldRuns, type FoldedRow, type Run } from "@/lib/books/runs";
 import { db } from "@/lib/db";
 import { entries, entryCards, reads } from "@/lib/db/schema";
 import { isShelf, SHELF_LABELS, SHELVES, type Shelf } from "@/lib/shelves";
@@ -144,8 +145,8 @@ function bucketFor(row: Row, groupBy: GroupBy): { label: string; order: number |
   }
 }
 
-function toCard(row: Row): ShelfCard {
-  return {
+function toCard({ row, run }: { row: Row; run: Run | null }): ShelfCard {
+  const card: ShelfCard = {
     entryId: row.entryId ?? "",
     editionId: row.editionId ?? "",
     workTitle: row.workTitle ?? "Untitled",
@@ -157,6 +158,17 @@ function toCard(row: Row): ShelfCard {
     rating: row.rating,
     coverUrl: row.coverUrl,
     lastFinishedOn: row.lastFinishedOn,
+    run: null,
+  };
+  if (!run) return card;
+  // The run stands under its own name; the rating was each issue's, so none.
+  return {
+    ...card,
+    entryId: `run:${run.seriesId}`,
+    workTitle: run.name,
+    editionName: `${run.issueCount} issues`,
+    rating: null,
+    run: { slug: run.slug, issueCount: run.issueCount },
   };
 }
 
@@ -199,6 +211,9 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   const tag = tagOptions.find((option) => option.slug === params.tag);
 
   const rows = await shelfRows(user.id, { status, tag: tag?.slug, sort });
+  // A tag picks out entries, so it shows them as themselves: a run folded
+  // under a tag that only some of its issues carry would claim the rest.
+  const folded = foldRuns(rows, tag ? new Map() : await completeRuns(user.id));
 
   const counts = await db
     .select({ status: entryCards.status, n: count() })
@@ -228,7 +243,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
     const year = row.year ?? Number.POSITIVE_INFINITY;
     seriesBegan.set(row.seriesId, Math.min(seriesBegan.get(row.seriesId) ?? Number.POSITIVE_INFINITY, year));
   }
-  const inCollectionOrder = (a: Row, b: Row) => {
+  const inCollectionOrder = ({ row: a }: FoldedRow, { row: b }: FoldedRow) => {
     const startA = a.seriesId ? seriesBegan.get(a.seriesId)! : (a.year ?? Number.POSITIVE_INFINITY);
     const startB = b.seriesId ? seriesBegan.get(b.seriesId)! : (b.year ?? Number.POSITIVE_INFINITY);
     if (startA !== startB) return startA - startB;
@@ -238,22 +253,22 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
 
   const ordered =
     groupBy === "collection"
-      ? [...rows].sort(inCollectionOrder)
+      ? [...folded].sort(inCollectionOrder)
       : groupBy === "series"
-        ? [...rows].sort(
-            (a, b) =>
+        ? [...folded].sort(
+            ({ row: a }, { row: b }) =>
               (a.seriesPosition ?? Number.POSITIVE_INFINITY) -
               (b.seriesPosition ?? Number.POSITIVE_INFINITY),
           )
         : groupBy === "finished"
-          ? [...rows].sort((a, b) => (b.lastFinishedOn ?? "").localeCompare(a.lastFinishedOn ?? ""))
-          : rows;
+          ? [...folded].sort(({ row: a }, { row: b }) => (b.lastFinishedOn ?? "").localeCompare(a.lastFinishedOn ?? ""))
+          : folded;
 
   const groups = new Map<string, { order: number | string; cards: ShelfCard[] }>();
-  for (const row of ordered) {
-    const { label, order } = bucketFor(row, groupBy);
+  for (const item of ordered) {
+    const { label, order } = bucketFor(item.row, groupBy);
     const group = groups.get(label) ?? { order, cards: [] };
-    group.cards.push(toCard(row));
+    group.cards.push(toCard(item));
     groups.set(label, group);
   }
   const sections: ShelfSection[] = [...groups.entries()]
@@ -276,7 +291,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   // A bare "/" is the room: the reading band, then a strip per shelf. Asking
   // for a shelf, a tag or the whole wall is asking for the wall.
   if (!status && !tag && params.show !== "all") {
-    const cards = rows.map(toCard);
+    const cards = folded.map(toCard);
     const rooms = ROOMS.map((room) => {
       const all = cards.filter((card) => card.status === room.shelf);
       // Finished reads newest-finished first: what you last put down is what

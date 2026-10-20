@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { collections, editions, entries, entryCards, entryTags, series, tags, works } from "@/lib/db/schema";
@@ -133,5 +133,62 @@ export async function workDetail(userId: string, slug: string) {
       : null,
     collection: inCollection ?? null,
     editions: editionRows,
+  };
+}
+
+/**
+ * A series by slug: its works in reading order (unnumbered last, as the
+ * series page lists them) with your entries on each, and its collection.
+ */
+export async function seriesDetail(userId: string, slug: string) {
+  const [found] = await db.select().from(series).where(eq(series.slug, slug));
+  if (!found) return null;
+
+  const members = await db
+    .select({
+      id: works.id,
+      slug: works.slug,
+      title: works.title,
+      authors: works.authors,
+      position: works.seriesPosition,
+      coverUrl: works.coverUrl,
+    })
+    .from(works)
+    .where(eq(works.seriesId, found.id))
+    .orderBy(sql`${works.seriesPosition} asc nulls last`, asc(works.title));
+
+  const mine = members.length
+    ? await db
+        .select({
+          workId: editions.workId,
+          entryId: entries.id,
+          editionId: editions.id,
+          editionName: editions.name,
+          shelf: entries.status,
+          rating: entries.rating,
+        })
+        .from(entries)
+        .innerJoin(editions, eq(editions.id, entries.editionId))
+        .where(and(eq(entries.userId, userId), inArray(editions.workId, members.map((m) => m.id))))
+    : [];
+
+  const [inCollection] = found.collectionId
+    ? await db
+        .select({ name: collections.name, slug: collections.slug })
+        .from(collections)
+        .where(eq(collections.id, found.collectionId))
+    : [];
+
+  return {
+    id: found.id,
+    slug: found.slug,
+    name: found.name,
+    collection: inCollection ?? null,
+    works: members.map((work) => ({
+      ...work,
+      entries: mine
+        .filter((m) => m.workId === work.id)
+        .map((m) => ({ entryId: m.entryId, editionId: m.editionId, editionName: m.editionName, shelf: m.shelf, rating: m.rating })),
+    })),
   };
 }
