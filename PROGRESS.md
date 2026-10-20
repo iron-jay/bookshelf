@@ -1491,3 +1491,18 @@ book; its last edition then showed no switch and deleting the book removed
 its series and collection; the work page's Delete removed a standalone book;
 a cover file the work still used survived an edition's delete. tsc, lint and
 `check:actions` pass.
+
+## 2026-10-20 — New icons
+
+Jay asked for new icons for both web apps, a distinct pair, and a matching
+one for the phone app. Three directions were drawn (cover on a plank, letter
+on a plank, the rating sticker); Jay picked the sticker.
+
+- `app/icon.svg`: a sage sticker tilted left with a heavy Archivo "B" in the
+  ground colour, on a ground tile. The letter is outlined to paths, so no
+  font is needed to draw it.
+- `app/favicon.ico` (16/32/48), `app/apple-icon.png` (180, full bleed) and
+  `public/icons/` (192, 512, maskable 512) are rendered from it; the new
+  `app/manifest.ts` lists the PNGs for "Add to home screen".
+- Checked in `next dev`: the login page carries the icon, apple-touch-icon
+  and manifest links, and each file serves. tsc and lint pass.
