@@ -487,17 +487,20 @@ marked fan translations, which are gone (§1).
   Did not finish) on a plank, with "See all". Finished it asks for a rating
   out of ten on the way, which can be skipped (Jay, 2026-10-20), and Recently
   finished runs newest finish first. The "N finished in 2026" line sits at
-  the bottom.
+  the bottom. It is an overview: the band and every strip show ten at most
+  (Jay, 2026-10-20), with "See all N" for the rest.
 - **The wall** (`/?show=all`, any shelf, or a tag; `view` stays grid/list):
   2:3 covers in a grid whose columns come from its own width, a plank under
-  every row. Filters in one sideways-scrolling row on a phone.
+  every row. Filters in one sideways-scrolling row on a phone. **All
+  shelves** in the nav (header and tab bar) is the wall grouped by shelf,
+  each shelf in full under a heading that opens it alone.
 - **Edition and work pages**: the whole cover standing on a plank beside the
   title; Change cover and Edit details directly beneath; the shelf as a
   segmented control; rating as ten bars climbing left to right.
 - Covers are always whole, at every size: no spines, no cropped banners.
 - On hover-capable screens a tile shows its name and shelf on hover; on a
   phone a cover is a plain tap.
-- **Phones**: a bottom tab bar (Shelves, Search, Add, More). `GAMESHELF_URL`
+- **Phones**: a bottom tab bar (Shelves, All, Search, Add, More). `GAMESHELF_URL`
   puts a link across to gameshelf in the header.
 
 ### The typeset placeholder
@@ -619,3 +622,13 @@ runs end to end.
 
 Ship after 7. Import is last in the list but is what makes the app usable with a
 real library — do it before calling v1 done.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

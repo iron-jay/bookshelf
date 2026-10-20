@@ -11,14 +11,22 @@ import type { ShelfCard } from "./shelf-card";
  * the open read today, exactly as choosing Finished on the book's page does,
  * and asks for a rating on the way.
  */
-export function ReadingNow({ cards }: { cards: ShelfCard[] }) {
+export function ReadingNow({ cards, count, seeAll }: { cards: ShelfCard[]; count: number; seeAll: string }) {
   return (
     <section className="bg-band px-4 pt-6 pb-7 sm:px-10">
       <div className="mb-5 flex items-baseline gap-3">
         <h1 className="font-display text-3xl sm:text-4xl">Reading now</h1>
         <span className="text-ink-dim">
-          {cards.length === 0 ? "Nothing on the go" : `${cards.length} ${cards.length === 1 ? "book" : "books"}`}
+          {count === 0 ? "Nothing on the go" : `${count} ${count === 1 ? "book" : "books"}`}
         </span>
+        {count > cards.length ? (
+          <>
+            <div className="flex-1" />
+            <Link href={seeAll} className="font-narrow text-ink-dim underline underline-offset-4 hover:text-ink">
+              See all {count}
+            </Link>
+          </>
+        ) : null}
       </div>
 
       {cards.length === 0 ? (
