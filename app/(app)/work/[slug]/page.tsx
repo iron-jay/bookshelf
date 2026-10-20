@@ -250,6 +250,15 @@ export default async function WorkPage({ params }: { params: Promise<{ slug: str
           })}
         </ul>
       </section>
+
+      <p>
+        <Link
+          href={`/work/${work.slug}/delete`}
+          className="font-narrow text-ink-dim underline underline-offset-4 hover:text-danger"
+        >
+          Delete
+        </Link>
+      </p>
       </div>
     </main>
   );

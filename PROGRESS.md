@@ -1413,3 +1413,31 @@ Recently finished, as in gameshelf.
 
 **Next:** the phone app's Finished it does not prompt yet.
 
+
+
+## 2026-10-20 — Delete a book, or just this edition
+
+Jay asked for gameshelf's new Delete choice here too. bookshelf had no delete
+at all, only Remove from shelf, so this adds it:
+
+- **`lib/books/removal.ts`**: `removeWork` and `removeEdition` in one
+  transaction each, with `inspect*Removal` counting what goes for the
+  confirmation page. Deleting a book also deletes a series it leaves empty,
+  that series' collection or its own if empty (as `setWorkSeries` does), and
+  tags left on nothing (as `untagEntries` does). Cover files go afterwards,
+  and only when no remaining work or edition points at them, since an
+  edition can carry its work's file. `removeEdition` refuses a book's last
+  edition.
+- **Pages**: Delete links at the foot of the edition and work pages.
+  `/edition/{id}/delete` has a segmented "The whole book" (preselected) /
+  "Just this edition" with the heading, summary and button following it, and
+  no switch when there is one edition. `/work/{slug}/delete` is always the
+  whole book. Both list editions of other books made from what goes.
+- The phone app only removes entries, so the API is untouched.
+
+Checked on a local database in Chromium at phone width: just the audiobook of
+a two-edition book went with its entry, read and only tag, landing on the
+book; its last edition then showed no switch and deleting the book removed
+its series and collection; the work page's Delete removed a standalone book;
+a cover file the work still used survived an edition's delete. tsc, lint and
+`check:actions` pass.
