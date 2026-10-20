@@ -10,7 +10,7 @@ import { changeSelectedShelf, tagSelected, untagSelected, type BulkState } from 
 import { Cover } from "./cover";
 import { haystackOf, headlineOf, hrefOf, ratingLabel, type ShelfCard } from "./shelf-card";
 
-export type ShelfSection = { label: string; cards: ShelfCard[] };
+export type ShelfSection = { label: string; href?: string; cards: ShelfCard[] };
 
 const BUTTON = "btn";
 const FIELD = "field";
@@ -223,7 +223,13 @@ export function ShelfGrid({
         <section key={section.label || "all"} className="shelf-wall mb-10">
           {grouped ? (
             <h2 className="mb-1 flex items-baseline gap-3">
-              <span className="font-display text-2xl">{section.label}</span>
+              {section.href ? (
+                <Link href={section.href} className="font-display text-2xl hover:underline">
+                  {section.label}
+                </Link>
+              ) : (
+                <span className="font-display text-2xl">{section.label}</span>
+              )}
               <span className="text-ink-dim">{section.cards.length}</span>
             </h2>
           ) : null}

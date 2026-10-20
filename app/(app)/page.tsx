@@ -81,8 +81,11 @@ const ROOMS: ReadonlyArray<{ shelf: Shelf; title: string }> = [
   { shelf: "finished", title: "Recently finished" },
   { shelf: "dnf", title: "Did not finish" },
 ];
-/** A strip is a glimpse; "See all" is the whole shelf. */
-const STRIP_LENGTH = 24;
+/**
+ * The main page is an overview: ten to a strip at most (Jay, 2026-10-20).
+ * "See all" is that shelf in full, and "All shelves" in the nav is every one.
+ */
+const STRIP_LENGTH = 10;
 
 type Row = ShelfRow;
 
@@ -277,7 +280,15 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
         ? a[1].order - b[1].order
         : String(a[1].order).localeCompare(String(b[1].order)),
     )
-    .map(([label, group]) => ({ label, cards: group.cards }));
+    .map(([label, group]) => {
+      // Grouped by shelf, a heading opens that shelf on its own.
+      const shelf = groupBy === "shelf" ? SHELVES.find((one) => SHELF_LABELS[one] === label) : undefined;
+      return {
+        label,
+        href: shelf ? hrefWith(params, { status: shelf, show: undefined, groupBy: undefined }) : undefined,
+        cards: group.cards,
+      };
+    });
 
   const landedId = params.added ?? params.already;
   const landed = landedId ? rows.find((row) => row.entryId === landedId) : undefined;
@@ -309,13 +320,14 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
       return { ...room, count: all.length, cards: all.slice(0, STRIP_LENGTH) };
     }).filter((room) => room.count > 0);
 
+    const reading = cards.filter((card) => card.status === "reading");
     let tileIndex = 0;
 
     return (
       <main className="flex-1">
         <RememberShelfView query={queryFor(params)} />
         {notice ? <div className="px-4 pt-4 sm:px-10">{notice}</div> : null}
-        <ReadingNow cards={cards.filter((card) => card.status === "reading")} />
+        <ReadingNow cards={reading.slice(0, STRIP_LENGTH)} count={reading.length} seeAll={hrefWith({}, { status: "reading" })} />
 
         <ResolveOnce>
           <div className="px-4 pb-14 sm:px-10">
@@ -353,10 +365,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
               <p className="mt-10 font-narrow text-ink-dim">
                 {/* The entire stats feature (§5). There is no stats page. */}
                 {finished > 0 ? `${finished} finished in ${year}. ` : ""}
-                {everything} {everything === 1 ? "book" : "books"} on your shelves.{" "}
-                <Link href="/?show=all" className="underline underline-offset-4 hover:text-ink">
-                  See them all, with filters
-                </Link>
+                {everything} {everything === 1 ? "book" : "books"} on your shelves.
               </p>
             )}
           </div>
@@ -371,7 +380,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
       {notice}
 
       <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h1 className="font-display text-3xl sm:text-4xl">{status ? SHELF_LABELS[status] : "All books"}</h1>
+        <h1 className="font-display text-3xl sm:text-4xl">{status ? SHELF_LABELS[status] : groupBy === "shelf" ? "All shelves" : "All books"}</h1>
         {/* The entire stats feature (§5). There is no stats page. */}
         {finished > 0 ? (
           <span className="text-ink-dim">
