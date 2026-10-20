@@ -348,7 +348,17 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
           ) : null}
         </div>
 
-        {entry ? <RemoveFromShelf editionId={edition.id} /> : null}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          {entry ? <RemoveFromShelf editionId={edition.id} /> : null}
+          {/* Removing from the shelf keeps the book; this deletes it, behind
+              its own confirmation page, as gameshelf does. */}
+          <Link
+            href={`/edition/${edition.id}/delete`}
+            className="font-narrow text-ink-dim underline underline-offset-4 hover:text-danger"
+          >
+            Delete
+          </Link>
+        </div>
       </div>
     </main>
   );

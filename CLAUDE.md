@@ -336,6 +336,11 @@ form. Used for web serials, zines, ARCs, out-of-print things.
    cover" and "Edit details". Details are their own page: `/work/{slug}/edit`
    for the book, `/edition/{id}/edit` for the book and that edition together,
    one Save, back to the book.
+   Delete, at the foot of both, deletes rather than removes from the shelf,
+   behind its own page (2026-10-20). On an edition it asks "The whole book"
+   (the default) or "Just this edition"; a book's last edition only goes with
+   the book. A series or collection left empty goes too, and a tag left on
+   nothing.
 5. **Series page** — ordered works, your shelf state for each, the
    series' collection, and "Mark all N finished" on a day. **Collection page** — its series and books, as above.
 6. **Settings** — account name and password, export, import, cover art review.
