@@ -424,6 +424,15 @@ automatically afterwards — gameshelf tried that and reverted it within a day.
 ### Import and export
 
 - **Export**: JSON and CSV of everything, from day one.
+- **Restore** (Jay, 2026-10-20, as gameshelf): Settings → Export and restore
+  reads the JSON export back in (`lib/import/restore.ts`), batched like the
+  Goodreads import. Details come from the file; Open Library is asked only
+  for `ol_payload` and covers, which are looked up again as on add. A book
+  here already (Open Library keys, Goodreads, Comic Vine or Hardcover id,
+  else a local work of the same title and authors) is joined, an entry
+  already on the shelf is left alone, and series and collections are only set
+  where a book has none. The export carries `seriesRun`, `hardcoverId` and
+  `comicvineIssueId` for this; older exports restore without them.
 - **Import: Goodreads CSV.** This is the realistic starting point for anyone,
   and it is to bookshelf what the Grouvee import was to gameshelf. Map by ISBN13
   → ISBN → title + author search. Rows that cannot be matched become local works

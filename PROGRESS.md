@@ -1506,3 +1506,34 @@ on a plank, the rating sticker); Jay picked the sticker.
   `app/manifest.ts` lists the PNGs for "Add to home screen".
 - Checked in `next dev`: the login page carries the icon, apple-touch-icon
   and manifest links, and each file serves. tsc and lint pass.
+
+## 2026-10-20 — Restore from an export
+
+Jay asked for each app to import its own export, to restore a library or
+move it to another server. Built with gameshelf's, as a pair.
+
+- **Settings → Export and restore** gains "Restore from an export": the JSON
+  download, read once (`lib/import/restore.ts`, which also refuses a
+  gameshelf file by name) and imported five at a time from the page. The
+  Goodreads import's page component became `BatchImport`
+  (`settings/batch-import.tsx`), shared by both imports, which differ only in
+  their words.
+- `lib/import/restore-run.ts`: a book is joined by its Open Library edition
+  key or Goodreads id, else its work by Open Library key, Comic Vine issue,
+  Hardcover id, or a local work of the same title and authors; an entry
+  already on the shelf is left alone. New works and editions take the file's
+  details (your titles and summaries); Open Library is asked only for the
+  work's raw record and the edition's cover id. Series, a comic run's volume
+  and collections are set only where a book has none. Translations and
+  audiobooks link to their base edition by name.
+- The export now carries `work.seriesRun` (Comic Vine volume and issue
+  count), `hardcoverId` and `comicvineIssueId`. Older exports restore
+  without them.
+
+Checked on a local database: a Discworld book and its audiobook (renamed,
+series, collection, tags, reads), a local work with a German translation, two
+Saga issues and a Hardcover book, exported, restored into an empty database
+through the Settings page, exported again: identical. Running it again: 7
+already here. A gameshelf export is refused with a message. tsc, lint and
+`check:actions` pass. Uploaded covers are not in the export, so they are
+looked up again rather than restored.

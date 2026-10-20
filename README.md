@@ -237,3 +237,15 @@ Library*. Books match by ISBN, then by title and author; the rest are added as
 local works and listed for fixing. Keep the tab open while it runs (about two
 seconds per new book); running the same file again resumes and never
 overwrites anything you have changed.
+
+## Restoring from an export
+
+Settings → Export and restore takes bookshelf's own JSON download (not the
+CSV), from this server or another: a library lost, or moved to a new server.
+Titles, summaries, editions, series, collections, tags, ratings, reviews and
+every read come from the file; Open Library is asked only for its raw record
+and covers. Covers are looked up again in the order an add uses, so one you
+uploaded or picked by hand needs picking again — the nightly `pg_dump` and the
+`covers` folder remain the full backup. Books already here are joined rather
+than doubled and entries already on your shelf are left alone, so running it
+twice changes nothing.

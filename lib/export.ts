@@ -41,8 +41,12 @@ export type ExportEntry = {
     collection: string | null;
     series: string | null;
     seriesPosition: number | null;
+    /** A comic run's Comic Vine volume and issue count, so a restore folds it as before. */
+    seriesRun: { comicvineVolumeId: number; issueCount: number | null } | null;
     source: string;
     openLibraryKey: string | null;
+    hardcoverId: number | null;
+    comicvineIssueId: number | null;
   };
 };
 
@@ -66,6 +70,8 @@ export async function buildExport(userId: string, username: string): Promise<Exp
       edition: editions,
       work: works,
       seriesName: series.name,
+      seriesVolumeId: series.comicvineVolumeId,
+      seriesIssueCount: series.issueCount,
       collectionName: collections.name,
       baseName: base.name,
     })
@@ -97,7 +103,7 @@ export async function buildExport(userId: string, username: string): Promise<Exp
     username,
     note: "bookshelf export. Ratings are out of ten. Reads are one pass each; rereads are separate reads.",
     entryCount: rows.length,
-    entries: rows.map(({ entry, edition, work, seriesName, collectionName, baseName }) => ({
+    entries: rows.map(({ entry, edition, work, seriesName, seriesVolumeId, seriesIssueCount, collectionName, baseName }) => ({
       shelf: entry.status,
       rating: entry.rating,
       review: entry.review,
@@ -134,8 +140,11 @@ export async function buildExport(userId: string, username: string): Promise<Exp
         collection: collectionName,
         series: seriesName,
         seriesPosition: work.seriesPosition,
+        seriesRun: seriesVolumeId ? { comicvineVolumeId: seriesVolumeId, issueCount: seriesIssueCount } : null,
         source: work.source,
         openLibraryKey: work.olWorkKey,
+        hardcoverId: work.hardcoverId,
+        comicvineIssueId: work.comicvineIssueId,
       },
     })),
   };

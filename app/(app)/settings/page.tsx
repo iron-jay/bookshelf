@@ -15,6 +15,7 @@ import { GoodreadsImport } from "./goodreads-import";
 import { HardcoverFill } from "./hardcover-fill";
 import { MissingCovers } from "./missing-covers";
 import { PasswordForm } from "./password-form";
+import { RestoreImport } from "./restore-import";
 
 export const dynamic = "force-dynamic";
 
@@ -186,7 +187,7 @@ export default async function SettingsPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-display text-xl">Export</h2>
+          <h2 className="mb-1 font-display text-xl">Export and restore</h2>
           <p className="mb-3 font-narrow text-ink-dim">
             {entryTotal.n} {entryTotal.n === 1 ? "entry" : "entries"}. Plain downloads you could curl
             too. Open Library’s raw data is left out: it is theirs and can be fetched again.
@@ -204,6 +205,15 @@ export default async function SettingsPage() {
           <p className="mt-2 font-narrow text-ink-dim">
             JSON keeps every read and field. CSV is one row per book on your shelf, reads summarised.
           </p>
+
+          <h3 className="mt-6 font-medium">Restore from an export</h3>
+          <p className="font-narrow text-ink-dim">
+            The JSON download, here or from another bookshelf: to get a library back, or move it to
+            a new server. Books already here are joined rather than doubled, and entries already on
+            your shelf are left as they are. Covers are looked up again, so one you uploaded or
+            chose by hand needs choosing again.
+          </p>
+          <RestoreImport />
         </section>
       </div>
     </main>
