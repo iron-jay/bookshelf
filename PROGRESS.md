@@ -1414,6 +1414,23 @@ Recently finished, as in gameshelf.
 **Next:** the phone app's Finished it does not prompt yet.
 
 
+## 2026-10-20 — The main page as an overview, and All shelves
+
+Jay asked for the main page to show at most ten items to a shelf, as an
+overview, with a place in the nav for every shelf in full.
+
+- `STRIP_LENGTH` is 10 (was 24). The Reading now band is capped at ten too, with
+  "See all N" when there are more; the strips already had it.
+- **All shelves** replaces "All books/games" in the header and joins the phone
+  tab bar as "All" (five tabs now). It opens the wall grouped by shelf
+  (`/?show=all&groupBy=shelf`), titled "All shelves", and each shelf heading there opens that
+  shelf alone. The nav marks it current for any wall (a shelf or tag filter
+  too), not only `view/show=all`.
+- The "See them all, with filters" link under the strips is gone (Jay):
+  All shelves does that job.
+- Checked on a local database with Chromium, desktop and phone. tsc and lint
+  pass.
+
 ## 2026-10-20 — Series, as gameshelf has them
 
 Jay asked for gameshelf's series changes here too.
@@ -1444,3 +1461,6 @@ and The Expanse #1 saved from edition pages (button to "Saved"), "dis"
 offered Discworld, selecting Mort and The Colour of Magic and typing
 "discworld" put both in Discworld, and the strip showed "Discworld, 2 of 3
 finished" and "The Expanse, 1 book". tsc, lint and `check:actions` pass.
+
+After #8 merged, the Series strip is capped at `STRIP_LENGTH` (10) like the
+others, with "See all N by series".
