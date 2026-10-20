@@ -2,12 +2,14 @@ import Link from "next/link";
 
 import { Cover } from "./cover";
 import { setShelf } from "./edition/[id]/actions";
+import { FinishPrompt } from "./finish-prompt";
 import type { ShelfCard } from "./shelf-card";
 
 /**
  * The band across the top of the shelves: what you are reading, large, with
  * the two things you do to a book in hand one press away. Finishing closes
- * the open read today, exactly as choosing Finished on the book's page does.
+ * the open read today, exactly as choosing Finished on the book's page does,
+ * and asks for a rating on the way.
  */
 export function ReadingNow({ cards }: { cards: ShelfCard[] }) {
   return (
@@ -44,12 +46,12 @@ export function ReadingNow({ cards }: { cards: ShelfCard[] }) {
                 </span>
                 <div className="flex-1" />
                 <div className="flex flex-wrap gap-2">
-                  <form action={setShelf}>
-                    <input type="hidden" name="editionId" value={card.editionId} />
-                    <button type="submit" name="shelf" value="finished" className="btn btn-primary btn-sm">
-                      Finished it
-                    </button>
-                  </form>
+                  <FinishPrompt
+                    action={setShelf}
+                    fields={{ editionId: card.editionId, shelf: "finished" }}
+                    title={card.workTitle}
+                    rating={card.rating}
+                  />
                   <form action={setShelf}>
                     <input type="hidden" name="editionId" value={card.editionId} />
                     <button type="submit" name="shelf" value="dnf" className="btn btn-sm">

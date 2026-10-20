@@ -1335,3 +1335,24 @@ With the catalogue hosts allowed, against a local Postgres:
 - Google Books: the key is accepted, but Google refuses requests from the
   cloud test environment ("Cannot determine user location"), so the cover
   fallback could not be seen working from there. Not a code problem.
+
+## 2026-10-20 — A rating when you finish, and finished first
+
+Jay asked that "Finished it" ask for a rating and put the book at the top of
+Recently finished, as in gameshelf.
+
+- **The prompt** (`app/(app)/finish-prompt.tsx`, gameshelf's, with the title
+  in Newsreader): Finished it in the Reading now band opens a dialog with the
+  ten climbing bars, "Skip the rating" (or "Keep 6 / 10") and "Not yet".
+  Nothing is written until it is answered. `setShelf` takes an optional
+  rating, so the finish and the rating are one update.
+- **The order**: Recently finished already went by the latest read's finish,
+  but finishes are dates, so a book finished today could sit behind another
+  finished today. Same-day finishes now go by the entry's `updated_at`, on the
+  strip and in the shelf's "last finished" sort.
+- Checked on a local database in Chromium: Not yet left Mort reading; rating
+  it 9 closed its read today; Emma kept its 6; the strip read Emma, Mort, then
+  the two finished earlier today. `tsc`, lint and `check:actions` pass.
+
+**Next:** the phone app's Finished it does not prompt yet.
+

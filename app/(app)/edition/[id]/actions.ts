@@ -73,7 +73,11 @@ export async function setShelf(formData: FormData): Promise<void> {
   const shelf = text(formData, "shelf");
   const entry = await entryFrom(user.id, formData);
   if (!entry || !isShelf(shelf)) return;
-  await updateEntry(entry.entryId, { shelf });
+  // Finishing from the shelves asks for a rating on the way; skipping it sends
+  // none and leaves the rating alone.
+  const rating = Number(text(formData, "rating"));
+  const rated = Number.isInteger(rating) && rating >= 1 && rating <= 10;
+  await updateEntry(entry.entryId, rated ? { shelf, rating } : { shelf });
   refresh(entry.editionId);
 }
 
