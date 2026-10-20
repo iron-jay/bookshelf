@@ -365,10 +365,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
               <p className="mt-10 font-narrow text-ink-dim">
                 {/* The entire stats feature (§5). There is no stats page. */}
                 {finished > 0 ? `${finished} finished in ${year}. ` : ""}
-                {everything} {everything === 1 ? "book" : "books"} on your shelves.{" "}
-                <Link href="/?show=all" className="underline underline-offset-4 hover:text-ink">
-                  See them all, with filters
-                </Link>
+                {everything} {everything === 1 ? "book" : "books"} on your shelves.
               </p>
             )}
           </div>

@@ -1426,5 +1426,7 @@ overview, with a place in the nav for every shelf in full.
   (`/?show=all&groupBy=shelf`), titled "All shelves", and each shelf heading there opens that
   shelf alone. The nav marks it current for any wall (a shelf or tag filter
   too), not only `view/show=all`.
+- The "See them all, with filters" link under the strips is gone (Jay):
+  All shelves does that job.
 - Checked on a local database with Chromium, desktop and phone. tsc and lint
   pass.
