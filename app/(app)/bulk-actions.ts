@@ -1,13 +1,14 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
+import { setWorkSeries } from "@/lib/books/series";
 import { changeShelf } from "@/lib/books/shelving";
 import { cleanTagName, ensureTag, tagEntries, untagEntries } from "@/lib/books/tags";
 import { db } from "@/lib/db";
-import { entries, tags } from "@/lib/db/schema";
+import { editions, entries, series, tags, works } from "@/lib/db/schema";
 import { isShelf, SHELF_LABELS } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
 
@@ -80,4 +81,44 @@ export async function untagSelected(_prev: BulkState, formData: FormData): Promi
   await db.transaction((tx) => untagEntries(tx, tag.id, ids));
   revalidatePath("/");
   return { message: `Removed ${tag.name} from ${plural(ids.length)}.` };
+}
+
+/**
+ * Put every selected book in one series: collecting a series from the wall
+ * rather than one book page at a time. Series are shared catalogue, so this
+ * files the works, for everyone, as the book page's series box does.
+ *
+ * A book already in that series keeps its number; one joining it has none
+ * until it is given one. An empty box is refused rather than read as "take
+ * them all out", which nobody means by forgetting to type; the book page
+ * takes one out.
+ */
+export async function seriesSelected(_prev: BulkState, formData: FormData): Promise<BulkState> {
+  const user = await requireUser();
+  const name = text(formData, "series").slice(0, 200).replace(/\s+/g, " ");
+  if (!name) return { message: "Type a series name." };
+  const ids = await selectedEntries(user.id, formData);
+  if (ids.length === 0) return { message: "Nothing selected." };
+
+  const placed = await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: series.id, name: series.name })
+      .from(series)
+      .where(eq(sql`lower(${series.name})`, name.toLowerCase()))
+      .limit(1);
+    const targets = await tx
+      .selectDistinct({ workId: works.id, seriesId: works.seriesId, position: works.seriesPosition })
+      .from(entries)
+      .innerJoin(editions, eq(editions.id, entries.editionId))
+      .innerJoin(works, eq(works.id, editions.workId))
+      .where(inArray(entries.id, ids));
+    for (const work of targets) {
+      const stays = existing && work.seriesId === existing.id;
+      await setWorkSeries(tx, work.workId, name, stays ? work.position : null, user.id);
+    }
+    return { count: targets.length, name: existing?.name ?? name };
+  });
+
+  revalidatePath("/", "layout");
+  return { message: `Put ${plural(placed.count)} in ${placed.name}.` };
 }

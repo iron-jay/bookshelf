@@ -82,6 +82,12 @@ Consequences to honour in the UI:
   the whole feature.
 - Shelf grouping includes **collection** (series by series, each in order),
   **series** (in order) and **author**.
+- Series are set on the book page **and on each edition's page** (the page a
+  cover opens), and the wall's select mode puts many books in one at once
+  (keeping a number a book already has there). The series and collection
+  boxes drop down the names already here as you type and say when a typed
+  name is new; the example cycles through them; Save says "Saved" until the
+  box changes (Jay, 2026-10-20, as gameshelf).
 - A collection page lists its series, each in order, then its books with no
   series; series in the order they began (earliest book's year).
 
@@ -484,7 +490,10 @@ marked fan translations, which are gone (§1).
 
 - **Shelves** (`/`): the "Reading now" band (cover, title, Finished it, Did
   not finish), then a sideways strip per shelf (To read, Recently finished,
-  Did not finish) on a plank, with "See all". Finished it asks for a rating
+  Did not finish) on a plank, with "See all"; then a Series strip, one tile
+  per series (its first book's cover with two edges behind it, the name and
+  "2 of 3 finished" above), opening the series page, with "See all by
+  series" (2026-10-20, as gameshelf). Finished it asks for a rating
   out of ten on the way, which can be skipped (Jay, 2026-10-20), and Recently
   finished runs newest finish first. The "N finished in 2026" line sits at
   the bottom. It is an overview: the band and every strip show ten at most

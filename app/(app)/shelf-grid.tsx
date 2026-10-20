@@ -6,8 +6,9 @@ import Link from "next/link";
 
 import { SHELF_LABELS, SHELVES } from "@/lib/shelves";
 
-import { changeSelectedShelf, tagSelected, untagSelected, type BulkState } from "./bulk-actions";
+import { changeSelectedShelf, seriesSelected, tagSelected, untagSelected, type BulkState } from "./bulk-actions";
 import { Cover } from "./cover";
+import { NameInput } from "./name-input";
 import { haystackOf, headlineOf, hrefOf, ratingLabel, type ShelfCard } from "./shelf-card";
 
 export type ShelfSection = { label: string; href?: string; cards: ShelfCard[] };
@@ -36,6 +37,7 @@ export function ShelfGrid({
   grouped,
   view,
   tags,
+  seriesNames,
 }: {
   sections: ShelfSection[];
   /** Section headings only mean something when the shelf is grouped. */
@@ -43,6 +45,8 @@ export function ShelfGrid({
   view: "grid" | "list";
   /** Your tags, for bulk removal. */
   tags: { slug: string; name: string }[];
+  /** Offered in the series box, so a selection joins a series rather than misspelling one. */
+  seriesNames: string[];
 }) {
   const [query, setQuery] = useState("");
   const [selecting, setSelecting] = useState(false);
@@ -51,10 +55,12 @@ export function ShelfGrid({
   const [shelfState, shelfAction, shelfPending] = useActionState<BulkState, FormData>(changeSelectedShelf, null);
   const [tagState, tagAction, tagPending] = useActionState<BulkState, FormData>(tagSelected, null);
   const [untagState, untagAction, untagPending] = useActionState<BulkState, FormData>(untagSelected, null);
-  const pending = shelfPending || tagPending || untagPending;
+  const [seriesState, seriesAction, seriesPending] = useActionState<BulkState, FormData>(seriesSelected, null);
+  const pending = shelfPending || tagPending || untagPending || seriesPending;
   // Whichever action ran last; each resets only when it runs again.
-  const [lastRan, setLastRan] = useState<"shelf" | "tag" | "untag" | null>(null);
-  const message = { shelf: shelfState, tag: tagState, untag: untagState }[lastRan ?? "shelf"]?.message;
+  const [lastRan, setLastRan] = useState<"shelf" | "tag" | "untag" | "series" | null>(null);
+  const message = { shelf: shelfState, tag: tagState, untag: untagState, series: seriesState }[lastRan ?? "shelf"]
+    ?.message;
 
   function toggle(entryId: string) {
     setSelected((current) => {
@@ -206,6 +212,23 @@ export function ShelfGrid({
               </button>
             </>
           ) : null}
+
+          {/* Its own row: the box carries a hint line under it, which would
+              drag the buttons beside it out of line. */}
+          <div className="flex basis-full flex-wrap items-start gap-3">
+            <NameInput label="Series" name="series" kind="series" names={seriesNames} examples={[]} />
+            <button
+              type="submit"
+              formAction={(data) => {
+                setLastRan("series");
+                seriesAction(data);
+              }}
+              disabled={pending || selected.size === 0}
+              className={`${BUTTON} mt-[1.6rem]`}
+            >
+              {seriesPending ? "Saving…" : "Put in series"}
+            </button>
+          </div>
 
           {message ? (
             <span role="status" className="text-ink-dim">

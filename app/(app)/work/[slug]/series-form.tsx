@@ -1,15 +1,25 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
+import { NameInput } from "../../name-input";
 import { saveSeries, type SeriesState } from "./actions";
 
 const INITIAL: SeriesState = { error: null, saved: false };
 const FIELD = "field";
 
+/** For a shelf with too few series of its own to show as examples. */
+const EXAMPLES = ["Discworld", "The Expanse", "Earthsea", "The Murderbot Diaries", "Wayward Children"];
+
 /**
- * Name and position. The names already here are offered as you type, so
+ * Name and position. The names already here drop down as you type, so
  * joining Discworld is picking it rather than retyping it exactly.
+ *
+ * On the book page and on each edition's page, the page a cover opens: the
+ * book page is a link away from it, too far to go looking for one field.
+ *
+ * Save says "Saved" until either box changes again (Jay, 2026-10-20): the
+ * page refreshes in place, so nothing else shows that the save happened.
  */
 export function SeriesForm({
   workId,
@@ -23,52 +33,52 @@ export function SeriesForm({
   seriesNames: string[];
 }) {
   const [state, action, pending] = useActionState(saveSeries, INITIAL);
+  // Edits counted rather than values compared: two boxes, and a position
+  // typed as "8.0" is saved as 8.
+  const [edits, setEdits] = useState(0);
+  const [submitted, setSubmitted] = useState(-1);
+  const saved = state.saved && !pending && submitted === edits;
 
   return (
-    <form action={action} className="flex flex-col gap-2">
+    <form
+      action={action}
+      onSubmit={() => setSubmitted(edits)}
+      onChange={() => setEdits((n) => n + 1)}
+      className="flex flex-col gap-2"
+    >
       <input type="hidden" name="workId" value={workId} />
-      <div className="flex flex-wrap items-end gap-3 font-narrow">
-        <label className="flex flex-col gap-1">
-          <span className="text-ink-dim">Series</span>
-          <input
-            name="series"
-            list="series-names"
-            defaultValue={current ?? ""}
-            placeholder="Not in a series"
-            maxLength={200}
-            className={`${FIELD} w-64`}
-          />
-          <datalist id="series-names">
-            {seriesNames.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
-        </label>
+      <div className="flex flex-wrap items-start gap-3 font-narrow">
+        <NameInput
+          label="Series"
+          name="series"
+          kind="series"
+          names={seriesNames}
+          examples={EXAMPLES}
+          defaultValue={current ?? ""}
+          onValueChange={() => setEdits((n) => n + 1)}
+        />
         <label className="flex flex-col gap-1">
           <span className="text-ink-dim">Number</span>
           <input
             name="position"
             inputMode="decimal"
             defaultValue={position ?? ""}
-            placeholder="8"
+            placeholder="e.g. 8"
             className={`${FIELD} w-20`}
           />
         </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn"
-        >
-          {pending ? "Saving…" : "Save"}
+        {/* Level with the boxes, below their labels. */}
+        <button type="submit" disabled={pending || saved} aria-pressed={saved} className="btn sm:mt-[1.6rem]">
+          {pending ? "Saving…" : saved ? "Saved" : "Save"}
         </button>
       </div>
       {state.error ? (
         <p role="alert" className="border-l-2 border-ink-dim pl-3 font-narrow">
           {state.error}
         </p>
-      ) : state.saved ? (
+      ) : saved && current ? (
         <p role="status" className="font-narrow text-ink-dim">
-          Saved. Clear the name to take it out of the series.
+          Clear the name to take it out of the series.
         </p>
       ) : null}
     </form>

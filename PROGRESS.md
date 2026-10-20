@@ -1430,3 +1430,37 @@ overview, with a place in the nav for every shelf in full.
   All shelves does that job.
 - Checked on a local database with Chromium, desktop and phone. tsc and lint
   pass.
+
+## 2026-10-20 — Series, as gameshelf has them
+
+Jay asked for gameshelf's series changes here too.
+
+- **Series and collection boxes** (`name-input.tsx`): the names already here
+  drop down as you type (prefix matches first, six at most), a tap or arrows
+  and Enter picks one, and a line under the box says when a typed name will
+  be new. The placeholder reads "e.g. …" and cycles through the names here
+  (fixed examples with fewer than three), stopping on focus. Replaces the
+  `<datalist>`s, which a phone barely shows.
+- **Saved**: both forms' Save turns to "Saved" until either box changes
+  (edits counted rather than values compared: a position typed "8.0" is
+  stored as 8).
+- **Edition page**: the series box sits above "This edition", and the series
+  shows under the edition name as a link ("Discworld #8"). `saveSeries`
+  revalidates edition and series pages.
+- **Overview**: a Series strip after the shelves (`lib/books/series-shelf.ts`
+  folds it from the shelf's rows; one query for slugs). The lowest-numbered
+  book fronts each, stacked with `.run-stack`; "See all by series" opens the
+  wall grouped that way, whose headings now link to the series page.
+- **Bulk**: select mode has "Put in series" (`seriesSelected`), through
+  `setWorkSeries`, keeping a book's number if it is already in that series.
+- `.field::placeholder` is `--line-strong`, so an example never passes for a
+  value.
+
+Checked on a local database with five books from Open Library: Discworld #8
+and The Expanse #1 saved from edition pages (button to "Saved"), "dis"
+offered Discworld, selecting Mort and The Colour of Magic and typing
+"discworld" put both in Discworld, and the strip showed "Discworld, 2 of 3
+finished" and "The Expanse, 1 book". tsc, lint and `check:actions` pass.
+
+After #8 merged, the Series strip is capped at `STRIP_LENGTH` (10) like the
+others, with "See all N by series".
