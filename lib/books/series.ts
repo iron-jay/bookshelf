@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 
 import { series, works } from "@/lib/db/schema";
 import { slugify } from "@/lib/slug";
@@ -82,4 +82,83 @@ export async function setWorkSeries(
       if (gone?.collectionId) await deleteIfEmpty(tx, gone.collectionId);
     }
   }
+}
+
+/**
+ * Takes a work out of its series. It stays in the series' collection: Halo's
+ * Forerunner trilogy losing its series is still Halo, and the shelf grouped
+ * by collection should not lose a book because a series went.
+ */
+export async function takeOutOfSeries(tx: Tx, workId: string, userId: string): Promise<void> {
+  const [found] = await tx
+    .select({ collectionId: series.collectionId, own: works.collectionId })
+    .from(works)
+    .innerJoin(series, eq(series.id, works.seriesId))
+    .where(eq(works.id, workId));
+  if (!found) return;
+
+  if (found.collectionId && !found.own) {
+    await tx.update(works).set({ collectionId: found.collectionId }).where(eq(works.id, workId));
+  }
+  await setWorkSeries(tx, workId, "", null, userId);
+}
+
+/** Every work out of a series, which `setWorkSeries` then deletes as empty. */
+export async function removeSeries(tx: Tx, seriesId: string, userId: string): Promise<void> {
+  const members = await tx.select({ id: works.id }).from(works).where(eq(works.seriesId, seriesId));
+  for (const member of members) await takeOutOfSeries(tx, member.id, userId);
+  // A series with no works at all (possible only by hand) goes too.
+  await tx.delete(series).where(eq(series.id, seriesId));
+}
+
+export type Renamed = { slug: string } | { error: string };
+
+/**
+ * Renames a series, or joins it to another when the name is one already here
+ * (without regard to case, as the series box matches). Joined books keep their
+ * numbers. Two Comic Vine runs never join: each is measured against its own
+ * volume's issue count, and one count cannot say both are read to the end.
+ */
+export async function renameSeries(tx: Tx, seriesId: string, name: string): Promise<Renamed> {
+  const trimmed = name.trim().replace(/\s+/g, " ").slice(0, 200);
+  if (!trimmed) return { error: "Give the series a name." };
+
+  const [self] = await tx.select().from(series).where(eq(series.id, seriesId));
+  if (!self) return { error: "That series is gone." };
+
+  const [other] = await tx
+    .select()
+    .from(series)
+    .where(and(eq(sql`lower(${series.name})`, trimmed.toLowerCase()), ne(series.id, seriesId)))
+    .limit(1);
+
+  if (!other) {
+    const base = slugify(trimmed);
+    const [clash] = await tx
+      .select({ id: series.id })
+      .from(series)
+      .where(and(eq(series.slug, base), ne(series.id, seriesId)));
+    const slug = clash ? `${base}-${seriesId.slice(0, 8)}` : base;
+    await tx.update(series).set({ name: trimmed, slug }).where(eq(series.id, seriesId));
+    return { slug };
+  }
+
+  if (self.comicvineVolumeId !== null && other.comicvineVolumeId !== null) {
+    return { error: `${other.name} is another Comic Vine run. Give this one a name of its own.` };
+  }
+
+  await tx.update(works).set({ seriesId: other.id }).where(eq(works.seriesId, seriesId));
+  await tx
+    .update(series)
+    .set({
+      collectionId: other.collectionId ?? self.collectionId,
+      comicvineVolumeId: other.comicvineVolumeId ?? self.comicvineVolumeId,
+      issueCount: other.comicvineVolumeId !== null ? other.issueCount : self.issueCount,
+    })
+    .where(eq(series.id, other.id));
+  await tx.delete(series).where(eq(series.id, seriesId));
+  if (self.collectionId && self.collectionId !== (other.collectionId ?? self.collectionId)) {
+    await deleteIfEmpty(tx, self.collectionId);
+  }
+  return { slug: other.slug };
 }

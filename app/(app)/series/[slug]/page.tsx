@@ -11,13 +11,16 @@ import { SHELF_LABELS } from "@/lib/shelves";
 
 import { CollectionForm } from "../../collection-form";
 import { Cover } from "../../cover";
+import { takeOutOfSeriesAction } from "./actions";
+import { RenameForm } from "./rename-form";
 import { SeriesReadForm } from "./series-read-form";
 
 export const dynamic = "force-dynamic";
 
 /**
  * An ordered list of works with your shelf state beside each. That is the
- * whole feature (§2): no progress bars, no completion percentage.
+ * whole feature (§2): no progress bars, no completion percentage. Renaming,
+ * removing and taking a book out live here too (Jay, 2026-10-20).
  */
 export default async function SeriesPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await requireUser();
@@ -101,6 +104,9 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
           : `${members.length} ${members.length === 1 ? "book" : "books"}`}
         {finished > 0 ? ` · ${finished} finished` : ""}
       </p>
+      <div className="mb-6">
+        <RenameForm seriesId={found.id} slug={found.slug} name={found.name} />
+      </div>
       {members.length - finished > 0 ? (
         <div className="mb-4">
           <SeriesReadForm seriesId={found.id} today={today()} left={members.length - finished} />
@@ -136,7 +142,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
                     coverUrl={work.coverUrl}
                   />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate">
                     <Link href={`/work/${work.slug}`} className="underline hover:text-ink">
                       {work.title}
@@ -156,6 +162,16 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
                         ))}
                   </p>
                 </div>
+                <form action={takeOutOfSeriesAction} className="shrink-0">
+                  <input type="hidden" name="seriesId" value={found.id} />
+                  <input type="hidden" name="workId" value={work.id} />
+                  <button
+                    type="submit"
+                    className="py-2 font-narrow text-ink-dim underline underline-offset-4 hover:text-ink"
+                  >
+                    Take out<span className="sr-only"> {work.title}</span>
+                  </button>
+                </form>
               </li>
             );
           })}

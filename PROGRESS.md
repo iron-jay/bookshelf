@@ -1550,3 +1550,27 @@ looked up again rather than restored.
   compose config` with `--project-directory` resolves `.env`, the project name
   and the `../<app>-data` mounts against the deploy directory. Not yet run on
   the VM.
+
+## 2026-10-20 — Rename and remove a series
+
+Jay asked for a way to edit and remove series, and to take books out of one,
+in both apps. All on the series page, logic in `lib/books/series.ts`:
+
+- **Rename** (`renameSeries`): a new name gets a new slug, and the page moves
+  to it. A name already here (ignoring case) joins the two: books keep their
+  numbers, the joined series keeps its collection or takes this one's, and a
+  Comic Vine run's volume and count carry over. Two runs never join, since
+  each folds against its own issue count; that is a form error.
+- **Remove the series**: a confirm page, as deleting a book has. Every book
+  comes out (`removeSeries`), and the series is deleted.
+- **Take out** on each row (`takeOutOfSeries`): the book loses its series
+  and number but keeps the series' collection, so removing a series never
+  drops a book out of Halo. The last one out deletes the series
+  (`setWorkSeries` already did), and the page goes back to the shelves.
+- Comic runs: renaming survives a re-add, because runs are found by volume
+  id. Removing one unfolds its tile; adding an issue again starts it anew.
+
+Checked on a local database in Chromium at phone width: The Expanse renamed,
+then renamed to "discworld" (joined, four books), one taken out, the series
+removed, every book still on the shelf and in Pratchett. Two Comic Vine runs
+refused to join. tsc, lint and `check:actions` pass.
