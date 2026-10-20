@@ -1414,6 +1414,56 @@ Recently finished, as in gameshelf.
 **Next:** the phone app's Finished it does not prompt yet.
 
 
+## 2026-10-20 — The main page as an overview, and All shelves
+
+Jay asked for the main page to show at most ten items to a shelf, as an
+overview, with a place in the nav for every shelf in full.
+
+- `STRIP_LENGTH` is 10 (was 24). The Reading now band is capped at ten too, with
+  "See all N" when there are more; the strips already had it.
+- **All shelves** replaces "All books/games" in the header and joins the phone
+  tab bar as "All" (five tabs now). It opens the wall grouped by shelf
+  (`/?show=all&groupBy=shelf`), titled "All shelves", and each shelf heading there opens that
+  shelf alone. The nav marks it current for any wall (a shelf or tag filter
+  too), not only `view/show=all`.
+- The "See them all, with filters" link under the strips is gone (Jay):
+  All shelves does that job.
+- Checked on a local database with Chromium, desktop and phone. tsc and lint
+  pass.
+
+## 2026-10-20 — Series, as gameshelf has them
+
+Jay asked for gameshelf's series changes here too.
+
+- **Series and collection boxes** (`name-input.tsx`): the names already here
+  drop down as you type (prefix matches first, six at most), a tap or arrows
+  and Enter picks one, and a line under the box says when a typed name will
+  be new. The placeholder reads "e.g. …" and cycles through the names here
+  (fixed examples with fewer than three), stopping on focus. Replaces the
+  `<datalist>`s, which a phone barely shows.
+- **Saved**: both forms' Save turns to "Saved" until either box changes
+  (edits counted rather than values compared: a position typed "8.0" is
+  stored as 8).
+- **Edition page**: the series box sits above "This edition", and the series
+  shows under the edition name as a link ("Discworld #8"). `saveSeries`
+  revalidates edition and series pages.
+- **Overview**: a Series strip after the shelves (`lib/books/series-shelf.ts`
+  folds it from the shelf's rows; one query for slugs). The lowest-numbered
+  book fronts each, stacked with `.run-stack`; "See all by series" opens the
+  wall grouped that way, whose headings now link to the series page.
+- **Bulk**: select mode has "Put in series" (`seriesSelected`), through
+  `setWorkSeries`, keeping a book's number if it is already in that series.
+- `.field::placeholder` is `--line-strong`, so an example never passes for a
+  value.
+
+Checked on a local database with five books from Open Library: Discworld #8
+and The Expanse #1 saved from edition pages (button to "Saved"), "dis"
+offered Discworld, selecting Mort and The Colour of Magic and typing
+"discworld" put both in Discworld, and the strip showed "Discworld, 2 of 3
+finished" and "The Expanse, 1 book". tsc, lint and `check:actions` pass.
+
+After #8 merged, the Series strip is capped at `STRIP_LENGTH` (10) like the
+others, with "See all N by series".
 
 ## 2026-10-20 — Delete a book, or just this edition
 

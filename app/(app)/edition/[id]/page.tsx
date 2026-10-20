@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { editions, entries, entryTags, reads, tags, works } from "@/lib/db/schema";
+import { editions, entries, entryTags, reads, series, tags, works } from "@/lib/db/schema";
 import { SHELF_LABELS, SHELVES } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
 import { languageName } from "@/lib/languages";
@@ -13,6 +13,7 @@ import { Cover } from "../../cover";
 import { BackToShelf, ChangeCoverLink, SideLink } from "../../cover-page";
 import { addTag, addToShelf, readAgainAction, removeTag, setFormat, setRating, setShelf } from "./actions";
 import { ReadRow, RemoveFromShelf, ReviewForm } from "./entry-forms";
+import { SeriesForm } from "../../work/[slug]/series-form";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,13 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
         .where(eq(editions.id, edition.baseEditionId))
     : [];
 
+  const [inSeries] = work.seriesId
+    ? await db.select({ name: series.name, slug: series.slug }).from(series).where(eq(series.id, work.seriesId))
+    : [];
+  const seriesNames = (await db.select({ name: series.name }).from(series).orderBy(asc(series.name))).map(
+    (s) => s.name,
+  );
+
   const author = work.authors.join(", ") || null;
   const facts: [string, React.ReactNode][] = (
     [
@@ -145,6 +153,14 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
                 {edition.name}
               </Link>
             </p>
+            {inSeries ? (
+              <p className="mt-1 font-narrow text-ink-dim">
+                <Link href={`/series/${inSeries.slug}`} className="underline underline-offset-4 hover:text-ink">
+                  {inSeries.name}
+                  {work.seriesPosition !== null ? ` #${work.seriesPosition}` : ""}
+                </Link>
+              </p>
+            ) : null}
           </div>
         </div>
       </section>
@@ -290,6 +306,15 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
             </div>
           </>
         )}
+
+        {/* Here as well as on the book page: a cover opens this page, and the
+            book page is a link away from it (Jay, 2026-10-20). */}
+        <SeriesForm
+          workId={work.id}
+          current={inSeries?.name ?? null}
+          position={work.seriesPosition}
+          seriesNames={seriesNames}
+        />
 
         <div>
           <h2 className="mb-2 font-display text-xl">This edition</h2>
