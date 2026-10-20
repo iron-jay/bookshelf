@@ -85,7 +85,7 @@ curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
 | `POST /api/v1/auth/token` | Username and password in, `{ token, user }` out |
 | `DELETE /api/v1/auth/token` | Signs the calling device out |
 | `GET /api/v1/me` | The signed-in user |
-| `GET /api/v1/shelf` | Shelf cards. `shelf`, `tag` (slug), `sort` (`added`, `title`, `author`, `rated`, `finished`), `limit` (1–500, default 100), `offset`. Returns `{ total, limit, offset, items }` |
+| `GET /api/v1/shelf` | Shelf cards. `shelf`, `tag` (slug), `sort` (`added`, `title`, `author`, `rated`, `finished`), `limit` (1–500, default 100), `offset`, and `runs=fold` to stack each comic run read to the end into one card (its `run` is `{ seriesSlug, issueCount }`; every other card's is null; not with `tag`). Returns `{ total, limit, offset, items }` |
 | `GET /api/v1/tags` | Your tags with how many entries carry each |
 | `GET /api/v1/search?q=` | This server, Open Library and Hardcover merged as on the search page; an ISBN answers with the one edition (`isbn.remote` carries `olWorkKey`, `olEditionKey`, `format` and `isbn`, ready for `POST /entries`). `catalogueError` says why remote results are missing |
 | `GET /api/v1/works/{slug}` | A work, its editions (with your entry on each), series and collection |
@@ -93,7 +93,9 @@ curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
 | `GET /api/v1/catalogue/openlibrary/{olWorkKey}` | An Open Library work and its editions (newest first, each with `format`, language, ISBN, and your `editionId` if shelved), to pick one before adding |
 | `GET /api/v1/catalogue/comics?q=` | Comic Vine volumes. Needs `COMICVINE_API_KEY`; credit Comic Vine wherever these are shown |
 | `GET /api/v1/catalogue/comics/{volumeId}` | A volume's issues, each with the title it will have on the shelf |
-| `POST /api/v1/entries` | One of `{ editionId }`; `{ olWorkKey, olEditionKey?, format?, credit?, durationMinutes?, isbn? }` (no `olEditionKey` is "any edition"); `{ hardcoverId, format? }`; `{ comicvineIssueId }`. Each takes `shelf?` (default `tbr`); `format` is `book` (default) or `audiobook`. 201 when added, 200 when it was already there (its shelf is kept). Reading opens a read, Finished records one |
+| `POST /api/v1/entries` | One of `{ editionId }`; `{ olWorkKey, olEditionKey?, format?, credit?, durationMinutes?, isbn? }` (no `olEditionKey` is "any edition"); `{ hardcoverId, format? }`; `{ comicvineIssueId }`. Each takes `shelf?` (default `tbr`); `format` is `book` (default) or `audiobook`. 201 when added, 200 when it was already there (its shelf is kept). Reading opens a read, Finished records one, on `finishedOn?` (`YYYY-MM-DD`, default today) |
+| `GET /api/v1/series/{slug}` | A series: its works in reading order, your entries on each, and its collection |
+| `POST /api/v1/series/{slug}/read` | The whole series read: `{ finishedOn? }` (default today). Every book not yet finished goes to Finished on that day; one not on your shelf goes on it. Returns `{ finished, alreadyFinished, series }` |
 | `GET /api/v1/entries/{id}` | One entry: its card plus review, flags, tags and reads |
 | `PATCH /api/v1/entries/{id}` | Any of `shelf`, `rating` (1–10 or null), `review`, `reviewHasSpoilers`, `isFavourite`, `isPrivate`. A shelf change follows the read rules |
 | `DELETE /api/v1/entries/{id}` | Takes it off your shelf with its rating, review, reads and tags. The book stays on the server |

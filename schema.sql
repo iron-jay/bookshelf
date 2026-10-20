@@ -104,6 +104,11 @@ CREATE TABLE series (
   slug          text NOT NULL UNIQUE,
   notes         text,
   collection_id uuid REFERENCES collections(id) ON DELETE SET NULL,
+  -- A comic run's volume on Comic Vine and how many issues it has there, so a
+  -- run read to the end folds into one tile on the shelf (2026-10-19). Null for
+  -- every other series. Refreshed whenever an issue of it is added.
+  comicvine_volume_id integer,
+  issue_count   integer,
   created_by    uuid REFERENCES users(id) ON DELETE SET NULL,
   created_at    timestamptz NOT NULL DEFAULT now()
 );

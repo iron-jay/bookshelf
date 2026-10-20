@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { authorSortFor } from "@/lib/authors";
-import { comicTitle, getIssue, getVolume } from "@/lib/comicvine";
+import { comicTitle, getIssue, getVolume, type ComicVolume } from "@/lib/comicvine";
 import { downloadCover } from "@/lib/covers";
 import { db } from "@/lib/db";
 import { editions, entries, works } from "@/lib/db/schema";
@@ -13,6 +13,7 @@ import { slugify } from "@/lib/slug";
 
 import { ensurePlainEdition } from "./add";
 import { setCover } from "./covers";
+import { recordRun, runSeries, type RunVolume } from "./runs";
 import { parsePosition, setWorkSeries } from "./series";
 import { shelveEdition } from "./shelving";
 
@@ -30,7 +31,12 @@ export type CatalogueBook = {
   authors: string[];
   summary: string | null;
   year: number | null;
-  series: { name: string; position: number | null } | null;
+  series: {
+    name: string;
+    position: number | null;
+    /** A comic run: its Comic Vine volume and issue count, so a run read to the end folds into one tile. */
+    run?: RunVolume;
+  } | null;
   coverUrl: string | null;
   coverSource: "hardcover" | "comicvine";
   /** The book's page on the catalogue, kept as its edition's link — Comic Vine asks for one back. */
@@ -52,6 +58,8 @@ export async function addFromCatalogue(input: {
   book: CatalogueBook;
   format: "book" | "audiobook";
   shelf: Shelf;
+  /** The day its read starts or finishes, for a book landing on Reading or Finished; today if not given. */
+  on?: string;
 }): Promise<CatalogueAddResult> {
   const { book } = input;
   const match =
@@ -81,8 +89,16 @@ export async function addFromCatalogue(input: {
         source: book.source,
         createdBy: input.userId,
       });
-      if (book.series) await setWorkSeries(tx, workId, book.series.name, book.series.position, input.userId);
+      if (book.series?.run) {
+        const seriesId = await runSeries(tx, book.series.name, book.series.run, input.userId);
+        await tx.update(works).set({ seriesId, seriesPosition: book.series.position }).where(eq(works.id, workId));
+      } else if (book.series) {
+        await setWorkSeries(tx, workId, book.series.name, book.series.position, input.userId);
+      }
     }
+    // A new work's series was counted as it joined; one already here may
+    // have gained issues on Comic Vine since.
+    if (!created && book.series?.run) await recordRun(tx, workId, book.series.run);
 
     const edition = await ensurePlainEdition(
       tx,
@@ -95,7 +111,7 @@ export async function addFromCatalogue(input: {
         .set({ url: book.pageUrl })
         .where(and(eq(editions.id, edition.id), isNull(editions.url)));
     }
-    const shelved = await shelveEdition(tx, input.userId, edition.id, input.shelf);
+    const shelved = await shelveEdition(tx, input.userId, edition.id, input.shelf, input.on);
     return { workId, created, editionId: edition.id, ...shelved };
   });
 
@@ -153,9 +169,16 @@ export async function hardcoverBook(id: number): Promise<CatalogueBook | null> {
  * single issue, a trade paperback or a graphic novel. Its volume is its series
  * when the volume has more than one issue, numbered by the issue.
  */
-export async function comicBook(issueId: number): Promise<CatalogueBook | null> {
+export async function comicBook(issueId: number, knownVolume?: ComicVolume): Promise<CatalogueBook | null> {
   const issue = await getIssue(issueId);
-  const volume = issue?.volume ? await getVolume(issue.volume.id) : null;
+  // Adding a run passes its volume once rather than asking again per issue,
+  // which halves the requests against Comic Vine's hourly allowance.
+  const volume =
+    issue?.volume && knownVolume?.id === issue.volume.id
+      ? knownVolume
+      : issue?.volume
+        ? await getVolume(issue.volume.id)
+        : null;
   if (!issue || !volume) return null;
 
   const position = issue.issueNumber ? parsePosition(issue.issueNumber) : null;
@@ -167,7 +190,13 @@ export async function comicBook(issueId: number): Promise<CatalogueBook | null> 
     summary: issue.description,
     year: issue.year,
     series:
-      volume.issueCount > 1 ? { name: volume.name, position: typeof position === "number" ? position : null } : null,
+      volume.issueCount > 1
+        ? {
+            name: volume.name,
+            position: typeof position === "number" ? position : null,
+            run: { comicvineVolumeId: volume.id, issueCount: volume.issueCount, startYear: volume.startYear },
+          }
+        : null,
     coverUrl: issue.coverUrl,
     coverSource: "comicvine",
     // Comic Vine's own address for it, from its answer; only on its host.
