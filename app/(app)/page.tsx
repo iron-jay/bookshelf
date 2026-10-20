@@ -1,4 +1,4 @@
-import { and, count, eq, gte, lt } from "drizzle-orm";
+import { and, asc, count, eq, gte, lt } from "drizzle-orm";
 import { cookies } from "next/headers";
 import Link from "next/link";
 
@@ -12,8 +12,9 @@ import {
   type ShelfSort,
 } from "@/lib/books/shelf";
 import { completeRuns, foldRuns, type FoldedRow, type Run } from "@/lib/books/runs";
+import { seriesOnShelf } from "@/lib/books/series-shelf";
 import { db } from "@/lib/db";
-import { entries, entryCards, reads } from "@/lib/db/schema";
+import { entries, entryCards, reads, series } from "@/lib/db/schema";
 import { isShelf, SHELF_LABELS, SHELVES, type Shelf } from "@/lib/shelves";
 
 import { FilterForm } from "./filter-form";
@@ -21,6 +22,7 @@ import { RememberShelfView } from "./remember-shelf-view";
 import type { ShelfCard } from "./shelf-card";
 import { ReadingNow } from "./reading-now";
 import { ResolveOnce } from "./resolve-once";
+import { SeriesTile } from "./series-tile";
 import { ShelfGrid, Tile, type ShelfSection } from "./shelf-grid";
 import { preferencesFrom, SHELF_VIEW_COOKIE } from "./shelf-view";
 
@@ -264,6 +266,16 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
           ? [...folded].sort(({ row: a }, { row: b }) => (b.lastFinishedOn ?? "").localeCompare(a.lastFinishedOn ?? ""))
           : folded;
 
+  // Every series by name: the bulk series box offers them, and a series
+  // heading on the wall opens its page.
+  const allSeries = await db
+    .select({ name: series.name, slug: series.slug })
+    .from(series)
+    .orderBy(asc(series.name));
+  const seriesHref = new Map(
+    groupBy === "series" ? allSeries.map((s) => [s.name, `/series/${s.slug}`] as const) : [],
+  );
+
   const groups = new Map<string, { order: number | string; cards: ShelfCard[] }>();
   for (const item of ordered) {
     const { label, order } = bucketFor(item.row, groupBy);
@@ -277,7 +289,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
         ? a[1].order - b[1].order
         : String(a[1].order).localeCompare(String(b[1].order)),
     )
-    .map(([label, group]) => ({ label, cards: group.cards }));
+    .map(([label, group]) => ({ label, href: seriesHref.get(label), cards: group.cards }));
 
   const landedId = params.added ?? params.already;
   const landed = landedId ? rows.find((row) => row.entryId === landedId) : undefined;
@@ -308,6 +320,10 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
       }
       return { ...room, count: all.length, cards: all.slice(0, STRIP_LENGTH) };
     }).filter((room) => room.count > 0);
+
+    // Every series the shelf touches, whatever shelf its books are on, so a
+    // series reads as one thing on the main page as well as on the wall.
+    const seriesHere = await seriesOnShelf(rows);
 
     let tileIndex = 0;
 
@@ -340,6 +356,28 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
                 <div className="plank" />
               </section>
             ))}
+
+            {seriesHere.length > 0 ? (
+              <section className="mt-8">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="font-display text-2xl sm:text-[26px]">Series</h2>
+                  <span className="text-ink-dim">{seriesHere.length}</span>
+                  <div className="flex-1" />
+                  <Link
+                    href={hrefWith({}, { show: "all", groupBy: "series" })}
+                    className="font-narrow text-ink-dim underline underline-offset-4 hover:text-ink"
+                  >
+                    See all by series
+                  </Link>
+                </div>
+                <ul className="shelf-strip">
+                  {seriesHere.map((one) => (
+                    <SeriesTile key={one.slug} series={one} index={tileIndex++} />
+                  ))}
+                </ul>
+                <div className="plank" />
+              </section>
+            ) : null}
 
             {everything === 0 ? (
               <p className="mt-8 font-narrow text-ink-dim">
@@ -462,6 +500,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
           grouped={groupBy !== "none"}
           view={view}
           tags={tagOptions.map(({ slug, name }) => ({ slug, name }))}
+          seriesNames={allSeries.map((s) => s.name)}
         />
       )}
     </main>

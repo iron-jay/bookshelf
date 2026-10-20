@@ -37,6 +37,9 @@ export async function saveSeries(_prev: SeriesState, formData: FormData): Promis
 
   await db.transaction((tx) => setWorkSeries(tx, work.id, name, name ? position : null, user.id));
   revalidatePath(`/work/${work.slug}`);
+  // Set from an edition's page as well, and listed on the series pages.
+  revalidatePath("/edition/[id]", "page");
+  revalidatePath("/series/[slug]", "page");
   revalidatePath("/");
   return { error: null, saved: true };
 }
