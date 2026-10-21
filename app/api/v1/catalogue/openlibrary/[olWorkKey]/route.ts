@@ -3,8 +3,10 @@ import { and, eq } from "drizzle-orm";
 import { ApiError, json, withUser } from "@/lib/api";
 import { db } from "@/lib/db";
 import { editions, entries, works } from "@/lib/db/schema";
+import { draftFromOpenLibrary } from "@/lib/books/draft";
+import { AddBookError, fetchOpenLibraryWork } from "@/lib/books/works";
 import { languageName } from "@/lib/languages";
-import { coverUrl, getEditions, getWorkSummary, isWorkKey, OpenLibraryError } from "@/lib/openlibrary";
+import { coverUrl, getEditions, isWorkKey, OpenLibraryError } from "@/lib/openlibrary";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,9 @@ export const dynamic = "force-dynamic";
  * An Open Library work and its editions, to pick one before adding it with
  * POST /entries — what the web's add-a-book page shows. Newest first, at most
  * Open Library's first thousand (`total` says how many there are); `format`
- * is the Book | Audiobook split the phone filters on. Writes nothing.
+ * is the Book | Audiobook split the phone filters on. `details` are what a
+ * work not here yet would be saved with, to edit and send back with the add
+ * (null when it is here: it keeps its own). Writes nothing.
  */
 export const GET = withUser<{ olWorkKey: string }>(async (_request, { params, user }) => {
   const { olWorkKey } = await params;
@@ -24,8 +28,13 @@ export const GET = withUser<{ olWorkKey: string }>(async (_request, { params, us
     .where(eq(works.olWorkKey, olWorkKey));
 
   try {
-    const summary = local ? null : await getWorkSummary(olWorkKey);
-    if (!local && !summary) throw new ApiError("not_found", "Open Library has no such work.");
+    const work = local
+      ? null
+      : await fetchOpenLibraryWork(olWorkKey).catch((error) => {
+          if (error instanceof AddBookError) throw new ApiError("not_found", "Open Library has no such work.");
+          throw error;
+        });
+    const summary = work?.summary ?? null;
     const fetched = await getEditions(olWorkKey);
 
     const shelved = local
@@ -45,6 +54,7 @@ export const GET = withUser<{ olWorkKey: string }>(async (_request, { params, us
       authors: local?.authors ?? summary!.authors,
       year: local?.year ?? summary!.firstPublishedYear,
       coverUrl: summary?.coverId ? coverUrl(summary.coverId, "M") : null,
+      details: work ? draftFromOpenLibrary(work) : null,
       total: fetched?.total ?? 0,
       editions: [...(fetched?.editions ?? [])]
         .sort((a, b) => (b.year ?? -Infinity) - (a.year ?? -Infinity))

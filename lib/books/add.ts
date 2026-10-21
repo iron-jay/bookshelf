@@ -7,6 +7,7 @@ import { getEdition, type OlEditionSummary } from "@/lib/openlibrary";
 import type { Shelf } from "@/lib/shelves";
 
 import { lookUpCoversOnAdd } from "./covers";
+import { applyBookDraft, type BookDraft } from "./draft";
 import { editionNameFor, plainEditionName } from "./edition-name";
 import { shelveEdition } from "./shelving";
 import {
@@ -33,6 +34,8 @@ export type AddBookInput = {
   isbn: Isbn | null;
   /** The day its read starts or finishes, for Reading or Finished; today if not given. */
   on?: string;
+  /** The add form's edited details, for a work not here yet. */
+  draft?: BookDraft;
 };
 
 export type AddBookResult = {
@@ -91,6 +94,7 @@ export async function addOpenLibraryBook(input: AddBookInput): Promise<AddBookRe
     const work = workFetch
       ? await insertOpenLibraryWork(tx, workFetch, input.userId)
       : { id: knownWork.id, created: false };
+    if (work.created && input.draft) await applyBookDraft(tx, work.id, input.draft, input.userId);
 
     const edition = knownEdition
       ? { id: knownEdition.id, created: false, isbn13: null }
@@ -110,8 +114,8 @@ export async function addOpenLibraryBook(input: AddBookInput): Promise<AddBookRe
         outcome.work.created && workFetch
           ? {
               id: outcome.work.id,
-              title: workFetch.summary.title,
-              firstAuthor: workFetch.summary.authors[0] ?? null,
+              title: input.draft?.title ?? workFetch.summary.title,
+              firstAuthor: (input.draft?.authors ?? workFetch.summary.authors)[0] ?? null,
               coverId: workFetch.record.coverId ?? workFetch.summary.coverId,
             }
           : null,

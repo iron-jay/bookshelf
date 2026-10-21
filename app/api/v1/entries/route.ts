@@ -3,6 +3,7 @@ import { entryJson } from "@/lib/api/cards";
 import { refreshEntryPages } from "@/lib/api/refresh";
 import { addOpenLibraryBook, AddBookError } from "@/lib/books/add";
 import { addFromCatalogue, comicBook, hardcoverBook } from "@/lib/books/add-from-catalogue";
+import { readBookDraftJson, type BookDraft } from "@/lib/books/draft";
 import { editionExists } from "@/lib/books/entries";
 import { entryDetail } from "@/lib/books/read";
 import { shelveEdition } from "@/lib/books/shelving";
@@ -45,6 +46,17 @@ function openLibraryFailure(error: OpenLibraryError): ApiError {
 }
 
 /** Open Library's work, and the edition chosen from GET /catalogue/openlibrary/{key}, or "any edition". */
+/** `details`, the catalogue route's, edited: what a book not here yet is saved with. */
+function draftFrom(body: Record<string, unknown>): BookDraft | undefined {
+  if (body.details === undefined || body.details === null) return undefined;
+  if (typeof body.details !== "object" || Array.isArray(body.details)) {
+    throw new ApiError("invalid", "details must be an object.", { fields: { details: "Invalid." } });
+  }
+  const read = readBookDraftJson(body.details as Record<string, unknown>);
+  if (!read.ok) throw new ApiError("invalid", read.error, { fields: { details: read.error } });
+  return read.draft;
+}
+
 async function addFromOpenLibrary(userId: string, body: Record<string, unknown>, shelf: Shelf, on: string | undefined) {
   const olWorkKey = body.olWorkKey;
   if (typeof olWorkKey !== "string" || !isWorkKey(olWorkKey)) {
@@ -83,6 +95,7 @@ async function addFromOpenLibrary(userId: string, body: Record<string, unknown>,
       durationMinutes: audio ? durationMinutes : null,
       isbn: isbn.kind === "isbn" ? isbn.isbn : null,
       on,
+      draft: draftFrom(body),
     });
   } catch (error) {
     if (error instanceof AddBookError) throw new ApiError("invalid", error.message);
@@ -101,6 +114,11 @@ async function addFromOpenLibrary(userId: string, body: Record<string, unknown>,
  *   `durationMinutes` count only for an audiobook.
  * - `{ hardcoverId, format?, shelf? }` for a book only Hardcover has.
  * - `{ comicvineIssueId, shelf? }` for a comic or graphic novel.
+ *
+ * Each catalogue add takes `details?` (`title`, `subtitle`, `authors`,
+ * `authorSort`, `firstPublishedYear`, `summary`, `series: { name, position }`
+ * or null), as its catalogue route gives them, edited: a book not here yet is
+ * saved with them; one already here ignores them.
  *
  * The same lib code as the web's add pages, so the same rules: the shelf's
  * read rules apply, `format` defaults to book. `finishedOn` sets the day of
@@ -139,16 +157,18 @@ export const POST = withUser(async (request, { user }) => {
   } else if (body.hardcoverId !== undefined) {
     const id = catalogueId(body.hardcoverId, "hardcoverId");
     const format = formatFrom(body);
+    const draft = draftFrom(body);
     if (!hardcoverEnabled()) throw new ApiError("upstream", "This server has no Hardcover token.");
     const book = await hardcoverBook(id);
     if (!book) throw new ApiError("upstream", "Hardcover did not answer, or has no such book. Nothing was added.");
-    ({ editionId, entryId, added } = await addFromCatalogue({ userId: user.id, book, format, shelf, on }));
+    ({ editionId, entryId, added } = await addFromCatalogue({ userId: user.id, book, format, shelf, on, draft }));
   } else if (body.comicvineIssueId !== undefined) {
     const id = catalogueId(body.comicvineIssueId, "comicvineIssueId");
+    const draft = draftFrom(body);
     if (!comicvineEnabled()) throw new ApiError("upstream", "This server has no Comic Vine key.");
     const book = await comicBook(id);
     if (!book) throw new ApiError("upstream", "Comic Vine did not answer, or has no such issue. Nothing was added.");
-    ({ editionId, entryId, added } = await addFromCatalogue({ userId: user.id, book, format: "book", shelf, on }));
+    ({ editionId, entryId, added } = await addFromCatalogue({ userId: user.id, book, format: "book", shelf, on, draft }));
   } else {
     throw new ApiError("invalid", "Send an editionId, olWorkKey, hardcoverId or comicvineIssueId.", {
       fields: {

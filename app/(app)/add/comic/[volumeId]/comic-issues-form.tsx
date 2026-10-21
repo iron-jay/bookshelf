@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -184,9 +185,18 @@ export function ComicIssuesForm({
           {running ? "…" : "."}
         </p>
       ) : null}
-      <button type="submit" disabled={running} className="w-fit btn btn-primary">
-        {running ? "Adding…" : chosen.size > 1 ? `Add ${chosen.size} to shelf` : "Add to shelf"}
-      </button>
+      <div className="flex flex-wrap items-center gap-4">
+        <button type="submit" disabled={running} className="w-fit btn btn-primary">
+          {running ? "Adding…" : chosen.size > 1 ? `Add ${chosen.size} to shelf` : "Add to shelf"}
+        </button>
+        {/* Many at once are added as Comic Vine has them; one can be looked
+            over and edited first, as any other book is (2026-10-21). */}
+        {chosen.size === 1 && !running ? (
+          <Link href={`/add/comic/${volumeId}?issue=${[...chosen][0]}`} className="font-narrow text-ink-dim underline hover:text-ink">
+            Look over its details first
+          </Link>
+        ) : null}
+      </div>
     </form>
   );
 }

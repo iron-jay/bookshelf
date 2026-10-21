@@ -5,6 +5,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { draftFromOpenLibrary, seriesNames, type BookDraft } from "@/lib/books/draft";
+import { AddBookError, fetchOpenLibraryWork } from "@/lib/books/works";
 import { db } from "@/lib/db";
 import { editions, entries, works } from "@/lib/db/schema";
 import { parseIsbn } from "@/lib/isbn";
@@ -14,7 +16,6 @@ import {
   EDITIONS_PAGE,
   getEdition,
   getEditions,
-  getWorkSummary,
   isEditionKey,
   isWorkKey,
   OpenLibraryError,
@@ -74,10 +75,17 @@ export default async function AddBookPage({
   // two seconds or so to render for a work that is not cached yet. loading.tsx
   // covers the wait.
   let fetched: Awaited<ReturnType<typeof getEditions>> = null;
+  let draft: BookDraft | null = null;
   try {
     if (!heading) {
-      const summary = await getWorkSummary(olWorkKey);
-      if (!summary) notFound();
+      // The work's record as well as its search entry, as the add fetches
+      // them, so the details shown to edit are the ones it would save.
+      const work = await fetchOpenLibraryWork(olWorkKey).catch((error) => {
+        if (error instanceof AddBookError) notFound();
+        throw error;
+      });
+      const summary = work.summary;
+      draft = draftFromOpenLibrary(work);
       heading = {
         title: summary.title,
         authors: summary.authors,
@@ -213,6 +221,8 @@ export default async function AddBookPage({
         editions={pickerEditions}
         defaultFormat={defaultFormat}
         defaultEdition={preselected?.key ?? ""}
+        draft={draft}
+        seriesNames={draft ? await seriesNames() : []}
       />
     </main>
   );
