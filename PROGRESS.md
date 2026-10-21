@@ -1587,3 +1587,21 @@ Checked on a local database in Chromium at phone width: The Expanse renamed,
 then renamed to "discworld" (joined, four books), one taken out, the series
 removed, every book still on the shelf and in Pratchett. Two Comic Vine runs
 refused to join. tsc, lint and `check:actions` pass.
+
+## 2026-10-21 — books not on your shelf
+
+Jay asked gameshelf for a way to find games on the server that never show on
+the shelf; bookshelf gets the same, as a pair.
+
+- A book is on the shelf only through an entry on one of its editions.
+  "Remove from shelf" keeps the book, so a removed book was findable only by
+  search or its series page. None of the add paths leave a book without an
+  edition, but the page lists any that are.
+- **Settings → Books not on your shelf** (`/off-shelf`): "No edition" (Add an
+  edition, Delete) and "Off the shelf" (one-press shelf buttons in its one
+  edition, by the edition page's rules, or "Choose an edition" when there are
+  several; Delete). The delete page returns to the list (`?from=off-shelf`).
+  `lib/books/off-shelf.ts`.
+- Checked locally on seeded books: Guards! Guards! went on Finished with a
+  read finished today; deleting a book with no edition came back to the list.
+  tsc, lint and `check:actions` pass.
