@@ -1588,6 +1588,69 @@ then renamed to "discworld" (joined, four books), one taken out, the series
 removed, every book still on the shelf and in Pratchett. Two Comic Vine runs
 refused to join. tsc, lint and `check:actions` pass.
 
+## 2026-10-21 — books not on your shelf
+
+Jay asked gameshelf for a way to find games on the server that never show on
+the shelf; bookshelf gets the same, as a pair.
+
+- A book is on the shelf only through an entry on one of its editions.
+  "Remove from shelf" keeps the book, so a removed book was findable only by
+  search or its series page. None of the add paths leave a book without an
+  edition, but the page lists any that are.
+- **Settings → Books not on your shelf** (`/off-shelf`): "No edition" (Add an
+  edition, Delete) and "Off the shelf" (one-press shelf buttons in its one
+  edition, by the edition page's rules, or "Choose an edition" when there are
+  several; Delete). The delete page returns to the list (`?from=off-shelf`).
+  `lib/books/off-shelf.ts`.
+- Checked locally on seeded books: Guards! Guards! went on Finished with a
+  read finished today; deleting a book with no edition came back to the list.
+  tsc, lint and `check:actions` pass.
+
+## 2026-10-21 — tile text stays on the cover
+
+Jay: on a phone-width shelf, the hover text of "From a Certain Point of
+View: Return of the Jedi" (forty-odd authors) ran far off its cover, over the
+neighbouring tiles and the next shelf.
+
+- The tile overlay clips to the cover; the title is clamped to three lines and
+  the authors to two, and the shelf line never shrinks.
+- More than two authors read "Elizabeth Schaefer and 25 others"
+  (`authorLine` in `shelf-card.ts`), on tiles, list rows and the Reading now
+  band. The book's own page still names everyone.
+- The rating sticker sits above the overlay (z-index 25) instead of being
+  covered by it, and the title keeps clear of it.
+- Checked locally in Chromium at 400px and 1280px, hovering an anthology, a
+  very long title and a short one; tsc and lint pass. Same fix in gameshelf.
+  The phone app has no hover text and already clamps its placeholder covers.
+
+## 2026-10-21 — The wall remembers how you look at it
+
+- Jay: sort and grouping kept resetting. A cookie already remembered them,
+  but it was the same one that records the shelf's last query for "Back to
+  shelf", rewritten on every render, so the nav's "All shelves" link
+  (`groupBy=...` in its URL) and "See all by series" overwrote whatever
+  grouping had been picked.
+- Now a separate `bookshelf-preferences` cookie holds the preferences (sort, grouping and grid or list),
+  written by the filter row before it navigates, and only for the control
+  you changed (so changing sort on one shelf does not also store that
+  shelf's grouping). The server fills whatever the URL leaves out from it,
+  so there is no flash; URL values still win.
+- The nav's All shelves is now a bare wall link; the wall groups by shelf
+  when nothing is remembered. A single shelf shows ungrouped when the
+  preference is "by shelf" and no longer offers that option.
+- Cookie rather than localStorage because the page is server-rendered; not
+  a per-user DB setting because Simple beats complete (the phone has its
+  own screens anyway). The old cookie's preferences are not carried over:
+  one reset on deploy.
+- Checked in a browser against a local database: choices survive Shelves →
+  All shelves, a link naming a grouping does not overwrite them, a new
+  browser gets the default. Same change in gameshelf.
+
+- Later the same day: the wall's filter box has its own × to clear it (and
+  Escape clears it too), since iOS shows no native one; the browser's own
+  is hidden on that box only. It filters on the client, so clearing keeps
+  the sort, grouping and URL as they were.
+
 ## 2026-10-21 — look over a book's details before adding it
 
 Jay (with gameshelf): when you add a book you need to be able to edit the

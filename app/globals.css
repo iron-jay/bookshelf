@@ -233,7 +233,8 @@ body {
     position: absolute;
     top: 10px;
     right: -6px;
-    z-index: 15;
+    /* Above a tile's hover overlay (z-20), so the rating is not lost under it. */
+    z-index: 25;
     padding: 2px 7px;
     transform: rotate(6deg);
     background: var(--color-sticker);
@@ -354,4 +355,10 @@ body {
   .shelf-resolving .shelf-tile {
     animation: none;
   }
+}
+
+/* The shelf's filter box draws its own clear button (shelf-grid.tsx). */
+.shelf-filter::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
 }

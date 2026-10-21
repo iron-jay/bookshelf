@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 
@@ -49,6 +49,7 @@ export function ShelfGrid({
   seriesNames: string[];
 }) {
   const [query, setQuery] = useState("");
+  const filterBox = useRef<HTMLInputElement>(null);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -98,16 +99,40 @@ export function ShelfGrid({
   return (
     <div className={resolving ? "shelf-resolving" : undefined}>
       <div className="mb-6 flex flex-wrap items-center gap-3 font-narrow">
-        <label className="flex-1 basis-64">
-          <span className="sr-only">Filter this shelf</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter by title or author"
-            className="field max-w-md rounded-full px-4"
-          />
-        </label>
+        {/* Its own clear button, because the browser's is missing on iOS and
+            easy to miss elsewhere (Jay, 2026-10-21); the native one is hidden
+            in globals.css so there are never two. */}
+        <div className="flex-1 basis-64">
+          <div className="relative max-w-md">
+            <label>
+              <span className="sr-only">Filter this shelf</span>
+              <input
+                ref={filterBox}
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setQuery("");
+                }}
+                placeholder="Filter by title or author"
+                className="field shelf-filter w-full rounded-full pr-10 pl-4"
+              />
+            </label>
+            {query ? (
+              <button
+                type="button"
+                aria-label="Clear the filter"
+                onClick={() => {
+                  setQuery("");
+                  filterBox.current?.focus();
+                }}
+                className="absolute inset-y-0 right-1 my-auto flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-ink-dim hover:text-ink"
+              >
+                ×
+              </button>
+            ) : null}
+          </div>
+        </div>
         {/* Silent at zero, where the sentence below says it better. */}
         {needle && matching > 0 ? (
           <span className="text-ink-dim">
@@ -354,10 +379,12 @@ export function Tile({
           </span>
         ) : null}
         {selecting ? null : (
-          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-end bg-ground/92 p-2.5 opacity-0 transition-opacity [@media(hover:hover)]:group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
-            <p className="font-semibold leading-snug">{title}</p>
-            {subtitle ? <p className="font-narrow text-sm text-ink-dim">{subtitle}</p> : null}
-            <p className="mt-1 font-narrow text-sm text-ink-dim">
+          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-end overflow-hidden bg-ground/92 p-2.5 opacity-0 transition-opacity [@media(hover:hover)]:group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
+            {/* Clamped so a long title or credit stays on the cover and clear
+                of the sticker; the shelf line underneath never shrinks away. */}
+            <p className="line-clamp-3 min-h-0 pr-5 font-semibold leading-snug break-words">{title}</p>
+            {subtitle ? <p className="line-clamp-2 shrink-0 font-narrow text-sm break-words text-ink-dim">{subtitle}</p> : null}
+            <p className="mt-1 shrink-0 font-narrow text-sm text-ink-dim">
               {card.run
                 ? `All ${card.run.issueCount} issues finished`
                 : `${SHELF_LABELS[card.status]} · ${ratingLabel(card.rating)}`}

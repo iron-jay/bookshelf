@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Cover } from "./cover";
 import { setShelf } from "./edition/[id]/actions";
 import { FinishPrompt } from "./finish-prompt";
-import type { ShelfCard } from "./shelf-card";
+import { authorLine, type ShelfCard } from "./shelf-card";
 
 /**
  * The band across the top of the shelves: what you are reading, large, with
@@ -48,7 +48,7 @@ export function ReadingNow({ cards, count, seeAll }: { cards: ShelfCard[]; count
                   {card.workTitle}
                 </Link>
                 <span className="font-narrow text-ink-dim">
-                  {[card.authors.join(", "), card.format === "audiobook" ? "Audiobook" : null]
+                  {[authorLine(card.authors), card.format === "audiobook" ? "Audiobook" : null]
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
