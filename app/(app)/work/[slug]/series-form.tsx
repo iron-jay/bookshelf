@@ -20,6 +20,11 @@ const EXAMPLES = ["Discworld", "The Expanse", "Earthsea", "The Murderbot Diaries
  *
  * Save says "Saved" until either box changes again (Jay, 2026-10-20): the
  * page refreshes in place, so nothing else shows that the save happened.
+ *
+ * A number another book in the series already has is asked about rather than
+ * saved (Jay, 2026-10-21): move that book and the ones after it up one, or
+ * keep both at that number. The number box is held in state so it survives
+ * the form resetting while the question is up.
  */
 export function SeriesForm({
   workId,
@@ -38,6 +43,8 @@ export function SeriesForm({
   const [edits, setEdits] = useState(0);
   const [submitted, setSubmitted] = useState(-1);
   const saved = state.saved && !pending && submitted === edits;
+  const taken = state.taken && !pending && submitted === edits ? state.taken : null;
+  const [number, setNumber] = useState(position === null ? "" : String(position));
 
   return (
     <form
@@ -62,7 +69,8 @@ export function SeriesForm({
           <input
             name="position"
             inputMode="decimal"
-            defaultValue={position ?? ""}
+            value={number}
+            onChange={(event) => setNumber(event.target.value)}
             placeholder="e.g. 8"
             className={`${FIELD} w-20`}
           />
@@ -72,7 +80,21 @@ export function SeriesForm({
           {pending ? "Saving…" : saved ? "Saved" : "Save"}
         </button>
       </div>
-      {state.error ? (
+      {taken ? (
+        <div role="alert" className="flex flex-col gap-2 border-l-2 border-accent pl-3 font-narrow">
+          <p>
+            {taken.title} is already #{taken.position} in {taken.series}.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" name="taken" value="shift" className="btn btn-primary">
+              Move it and the rest up one
+            </button>
+            <button type="submit" name="taken" value="keep" className="btn">
+              Keep both at #{taken.position}
+            </button>
+          </div>
+        </div>
+      ) : state.error ? (
         <p role="alert" className="border-l-2 border-ink-dim pl-3 font-narrow">
           {state.error}
         </p>

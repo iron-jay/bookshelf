@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, ne, sql } from "drizzle-orm";
 
 import { series, works } from "@/lib/db/schema";
 import { slugify } from "@/lib/slug";
@@ -161,4 +161,49 @@ export async function renameSeries(tx: Tx, seriesId: string, name: string): Prom
     await deleteIfEmpty(tx, self.collectionId);
   }
   return { slug: other.slug };
+}
+
+export type TakenNumber = { title: string; series: string; position: number };
+
+/**
+ * Another book already at `position` in the series called `name`, so the
+ * series box can ask before two books share a number (Jay, 2026-10-21).
+ * Comic Vine runs are left out: their numbers are the issues' own, and
+ * shifting them would make them disagree with Comic Vine.
+ */
+export async function takenNumber(
+  tx: Tx,
+  name: string,
+  position: number,
+  workId: string,
+): Promise<TakenNumber | null> {
+  const [found] = await tx
+    .select({ title: works.title, series: series.name, position: works.seriesPosition })
+    .from(works)
+    .innerJoin(series, eq(series.id, works.seriesId))
+    .where(
+      and(
+        eq(sql`lower(${series.name})`, name.trim().replace(/\s+/g, " ").toLowerCase()),
+        isNull(series.comicvineVolumeId),
+        sql`${works.seriesPosition} = ${position}`,
+        ne(works.id, workId),
+      ),
+    )
+    .orderBy(asc(works.title))
+    .limit(1);
+  return found && found.position !== null ? { title: found.title, series: found.series, position: found.position } : null;
+}
+
+/**
+ * Makes room at `position`: every other book in the work's series numbered
+ * there or later moves up one, so #4 becomes #5 and a novella at 4.5 becomes
+ * 5.5. Gaps further down are left as they are.
+ */
+export async function shiftUpFrom(tx: Tx, workId: string, position: number): Promise<void> {
+  const [work] = await tx.select({ seriesId: works.seriesId }).from(works).where(eq(works.id, workId));
+  if (!work?.seriesId) return;
+  await tx
+    .update(works)
+    .set({ seriesPosition: sql`${works.seriesPosition} + 1` })
+    .where(and(eq(works.seriesId, work.seriesId), gte(works.seriesPosition, position), ne(works.id, workId)));
 }
