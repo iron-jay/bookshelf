@@ -12,5 +12,7 @@ export async function deleteBook(formData: FormData): Promise<void> {
   const workId = String(formData.get("workId") ?? "");
   if (isUuid(workId)) await removeWork(workId);
   revalidatePath("/");
-  redirect("/");
+  revalidatePath("/off-shelf");
+  // Deleting from the list of books not on your shelf goes back to the list.
+  redirect(formData.get("from") === "off-shelf" ? "/off-shelf" : "/");
 }
