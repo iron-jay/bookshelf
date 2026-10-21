@@ -78,8 +78,8 @@ proposed feature blurs these, the feature is wrong, not the model.
 Consequences to honour in the UI:
 
 - A series page is an ordered list of works with your shelf state beside each,
-  plus one button for having read the whole run (below, "Reads"). That is
-  the whole feature.
+  plus one button for having read the whole run (below, "Reads"), and the
+  series' own name to rename or remove. That is the whole feature.
 - Shelf grouping includes **collection** (series by series, each in order),
   **series** (in order) and **author**.
 - Series are set on the book page **and on each edition's page** (the page a
@@ -88,6 +88,11 @@ Consequences to honour in the UI:
   boxes drop down the names already here as you type and say when a typed
   name is new; the example cycles through them; Save says "Saved" until the
   box changes (Jay, 2026-10-20, as gameshelf).
+- The series page also renames a series (to a name already here, the two
+  join and keep their numbers; two Comic Vine runs never join), removes it
+  (its own confirm page, `/series/{slug}/remove`), and takes a book out of
+  it. Removing only unlinks: books, entries and reads stay, and a book keeps
+  the series' collection (Jay, 2026-10-20, as gameshelf).
 - A collection page lists its series, each in order, then its books with no
   series; series in the order they began (earliest book's year).
 
@@ -342,7 +347,8 @@ form. Used for web serials, zines, ARCs, out-of-print things.
    the book. A series or collection left empty goes too, and a tag left on
    nothing.
 5. **Series page** — ordered works, your shelf state for each, the
-   series' collection, and "Mark all N finished" on a day. **Collection page** — its series and books, as above.
+   series' collection, "Mark all N finished" on a day, Rename, Remove the
+   series, and Take out on each book. **Collection page** — its series and books, as above.
 6. **Settings** — account name and password, export, import, cover art review.
 
 Out of scope for v1: social features, reading challenges, page-by-page progress

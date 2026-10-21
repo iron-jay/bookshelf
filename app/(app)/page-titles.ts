@@ -41,13 +41,13 @@ export async function editionTitle(id: string, prefix?: string): Promise<Metadat
   return titled(row?.title, prefix);
 }
 
-export async function seriesTitle(slug: string): Promise<Metadata> {
+export async function seriesTitle(slug: string, prefix?: string): Promise<Metadata> {
   await requireUser();
   const [row] = await db
     .select({ name: series.name })
     .from(series)
     .where(eq(series.slug, decodeURIComponent(slug)));
-  return titled(row?.name);
+  return titled(row?.name, prefix);
 }
 
 export async function collectionTitle(slug: string): Promise<Metadata> {
