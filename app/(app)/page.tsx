@@ -390,7 +390,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
                 </div>
                 <ul className="shelf-strip">
                   {room.cards.map((card) => (
-                    <Tile key={card.entryId} card={card} index={tileIndex++} className="w-[28vw] max-w-32 sm:w-32" />
+                    <Tile key={card.entryId} card={card} index={tileIndex++} quick className="w-[28vw] max-w-32 sm:w-32" />
                   ))}
                 </ul>
                 <div className="plank" />

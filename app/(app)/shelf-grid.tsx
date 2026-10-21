@@ -9,6 +9,7 @@ import { SHELF_LABELS, SHELVES } from "@/lib/shelves";
 import { changeSelectedShelf, seriesSelected, tagSelected, untagSelected, type BulkState } from "./bulk-actions";
 import { Cover } from "./cover";
 import { NameInput } from "./name-input";
+import { QuickShelf } from "./quick-shelf";
 import { haystackOf, headlineOf, hrefOf, ratingLabel, type ShelfCard } from "./shelf-card";
 
 export type ShelfSection = { label: string; href?: string; cards: ShelfCard[] };
@@ -351,8 +352,15 @@ export function Tile({
   selecting = false,
   checked = false,
   onToggle = () => {},
+  quick = false,
   className = "",
-}: { card: ShelfCard; index: number; className?: string } & Partial<Selectable>) {
+}: {
+  card: ShelfCard;
+  index: number;
+  /** On the main page a press opens the quick shelf panel; the book is a step further. A run still opens its series. */
+  quick?: boolean;
+  className?: string;
+} & Partial<Selectable>) {
   const { title, subtitle } = headlineOf(card);
 
   return (
@@ -363,7 +371,11 @@ export function Tile({
       <div className={`relative${checked ? " outline outline-3 outline-offset-2 outline-accent" : ""}`}>
         {selecting && !card.run ? (
           <SelectOverlay card={card} title={title} checked={checked} onToggle={onToggle} />
-        ) : selecting ? null : (
+        ) : selecting ? null : quick && !card.run ? (
+          <QuickShelf card={card} className="absolute inset-0 z-10">
+            <span className="sr-only">{title}</span>
+          </QuickShelf>
+        ) : (
           <Link href={hrefOf(card)} className="absolute inset-0 z-10">
             <span className="sr-only">{title}</span>
           </Link>

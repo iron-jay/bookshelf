@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Cover } from "./cover";
 import { setShelf } from "./edition/[id]/actions";
 import { FinishPrompt } from "./finish-prompt";
+import { QuickShelf } from "./quick-shelf";
 import { authorLine, type ShelfCard } from "./shelf-card";
 
 /**
@@ -35,10 +36,12 @@ export function ReadingNow({ cards, count, seeAll }: { cards: ShelfCard[]; count
         <ul className="grid gap-4 sm:gap-5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))]">
           {cards.map((card) => (
             <li key={card.entryId} className="flex gap-4">
-              <Link href={`/edition/${card.editionId}`} className="w-20 shrink-0 sm:w-28">
+              {/* The cover opens the quick shelf panel, as on the strips below;
+                  the title is still the way straight to the book. */}
+              <QuickShelf card={card} className="w-20 shrink-0 sm:w-28">
                 <span className="sr-only">{card.workTitle}</span>
                 <Cover title={card.workTitle} author={card.authors.join(", ") || null} coverUrl={card.coverUrl} />
-              </Link>
+              </QuickShelf>
 
               <div className="flex min-w-0 flex-col gap-1">
                 <Link

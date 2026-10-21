@@ -1698,3 +1698,25 @@ Checked locally: Fantastic Mr Fox retitled into a new series at 3 on
 Reading; a manual zine with year, summary and series; a Hardcover book with
 its series prefilled, landing on its cover page; Saga #1 through the API with
 its run series kept. tsc, lint and `check:actions` pass.
+
+## 2026-10-21 — quick shelf moves on the main page
+
+Jay (with gameshelf): entries on the main page, Reading now and To read
+especially, should open a quick actions panel, so changing a book's shelf
+is not a trip to its page and back.
+
+- **A cover on the main page** (the band or any strip) opens a panel
+  (`app/(app)/quick-shelf.tsx`): the cover, title and authors, the shelf as
+  the edition page's segmented control, "Open the book" and Close. Choosing
+  a shelf saves it through `setShelf`, so reads follow exactly as on the
+  book's page, and closes. Finished turns the panel into Finished it's
+  rating step (`RatingAnswers`, now exported from `finish-prompt.tsx`).
+  Escape or a press on the dim room around it closes it.
+- The band's title still opens the book; a folded comic run still opens its
+  series (it is many entries). The wall's covers open the book as before
+  (`quick` on `Tile` is only set on the overview).
+
+Checked locally at desktop and phone width: Piranesi to Reading opened a
+read today, Guards! Guards! Reading to Did not finish from the band, The
+Fifth Season to Finished rated 8 with a read finished today. tsc, lint and
+`check:actions` pass.
