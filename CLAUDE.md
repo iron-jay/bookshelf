@@ -402,6 +402,17 @@ Door B — "Add edition" on an existing work page
 Door B is Door A with the work pre-filled. Build the form once. Do not write two
 components.
 
+**Details are looked over before anything is saved** (Jay, 2026-10-21, with
+gameshelf). Every add page for a book not here yet shows the catalogue's
+title, subtitle, authors, sort, year, summary, series and number (the edit
+page's fields, `BookDetails`), and a box to choose a different cover after
+adding (it lands on the edition's cover page). Only a work the add creates
+takes them (`BookDraft`, `lib/books/draft.ts`); one already here keeps its
+own. A comic run's series is its volume's and is not asked; several issues
+at once are added as Comic Vine has them, and one chosen can be looked over
+first (`/add/comic/{volumeId}?issue=`). The phone reads `details` from the
+catalogue routes and sends them back with `POST /entries`.
+
 **Book or audiobook** is a two-option toggle on the form, not a dropdown, and it
 is on every path that creates an edition (Door A, Door B, by hand). It
 defaults to whichever you picked last. It is the whole of

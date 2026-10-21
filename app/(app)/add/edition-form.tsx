@@ -11,7 +11,7 @@ import type { Format } from "./format";
 import { languageOptions } from "@/lib/languages";
 
 import { ShelfPicker } from "./shelf-picker";
-import { WorkFields } from "./work-fields";
+import { BookDetails } from "./book-details";
 
 const INITIAL: AddState = { error: null };
 const FIELD =
@@ -55,11 +55,13 @@ export function EditionForm({
   initialManual = false,
   initialTitle = "",
   defaultFormat,
+  seriesNames,
 }: {
   fixedWork: FixedWork | null;
   initialManual?: boolean;
   initialTitle?: string;
   defaultFormat: Format;
+  seriesNames: string[];
 }) {
   const [state, action, pending] = useActionState(addEditionAction, INITIAL);
   const [manual, setManual] = useState(initialManual);
@@ -147,7 +149,18 @@ export function EditionForm({
 
           {doorA && manual ? (
             <div className="flex flex-col gap-2">
-              <WorkFields defaultTitle={initialTitle} />
+              <BookDetails
+                draft={{
+                  title: initialTitle,
+                  subtitle: null,
+                  authors: [],
+                  authorSort: null,
+                  firstPublishedYear: null,
+                  summary: null,
+                  series: null,
+                }}
+                seriesNames={seriesNames}
+              />
               <button
                 type="button"
                 onClick={() => setManual(false)}

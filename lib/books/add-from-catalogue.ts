@@ -13,6 +13,7 @@ import { slugify } from "@/lib/slug";
 
 import { ensurePlainEdition } from "./add";
 import { setCover } from "./covers";
+import { applyBookDraft, type BookDraft } from "./draft";
 import { recordRun, runSeries, type RunVolume } from "./runs";
 import { parsePosition, setWorkSeries } from "./series";
 import { shelveEdition } from "./shelving";
@@ -45,7 +46,7 @@ export type CatalogueBook = {
   source: "local" | "comicvine";
 };
 
-export type CatalogueAddResult = { editionId: string; entryId: string; added: boolean };
+export type CatalogueAddResult = { workId: string; editionId: string; entryId: string; added: boolean };
 
 /**
  * The work (found, or created from the book), its plain Book or Audiobook
@@ -60,6 +61,8 @@ export async function addFromCatalogue(input: {
   shelf: Shelf;
   /** The day its read starts or finishes, for a book landing on Reading or Finished; today if not given. */
   on?: string;
+  /** The add form's edited details, for a work not here yet. */
+  draft?: BookDraft;
 }): Promise<CatalogueAddResult> {
   const { book } = input;
   const match =
@@ -92,9 +95,10 @@ export async function addFromCatalogue(input: {
       if (book.series?.run) {
         const seriesId = await runSeries(tx, book.series.name, book.series.run, input.userId);
         await tx.update(works).set({ seriesId, seriesPosition: book.series.position }).where(eq(works.id, workId));
-      } else if (book.series) {
+      } else if (book.series && input.draft?.series === undefined) {
         await setWorkSeries(tx, workId, book.series.name, book.series.position, input.userId);
       }
+      if (input.draft) await applyBookDraft(tx, workId, input.draft, input.userId);
     }
     // A new work's series was counted as it joined; one already here may
     // have gained issues on Comic Vine since.
@@ -119,7 +123,14 @@ export async function addFromCatalogue(input: {
     const stored = await downloadCover(book.coverUrl);
     if (stored.ok) await setCover({ kind: "work", id: outcome.workId }, stored.path, book.coverSource, false);
   }
-  return { editionId: outcome.editionId, entryId: outcome.entryId, added: outcome.added };
+  return { workId: outcome.workId, editionId: outcome.editionId, entryId: outcome.entryId, added: outcome.added };
+}
+
+/** Whether this catalogue book is on the server at all, so the add page knows its details are already set. */
+export async function catalogueWorkHere(key: CatalogueBook["key"]): Promise<boolean> {
+  const match = "hardcoverId" in key ? eq(works.hardcoverId, key.hardcoverId) : eq(works.comicvineIssueId, key.comicvineIssueId);
+  const [row] = await db.select({ id: works.id }).from(works).where(match).limit(1);
+  return Boolean(row);
 }
 
 /** Whether you already have this catalogue book on your shelf, in any edition — for the add page to say so. */
@@ -145,8 +156,11 @@ export async function shelvedEntryFor(
  */
 export async function hardcoverBook(id: number): Promise<CatalogueBook | null> {
   const book = await getBook(id);
-  if (!book) return null;
+  return book ? catalogueFromHardcover(book) : null;
+}
 
+/** Hardcover's answer as a book to add, for a page that has fetched it already. */
+export function catalogueFromHardcover(book: NonNullable<Awaited<ReturnType<typeof getBook>>>): CatalogueBook {
   // Hardcover often repeats the end of the title as the subtitle.
   const subtitle = book.subtitle && !book.title.toLowerCase().endsWith(book.subtitle.toLowerCase()) ? book.subtitle : null;
   return {

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
-import { shelvedEntryFor } from "@/lib/books/add-from-catalogue";
+import { catalogueFromHardcover, catalogueWorkHere, shelvedEntryFor } from "@/lib/books/add-from-catalogue";
+import { draftFromCatalogue, seriesNames } from "@/lib/books/draft";
 import { getBook, hardcoverEnabled } from "@/lib/hardcover";
 
 import { addHardcoverBook } from "../../actions";
@@ -38,6 +39,8 @@ export default async function AddHardcoverPage({ params }: { params: Promise<{ i
 
   const mine = await shelvedEntryFor(user.id, { hardcoverId: book.id });
   const remembered = (await cookies()).get(FORMAT_COOKIE)?.value;
+  // A book here already (in any edition) keeps its details; only a new one's are asked.
+  const draft = (await catalogueWorkHere({ hardcoverId: book.id })) ? null : draftFromCatalogue(catalogueFromHardcover(book));
 
   return (
     <main className="flex-1 px-4 py-6 sm:px-10">
@@ -59,7 +62,8 @@ export default async function AddHardcoverPage({ params }: { params: Promise<{ i
               .filter(Boolean)
               .join(" · ")}
           </p>
-          {book.description ? (
+          {/* Shown in the Details below when it can be edited there. */}
+          {book.description && !draft ? (
             <p className="mt-2 line-clamp-4 max-w-prose font-serif leading-relaxed">{book.description}</p>
           ) : null}
         </div>
@@ -80,6 +84,8 @@ export default async function AddHardcoverPage({ params }: { params: Promise<{ i
         hidden={{ hardcoverId: String(book.id) }}
         withFormat
         defaultFormat={isFormat(remembered) ? remembered : "book"}
+        draft={draft}
+        seriesNames={draft ? await seriesNames() : []}
       />
     </main>
   );

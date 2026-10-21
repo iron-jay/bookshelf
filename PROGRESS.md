@@ -1587,3 +1587,30 @@ Checked on a local database in Chromium at phone width: The Expanse renamed,
 then renamed to "discworld" (joined, four books), one taken out, the series
 removed, every book still on the shelf and in Pratchett. Two Comic Vine runs
 refused to join. tsc, lint and `check:actions` pass.
+
+## 2026-10-21 — look over a book's details before adding it
+
+Jay (with gameshelf): when you add a book you need to be able to edit the
+details before it goes to the server.
+
+- **Every add page** for a book not here yet shows "Details": the edit
+  page's fields (title, subtitle, authors, sort, first published, summary)
+  filled from Open Library, Hardcover or Comic Vine, plus series and number
+  (`app/(app)/add/book-details.tsx`). "Choose a different cover after adding"
+  lands on the new edition's cover page. The Open Library page now fetches
+  the work's record too (one more queued request) so the summary is there to
+  edit. Create it manually uses the same fields, so a hand-made book gets
+  its year, summary and series up front.
+- `BookDraft` (`lib/books/draft.ts`) is read by `readWorkFields`' rules and
+  applied inside the add's transaction, only to a work the add created.
+- **Comics.** A run's series is its Comic Vine volume's and is not offered.
+  Several issues at once are added as before; with one chosen, "Look over
+  its details first" opens `/add/comic/{volumeId}?issue=`.
+- **API.** `details` on `GET /catalogue/openlibrary/{key}`, new
+  `GET /catalogue/hardcover/{id}` and `GET /catalogue/comics/issues/{id}`,
+  and `details` on `POST /entries`; README updated.
+
+Checked locally: Fantastic Mr Fox retitled into a new series at 3 on
+Reading; a manual zine with year, summary and series; a Hardcover book with
+its series prefilled, landing on its cover page; Saga #1 through the API with
+its run series kept. tsc, lint and `check:actions` pass.

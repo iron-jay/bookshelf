@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { catalogueWorkHere, comicBook } from "@/lib/books/add-from-catalogue";
+import { draftFromCatalogue, seriesNames } from "@/lib/books/draft";
 import { today } from "@/lib/books/shelving";
 import { comicTitle, comicvineEnabled, getVolume, volumeIssues } from "@/lib/comicvine";
 import { db } from "@/lib/db";
@@ -23,7 +25,13 @@ export const dynamic = "force-dynamic";
  */
 export const metadata: Metadata = { title: "Add a comic" };
 
-export default async function AddComicVolumePage({ params }: { params: Promise<{ volumeId: string }> }) {
+export default async function AddComicVolumePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ volumeId: string }>;
+  searchParams: Promise<{ issue?: string }>;
+}) {
   const user = await requireUser();
   const volumeId = Number((await params).volumeId);
   if (!Number.isInteger(volumeId) || volumeId <= 0 || !comicvineEnabled()) notFound();
@@ -50,7 +58,12 @@ export default async function AddComicVolumePage({ params }: { params: Promise<{
     .innerJoin(entries, and(eq(entries.editionId, editions.id), eq(entries.userId, user.id)))
     .where(inArray(works.comicvineIssueId, issues.map((i) => i.id)));
   const onShelf = new Map(shelved.map((s) => [s.issueId, s.editionId]));
-  const single = issues.length === 1 ? issues[0] : null;
+  // One issue to look over before adding: a volume of one, or one chosen
+  // from a run's list ("Look over its details first").
+  const asked = Number((await searchParams).issue);
+  const single = issues.length === 1 ? issues[0] : (issues.find((i) => i.id === asked) ?? null);
+  const book = single && !(await catalogueWorkHere({ comicvineIssueId: single.id })) ? await comicBook(single.id, volume) : null;
+  const draft = book ? draftFromCatalogue(book) : null;
 
   return (
     <main className="flex-1 px-4 py-6 sm:px-10">
@@ -76,6 +89,8 @@ export default async function AddComicVolumePage({ params }: { params: Promise<{
           hidden={{ issueId: String(single.id) }}
           withFormat={false}
           defaultFormat="book"
+          draft={draft}
+          seriesNames={draft ? await seriesNames() : []}
         >
           <div className="flex items-start gap-4">
             <div className="h-36 w-24 shrink-0 bg-panel">
@@ -103,6 +118,13 @@ export default async function AddComicVolumePage({ params }: { params: Promise<{
         />
       )}
 
+      {single && issues.length > 1 ? (
+        <p className="mt-4 font-narrow">
+          <Link href={`/add/comic/${volume.id}`} className="text-ink-dim underline hover:text-ink">
+            Back to all its issues
+          </Link>
+        </p>
+      ) : null}
       {single && onShelf.has(single.id) ? (
         <p className="mt-4 font-narrow text-ink-dim">
           Already on your shelf:{" "}

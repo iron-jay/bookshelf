@@ -2,7 +2,10 @@
 
 import { useActionState, useState } from "react";
 
+import type { BookDraft } from "@/lib/books/draft";
+
 import { addBook, type AddState } from "./actions";
+import { BookDetails } from "./book-details";
 import { CreditField, LengthField } from "./credit-fields";
 import { EditionPicker, type PickerEdition } from "./edition-picker";
 import { FormatToggle } from "./format-toggle";
@@ -12,7 +15,8 @@ import { ShelfPicker } from "./shelf-picker";
 const INITIAL: AddState = { error: null };
 
 /**
- * The Book path of the add flow: format, edition, shelf.
+ * The Book path of the add flow: the book's details (for one not here yet),
+ * format, edition, shelf.
  */
 export function AddForm({
   olWorkKey,
@@ -21,6 +25,8 @@ export function AddForm({
   editions,
   defaultFormat,
   defaultEdition,
+  draft,
+  seriesNames,
 }: {
   olWorkKey: string;
   workTitle: string;
@@ -28,6 +34,9 @@ export function AddForm({
   editions: PickerEdition[];
   defaultFormat: Format;
   defaultEdition: string;
+  /** Null for a work already here: its details stand. */
+  draft: BookDraft | null;
+  seriesNames: string[];
 }) {
   const [state, action, pending] = useActionState(addBook, INITIAL);
   const [format, setFormat] = useState<Format>(defaultFormat);
@@ -57,6 +66,8 @@ export function AddForm({
     <form action={action} className="flex max-w-3xl flex-col gap-6">
       <input type="hidden" name="olWorkKey" value={olWorkKey} />
       {isbn ? <input type="hidden" name="isbn" value={isbn} /> : null}
+
+      {draft ? <BookDetails draft={draft} seriesNames={seriesNames} /> : null}
 
       <FormatToggle value={format} onChange={changeFormat} />
 

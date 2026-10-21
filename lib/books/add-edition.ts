@@ -5,6 +5,7 @@ import { editions, works, type editionKind } from "@/lib/db/schema";
 import type { Shelf } from "@/lib/shelves";
 
 import { lookUpCoversOnAdd } from "./covers";
+import { applyBookDraft, type BookDraft } from "./draft";
 import { plainEditionName } from "./edition-name";
 import { shelveEdition } from "./shelving";
 import { AddBookError, insertLocalWork, type EnsuredWork } from "./works";
@@ -12,7 +13,10 @@ import { AddBookError, insertLocalWork, type EnsuredWork } from "./works";
 export type EditionKind = (typeof editionKind.enumValues)[number];
 
 /** Where the new edition hangs: a work here, or a new one typed in. */
-export type WorkTarget = { kind: "existing"; workId: string } | { kind: "new"; title: string; authors: string[] };
+export type WorkTarget =
+  | { kind: "existing"; workId: string }
+  /** `draft` is the rest of the form's details: year, summary, series. */
+  | { kind: "new"; title: string; authors: string[]; draft?: BookDraft };
 
 export type AddEditionInput = {
   userId: string;
@@ -61,6 +65,9 @@ export async function addEdition(input: AddEditionInput): Promise<AddEditionResu
       : target.kind === "new"
         ? await insertLocalWork(tx, target, input.userId)
         : unreachable();
+    if (work.created && target.kind === "new" && target.draft) {
+      await applyBookDraft(tx, work.id, target.draft, input.userId);
+    }
 
     // The base comes from a form, so it is checked rather than believed: an
     // edition of some other book is not what this one translates.

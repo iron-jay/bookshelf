@@ -2,7 +2,10 @@
 
 import { useActionState, useState } from "react";
 
+import type { BookDraft } from "@/lib/books/draft";
+
 import type { AddState } from "./actions";
+import { BookDetails } from "./book-details";
 import type { Format } from "./format";
 import { FormatToggle } from "./format-toggle";
 import { ShelfPicker } from "./shelf-picker";
@@ -10,8 +13,8 @@ import { ShelfPicker } from "./shelf-picker";
 const INITIAL: AddState = { error: null };
 
 /**
- * The add form for a book from Hardcover or Comic Vine: which shelf, and for
- * a book, Book or Audiobook. The book itself is named by hidden fields, and
+ * The add form for a book from Hardcover or Comic Vine: its details (for one
+ * not here yet), which shelf, and for a book, Book or Audiobook. The book itself is named by hidden fields, and
  * whatever else the page needs to ask (which issue) comes in as children.
  */
 export function CatalogueAddForm({
@@ -19,12 +22,16 @@ export function CatalogueAddForm({
   hidden,
   withFormat,
   defaultFormat,
+  draft = null,
+  seriesNames = [],
   children,
 }: {
   action: (state: AddState, formData: FormData) => Promise<AddState>;
   hidden: Record<string, string>;
   withFormat: boolean;
   defaultFormat: Format;
+  draft?: BookDraft | null;
+  seriesNames?: string[];
   children?: React.ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
@@ -36,6 +43,7 @@ export function CatalogueAddForm({
         <input key={name} type="hidden" name={name} value={value} />
       ))}
       {children}
+      {draft ? <BookDetails draft={draft} seriesNames={seriesNames} /> : null}
       {withFormat ? <FormatToggle value={format} onChange={setFormat} /> : <input type="hidden" name="format" value="book" />}
       <ShelfPicker />
       {state.error ? (

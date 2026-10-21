@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { addOpenLibraryBook, AddBookError } from "@/lib/books/add";
 import { addEdition, type WorkTarget } from "@/lib/books/add-edition";
 import { addFromCatalogue, comicBook, hardcoverBook } from "@/lib/books/add-from-catalogue";
+import { readBookDraft } from "@/lib/books/draft";
 import { editionKind } from "@/lib/db/schema";
 import { parseIsbn } from "@/lib/isbn";
 import { isEditionKey, isWorkKey, OpenLibraryError } from "@/lib/openlibrary";
@@ -57,6 +58,8 @@ export async function addBook(_prev: AddState, formData: FormData): Promise<AddS
 
   const isbn = parseIsbn(text(formData, "isbn"));
   const audio = format === "audiobook";
+  const draft = readBookDraft(formData);
+  if (draft && !draft.ok) return { error: draft.error };
 
   let result;
   try {
@@ -71,6 +74,7 @@ export async function addBook(_prev: AddState, formData: FormData): Promise<AddS
       credit: audio ? text(formData, "credit") || null : null,
       durationMinutes: audio ? duration : null,
       isbn: isbn.kind === "isbn" ? isbn.isbn : null,
+      draft: draft?.draft,
     });
   } catch (error) {
     if (error instanceof AddBookError) return { error: error.message };
@@ -82,7 +86,16 @@ export async function addBook(_prev: AddState, formData: FormData): Promise<AddS
 
   await rememberFormat(format);
   revalidatePath("/");
-  redirect(`/?${result.added ? "added" : "already"}=${result.entryId}`);
+  redirect(landing(formData, result));
+}
+
+/**
+ * Where an add lands: the shelf, saying what was added, or the new edition's
+ * cover page when the form asked to choose a different one.
+ */
+function landing(formData: FormData, result: { editionId: string; entryId: string; added: boolean }): string {
+  if (formData.get("then") === "cover") return `/edition/${result.editionId}/cover`;
+  return `/?${result.added ? "added" : "already"}=${result.entryId}`;
 }
 
 async function rememberFormat(format: Format): Promise<void> {
@@ -108,7 +121,9 @@ function workTargetFrom(formData: FormData): WorkTarget | string {
 
   if (workId) return isUuid(workId) ? { kind: "existing", workId } : "That link is broken.";
   if (!title) return "Give the book a title, or pick it from the search.";
-  return { kind: "new", title: title.slice(0, 500), authors: authorsFrom(text(formData, "authors")) };
+  const draft = readBookDraft(formData);
+  if (draft && !draft.ok) return draft.error;
+  return { kind: "new", title: title.slice(0, 500), authors: authorsFrom(text(formData, "authors")), draft: draft?.draft };
 }
 
 function isEditionKind(value: string): value is (typeof editionKind.enumValues)[number] {
@@ -191,7 +206,7 @@ export async function addEditionAction(_prev: AddState, formData: FormData): Pro
 
   await rememberFormat(format);
   revalidatePath("/");
-  redirect(`/?added=${result.entryId}`);
+  redirect(landing(formData, { ...result, added: true }));
 }
 
 function positiveId(formData: FormData, name: string): number | null {
@@ -211,6 +226,9 @@ export async function addHardcoverBook(_prev: AddState, formData: FormData): Pro
   if (!id) return { error: "That link is broken. Search for the book again." };
   if (!isFormat(format)) return { error: "Choose Book or Audiobook." };
 
+  const draft = readBookDraft(formData);
+  if (draft && !draft.ok) return { error: draft.error };
+
   const book = await hardcoverBook(id);
   if (!book) return { error: "Hardcover did not answer just now. Nothing was added; try again in a moment." };
 
@@ -219,11 +237,12 @@ export async function addHardcoverBook(_prev: AddState, formData: FormData): Pro
     book,
     format,
     shelf: isShelf(shelf) ? shelf : "tbr",
+    draft: draft?.draft,
   });
 
   await rememberFormat(format);
   revalidatePath("/");
-  redirect(`/?${result.added ? "added" : "already"}=${result.entryId}`);
+  redirect(landing(formData, result));
 }
 
 /** A comic or graphic novel from Comic Vine: one issue (§4c). */
@@ -232,6 +251,8 @@ export async function addComicBook(_prev: AddState, formData: FormData): Promise
   const issueId = positiveId(formData, "issueId");
   const shelf = text(formData, "shelf");
   if (!issueId) return { error: "Choose which one to add." };
+  const draft = readBookDraft(formData);
+  if (draft && !draft.ok) return { error: draft.error };
 
   const book = await comicBook(issueId);
   if (!book) return { error: "Comic Vine did not answer just now. Nothing was added; try again in a moment." };
@@ -241,8 +262,9 @@ export async function addComicBook(_prev: AddState, formData: FormData): Promise
     book,
     format: "book",
     shelf: isShelf(shelf) ? shelf : "tbr",
+    draft: draft?.draft,
   });
 
   revalidatePath("/");
-  redirect(`/?${result.added ? "added" : "already"}=${result.entryId}`);
+  redirect(landing(formData, result));
 }

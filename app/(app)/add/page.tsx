@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { seriesNames } from "@/lib/books/draft";
 import { db } from "@/lib/db";
 import { editions, works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
@@ -91,6 +92,7 @@ export default async function AddPage({
         initialManual={query.type === "manual"}
         initialTitle={query.title?.slice(0, 500) ?? ""}
         defaultFormat={isFormat(remembered) ? remembered : "book"}
+        seriesNames={fixedWork ? [] : await seriesNames()}
       />
     </main>
   );
