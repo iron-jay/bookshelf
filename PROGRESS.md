@@ -1587,3 +1587,24 @@ Checked on a local database in Chromium at phone width: The Expanse renamed,
 then renamed to "discworld" (joined, four books), one taken out, the series
 removed, every book still on the shelf and in Pratchett. Two Comic Vine runs
 refused to join. tsc, lint and `check:actions` pass.
+
+## 2026-10-21 — A taken series number asks first
+
+Jay asked that putting a book at a number another book in that series
+already has should say so, and offer to shift everything up one.
+
+- The series box (book and edition pages) is the only place a number is
+  typed, so it is the only place that asks. `saveSeries` checks
+  `takenNumber` first; while the answer is pending nothing is saved, and the
+  form shows "Mort is already #4 in Discworld." with "Move it and the rest
+  up one" (`shiftUpFrom`: every other book at 4 or later, novellas at 4.5
+  too, goes up by one) and "Keep both at #4".
+- Comic Vine runs are left out of the check: their numbers are the issues'
+  own. Imports, restore and Hardcover fills set numbers without asking.
+- The number box is held in state, so it survives the form resetting while
+  the question is up.
+
+Checked on a local database at phone width: The Colour of Magic to #4 with
+Mort there asked, and Move moved Mort to 5 and Guards! Guards! to 9;
+Earthsea to Discworld #9, Keep both, left two at 9. tsc, lint and
+`check:actions` pass.
