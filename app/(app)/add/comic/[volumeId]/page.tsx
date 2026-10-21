@@ -13,6 +13,7 @@ import { addComicBook } from "../../actions";
 import { AddTabs, ComicVineCredit } from "../../add-tabs";
 import { CatalogueAddForm } from "../../catalogue-add-form";
 import { ComicIssuesForm } from "./comic-issues-form";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ export const dynamic = "force-dynamic";
  * One Comic Vine volume: pick the issues to shelve — one, or a run read in
  * one go. A graphic novel is a volume of one, so there is nothing to pick.
  */
+export const metadata: Metadata = { title: "Add a comic" };
+
 export default async function AddComicVolumePage({ params }: { params: Promise<{ volumeId: string }> }) {
   const user = await requireUser();
   const volumeId = Number((await params).volumeId);

@@ -6,8 +6,14 @@ import { db } from "@/lib/db";
 import { works } from "@/lib/db/schema";
 
 import { backFor, CoverPage } from "../../../cover-page";
+import type { Metadata } from "next";
+import { workTitle } from "../../../page-titles";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return workTitle((await params).slug, "Cover for");
+}
 
 export default async function WorkCoverPage({
   params,

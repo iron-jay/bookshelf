@@ -14,6 +14,7 @@ import {
   searchWorks,
   type IsbnLookup,
 } from "@/lib/openlibrary";
+import type { Metadata } from "next";
 
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,11 @@ function remoteFailure(error: unknown): string {
       : `${error.message}. Local results are shown.`;
   }
   return "Open Library search failed. Local results are shown.";
+}
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ q?: string }> }): Promise<Metadata> {
+  const q = ((await searchParams).q ?? "").trim();
+  return { title: q ? `Search: ${q}` : "Search" };
 }
 
 export default async function SearchPage({

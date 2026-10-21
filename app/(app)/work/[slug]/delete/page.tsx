@@ -9,10 +9,16 @@ import { works } from "@/lib/db/schema";
 
 import { RemovalSummary } from "../../../removal-summary";
 import { deleteBook } from "./actions";
+import type { Metadata } from "next";
+import { workTitle } from "../../../page-titles";
 
 export const dynamic = "force-dynamic";
 
 /** The book page's Delete is always the whole book; one edition goes from its own page. */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return workTitle((await params).slug, "Delete");
+}
+
 export default async function DeleteWorkPage({ params }: { params: Promise<{ slug: string }> }) {
   await requireUser();
   const { slug } = await params;

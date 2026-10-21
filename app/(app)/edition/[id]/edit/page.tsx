@@ -10,6 +10,8 @@ import { isUuid } from "@/lib/uuid";
 import { EditForm, EditionFields, WorkFields } from "../../../edit-fields";
 import { workFields } from "../../../edit-work-fields";
 import { saveEditionDetails } from "./actions";
+import type { Metadata } from "next";
+import { editionTitle } from "../../../page-titles";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,10 @@ export const dynamic = "force-dynamic";
  * Everything about the book you hold, on one page with one Save: the book's
  * title and authors (shared by all its editions) and this edition's own.
  */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  return editionTitle((await params).id, "Edit");
+}
+
 export default async function EditEditionPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;

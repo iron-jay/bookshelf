@@ -12,6 +12,8 @@ import { SHELF_LABELS } from "@/lib/shelves";
 import { CollectionForm } from "../../collection-form";
 import { Cover } from "../../cover";
 import { SeriesReadForm } from "./series-read-form";
+import type { Metadata } from "next";
+import { seriesTitle } from "../../page-titles";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,10 @@ export const dynamic = "force-dynamic";
  * An ordered list of works with your shelf state beside each. That is the
  * whole feature (§2): no progress bars, no completion percentage.
  */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return seriesTitle((await params).slug);
+}
+
 export default async function SeriesPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await requireUser();
   const { slug } = await params;

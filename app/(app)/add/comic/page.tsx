@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { comicvineEnabled, searchVolumes } from "@/lib/comicvine";
 
 import { AddTabs, ComicVineCredit } from "../add-tabs";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,8 @@ const FIELD = "w-full max-w-md field";
  * editions), then pick the issue — a single issue, a trade paperback, a
  * graphic novel — on the volume's page.
  */
+export const metadata: Metadata = { title: "Add a comic" };
+
 export default async function AddComicPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requireUser();
   const term = ((await searchParams).q ?? "").trim();

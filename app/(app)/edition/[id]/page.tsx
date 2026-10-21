@@ -14,6 +14,8 @@ import { BackToShelf, ChangeCoverLink, SideLink } from "../../cover-page";
 import { addTag, addToShelf, readAgainAction, removeTag, setFormat, setRating, setShelf } from "./actions";
 import { ReadRow, RemoveFromShelf, ReviewForm } from "./entry-forms";
 import { SeriesForm } from "../../work/[slug]/series-form";
+import type { Metadata } from "next";
+import { editionTitle } from "../../page-titles";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +47,10 @@ function creditLabel(kind: string, format: string): string {
  * What you actually read: your shelf, rating out of ten, review and reads for
  * this edition, and the few facts about it worth knowing.
  */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  return editionTitle((await params).id);
+}
+
 export default async function EditionPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
