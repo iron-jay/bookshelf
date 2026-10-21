@@ -27,7 +27,18 @@ export function hrefOf(card: ShelfCard): string {
 
 /** The two lines a card leads with: the book, then who wrote it. */
 export function headlineOf(card: ShelfCard): { title: string; subtitle: string | null } {
-  return { title: card.workTitle, subtitle: card.authors.join(", ") || null };
+  return { title: card.workTitle, subtitle: authorLine(card.authors) };
+}
+
+/**
+ * Authors short enough to sit on a cover. An anthology can credit forty
+ * people, and the whole list ran off the tile over its neighbours; the book's
+ * own page still names every one.
+ */
+export function authorLine(authors: string[]): string | null {
+  if (authors.length === 0) return null;
+  if (authors.length <= 2) return authors.join(", ");
+  return `${authors[0]} and ${authors.length - 1} others`;
 }
 
 /** Stored 1..10 and shown 1..10: a ten-point scale with no halves or stars. */

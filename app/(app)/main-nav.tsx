@@ -9,11 +9,12 @@ type Item = { href: string; label: string; current: (path: string, wall: boolean
  * The shelves overview and the full wall are both "/", told apart by the query
  * (page.tsx; `view` was already grid or list), so which one is current has to
  * read the query as well as the path. The overview is ten to a shelf; "All
- * shelves" is every shelf in full, the wall grouped by shelf (Jay, 2026-10-20).
+ * shelves" is every shelf in full, the wall grouped by shelf (Jay, 2026-10-20)
+ * until you pick another grouping, which it then keeps (page.tsx, groupingFor).
  */
 const OVERVIEW = (path: string, wall: boolean) => path === "/" && !wall;
 const WALL = (path: string, wall: boolean) => path === "/" && wall;
-const ALL_SHELVES = "/?show=all&groupBy=shelf";
+const ALL_SHELVES = "/?show=all";
 
 const DESKTOP: Item[] = [
   { href: "/", label: "Shelves", current: OVERVIEW },

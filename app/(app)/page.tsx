@@ -24,7 +24,7 @@ import { ReadingNow } from "./reading-now";
 import { ResolveOnce } from "./resolve-once";
 import { SeriesTile } from "./series-tile";
 import { ShelfGrid, Tile, type ShelfSection } from "./shelf-grid";
-import { preferencesFrom, SHELF_VIEW_COOKIE } from "./shelf-view";
+import { preferencesFrom, SHELF_PREFERENCES_COOKIE } from "./shelf-view";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +59,18 @@ type Params = {
 
 function isKeyOf<T extends object>(table: T, value: string | undefined): value is Extract<keyof T, string> {
   return value !== undefined && Object.hasOwn(table, value);
+}
+
+/**
+ * The whole wall reads by shelf until you pick otherwise: "All shelves" is
+ * that wall (Jay, 2026-10-20), and the nav no longer says so in its link, so
+ * the grouping you choose is the one it keeps opening with. One shelf on its
+ * own has nothing to group by shelf, so there it shows ungrouped without
+ * forgetting the preference.
+ */
+function groupingFor(params: Params, status: string | undefined): GroupBy {
+  const asked = isKeyOf(GROUPINGS, params.groupBy) ? params.groupBy : status ? "none" : "shelf";
+  return status && asked === "shelf" ? "none" : asked;
 }
 
 /** The URL-state part of the params: not the one-off added/already notice. */
@@ -197,7 +209,7 @@ async function finishedThisYear(userId: string, year: number): Promise<number> {
 export async function generateMetadata({ searchParams }: { searchParams: Promise<Params> }): Promise<Metadata> {
   // The tab says what the wall's heading says, so it reads the view the same way.
   const params: Params = {
-    ...preferencesFrom((await cookies()).get(SHELF_VIEW_COOKIE)?.value),
+    ...preferencesFrom((await cookies()).get(SHELF_PREFERENCES_COOKIE)?.value),
     ...(await searchParams),
   };
   if (isShelf(params.status)) return { title: SHELF_LABELS[params.status] };
@@ -207,7 +219,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     if (tag) return { title: tag.name };
   }
   if (params.show !== "all") return {};
-  return { title: params.groupBy === "shelf" ? "All shelves" : "All books" };
+  return { title: groupingFor(params, undefined) === "shelf" ? "All shelves" : "All books" };
 }
 
 export default async function ShelfPage({ searchParams }: { searchParams: Promise<Params> }) {
@@ -218,13 +230,13 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
   // shows what it says rather than what the reader happens to prefer.
   const asked = await searchParams;
   const params: Params = {
-    ...preferencesFrom((await cookies()).get(SHELF_VIEW_COOKIE)?.value),
+    ...preferencesFrom((await cookies()).get(SHELF_PREFERENCES_COOKIE)?.value),
     ...asked,
   };
 
   const status: Shelf | undefined = isShelf(params.status) ? params.status : undefined;
   const sort: ShelfSort = isShelfSort(params.sort) ? params.sort : "added";
-  const groupBy: GroupBy = isKeyOf(GROUPINGS, params.groupBy) ? params.groupBy : "none";
+  const groupBy = groupingFor(params, status);
   const view: View = isKeyOf(VIEWS, params.view) ? params.view : "grid";
 
   const mine = eq(entryCards.userId, user.id);
@@ -465,7 +477,7 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
         </div>
       </nav>
 
-      <FilterForm defaults={{ sort: "added", groupBy: "none", view: "grid" }}>
+      <FilterForm defaults={{ sort: "added", view: "grid" }} shown={{ sort, groupBy, view }}>
         {status ? <input type="hidden" name="status" value={status} /> : null}
         {!status ? <input type="hidden" name="show" value="all" /> : null}
 
@@ -489,11 +501,13 @@ export default async function ShelfPage({ searchParams }: { searchParams: Promis
         </select>
 
         <select name="groupBy" defaultValue={groupBy} aria-label="Group" className={SELECT}>
-          {Object.entries(GROUPINGS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {value === "none" ? label : `Group by ${label.toLowerCase()}`}
-            </option>
-          ))}
+          {Object.entries(GROUPINGS)
+            .filter(([value]) => !(status && value === "shelf"))
+            .map(([value, label]) => (
+              <option key={value} value={value}>
+                {value === "none" ? label : `Group by ${label.toLowerCase()}`}
+              </option>
+            ))}
         </select>
 
         <select name="view" defaultValue={view} aria-label="Layout" className={SELECT}>
