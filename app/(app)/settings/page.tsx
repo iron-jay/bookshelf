@@ -6,6 +6,7 @@ import { listDeviceSessions } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { editions, entries, entryCards, works } from "@/lib/db/schema";
 
+import { offShelfBooks } from "@/lib/books/off-shelf";
 import { hardcoverEnabled } from "@/lib/hardcover";
 
 import { revokeDevice } from "./actions";
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
         .where(and(eq(entries.userId, user.id), eq(works.source, "local"), isNull(works.hardcoverId)))
     : [{ n: 0 }];
 
+  const offShelf = (await offShelfBooks(user.id)).length;
   const [entryTotal] = await db.select({ n: count() }).from(entries).where(eq(entries.userId, user.id));
   // entry_cards already says whether the cover on screen for each entry is
   // flagged, whichever row it belongs to.
@@ -126,6 +128,20 @@ export default async function SettingsPage() {
               ))}
             </ul>
           )}
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-display text-xl">Books not on your shelf</h2>
+          <p className="mb-3 font-narrow text-ink-dim">
+            {offShelf === 0
+              ? "Every book here is on your shelf."
+              : `${offShelf} ${offShelf === 1 ? "book is" : "books are"} on this server but on none of your shelves, so the shelf never shows ${offShelf === 1 ? "it" : "them"} — mostly books taken off it.`}
+          </p>
+          {offShelf > 0 ? (
+            <Link href="/off-shelf" className="btn">
+              Review them
+            </Link>
+          ) : null}
         </section>
 
         <section>

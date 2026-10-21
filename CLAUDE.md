@@ -349,7 +349,12 @@ form. Used for web serials, zines, ARCs, out-of-print things.
 5. **Series page** — ordered works, your shelf state for each, the
    series' collection, "Mark all N finished" on a day, Rename, Remove the
    series, and Take out on each book. **Collection page** — its series and books, as above.
-6. **Settings** — account name and password, export, import, cover art review.
+6. **Settings** — account name and password, export, import, cover art review,
+   and **Books not on your shelf** (`/off-shelf`, Jay, 2026-10-21, as
+   gameshelf): every book with no entry of yours on any edition, which the
+   shelf therefore never shows — mostly books taken off it, and any left with
+   no edition. Each goes on a shelf in one press (when it has one edition),
+   opens, or is deleted (back to the list). `lib/books/off-shelf.ts`.
 
 Out of scope for v1: social features, reading challenges, page-by-page progress
 tracking, quotes/highlights, recommendations, stats dashboards.
