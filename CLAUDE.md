@@ -88,6 +88,12 @@ Consequences to honour in the UI:
   boxes drop down the names already here as you type and say when a typed
   name is new; the example cycles through them; Save says "Saved" until the
   box changes (Jay, 2026-10-20, as gameshelf).
+- A number another book in the series already has is asked about, not
+  saved: "Mort is already #4 in Discworld", then "Move it and the rest up
+  one" (every other book at that number or later goes up by one) or "Keep
+  both at #4" (Jay, 2026-10-21). Comic Vine runs are never asked: their
+  numbers are the issues' own. Bulk "Put in series" sets no numbers, so it
+  never asks; gameshelf has no numbers at all.
 - The series page also renames a series (to a name already here, the two
   join and keep their numbers; two Comic Vine runs never join), removes it
   (its own confirm page, `/series/{slug}/remove`), and takes a book out of
