@@ -354,10 +354,12 @@ export function Tile({
           </span>
         ) : null}
         {selecting ? null : (
-          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-end bg-ground/92 p-2.5 opacity-0 transition-opacity [@media(hover:hover)]:group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
-            <p className="font-semibold leading-snug">{title}</p>
-            {subtitle ? <p className="font-narrow text-sm text-ink-dim">{subtitle}</p> : null}
-            <p className="mt-1 font-narrow text-sm text-ink-dim">
+          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-end overflow-hidden bg-ground/92 p-2.5 opacity-0 transition-opacity [@media(hover:hover)]:group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
+            {/* Clamped so a long title or credit stays on the cover and clear
+                of the sticker; the shelf line underneath never shrinks away. */}
+            <p className="line-clamp-3 min-h-0 pr-5 font-semibold leading-snug break-words">{title}</p>
+            {subtitle ? <p className="line-clamp-2 shrink-0 font-narrow text-sm break-words text-ink-dim">{subtitle}</p> : null}
+            <p className="mt-1 shrink-0 font-narrow text-sm text-ink-dim">
               {card.run
                 ? `All ${card.run.issueCount} issues finished`
                 : `${SHELF_LABELS[card.status]} · ${ratingLabel(card.rating)}`}

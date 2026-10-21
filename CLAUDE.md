@@ -533,7 +533,9 @@ marked fan translations, which are gone (§1).
   segmented control; rating as ten bars climbing left to right.
 - Covers are always whole, at every size: no spines, no cropped banners.
 - On hover-capable screens a tile shows its name and shelf on hover; on a
-  phone a cover is a plain tap.
+  phone a cover is a plain tap. That text stays on the cover (2026-10-21):
+  the title clamped to three lines, more than two authors as "First and N
+  others", the rating sticker above it.
 - **Phones**: a bottom tab bar (Shelves, All, Search, Add, More). `GAMESHELF_URL`
   puts a link across to gameshelf in the header.
 
