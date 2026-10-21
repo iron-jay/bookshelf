@@ -540,6 +540,12 @@ marked fan translations, which are gone (§1).
   finished runs newest finish first. The "N finished in 2026" line sits at
   the bottom. It is an overview: the band and every strip show ten at most
   (Jay, 2026-10-20), with "See all N" for the rest.
+  A cover here (band or strip) opens a quick shelf panel rather than the
+  book (Jay, 2026-10-21, with gameshelf): the shelf as a segmented control,
+  Finished going by way of the rating as Finished it does (reads follow as
+  on the book's page), and "Open the book". The band's title still opens
+  the book, and a folded comic run still opens its series.
+  `quick-shelf.tsx`; the wall's covers open the book as before.
 - **The wall** (`/?show=all`, any shelf, or a tag; `view` stays grid/list):
   2:3 covers in a grid whose columns come from its own width, a plank under
   every row. Filters in one sideways-scrolling row on a phone. **All

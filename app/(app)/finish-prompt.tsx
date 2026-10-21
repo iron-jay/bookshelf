@@ -55,14 +55,15 @@ export function FinishPrompt({
             Finished {title}
           </h2>
           <p className="mt-1 mb-4 font-narrow text-ink-dim">How was it, out of ten?</p>
-          <Answers rating={rating} onCancel={() => dialog.current?.close()} />
+          <RatingAnswers rating={rating} onCancel={() => dialog.current?.close()} />
         </form>
       </dialog>
     </>
   );
 }
 
-function Answers({ rating, onCancel }: { rating: number | null; onCancel: () => void }) {
+/** The ten bars and the two ways out, inside a form whose action finishes the book. */
+export function RatingAnswers({ rating, onCancel }: { rating: number | null; onCancel: () => void }) {
   const { pending } = useFormStatus();
   // The bars fill up to whichever one is under the pointer, so you see the
   // rating before you press it.
