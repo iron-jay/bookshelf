@@ -14,6 +14,8 @@ import { Cover } from "../../cover";
 import { takeOutOfSeriesAction } from "./actions";
 import { RenameForm } from "./rename-form";
 import { SeriesReadForm } from "./series-read-form";
+import type { Metadata } from "next";
+import { seriesTitle } from "../../page-titles";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,10 @@ export const dynamic = "force-dynamic";
  * whole feature (§2): no progress bars, no completion percentage. Renaming,
  * removing and taking a book out live here too (Jay, 2026-10-20).
  */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return seriesTitle((await params).slug);
+}
+
 export default async function SeriesPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await requireUser();
   const { slug } = await params;

@@ -13,6 +13,8 @@ import { BackToShelf, ChangeCoverLink, SideLink } from "../../cover-page";
 import { ratingLabel } from "../../shelf-card";
 import { CollectionForm } from "../../collection-form";
 import { SeriesForm } from "./series-form";
+import type { Metadata } from "next";
+import { workTitle } from "../../page-titles";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,10 @@ const KIND_LABELS: Readonly<Record<string, string | null>> = {
  * shelf state beside each, and where it sits in a series. "Add edition" is
  * Door B of the add flow.
  */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return workTitle((await params).slug);
+}
+
 export default async function WorkPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await requireUser();
   const { slug } = await params;

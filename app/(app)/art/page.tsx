@@ -7,6 +7,7 @@ import { editions, entries, works } from "@/lib/db/schema";
 
 import { approveCover } from "../cover-actions";
 import { Cover } from "../cover";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,8 @@ type Flagged = {
  * title — waiting for someone to say they are right (§4a). Its own page rather
  * than a filter on the shelf, as gameshelf learned.
  */
+export const metadata: Metadata = { title: "Cover art to review" };
+
 export default async function ArtPage() {
   const user = await requireUser();
 

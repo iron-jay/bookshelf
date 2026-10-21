@@ -1,4 +1,5 @@
 import { count, eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -6,9 +7,14 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { collections, series, works } from "@/lib/db/schema";
 
+import { seriesTitle } from "../../../page-titles";
 import { removeSeriesAction } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return seriesTitle((await params).slug, "Remove");
+}
 
 /** Its own page, as deleting a book is: one tap on the series page should not undo a series. */
 export default async function RemoveSeriesPage({ params }: { params: Promise<{ slug: string }> }) {

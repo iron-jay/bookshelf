@@ -6,8 +6,11 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 
 import { LoginForm } from "./login-form";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { title: "Sign in" };
 
 export default async function LoginPage() {
   // Checked before the redirect below, not after. With sign-in off and nobody

@@ -25,6 +25,7 @@ import { ResolveOnce } from "./resolve-once";
 import { SeriesTile } from "./series-tile";
 import { ShelfGrid, Tile, type ShelfSection } from "./shelf-grid";
 import { preferencesFrom, SHELF_VIEW_COOKIE } from "./shelf-view";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
@@ -191,6 +192,22 @@ async function finishedThisYear(userId: string, year: number): Promise<number> {
       ),
     );
   return row.n;
+}
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<Params> }): Promise<Metadata> {
+  // The tab says what the wall's heading says, so it reads the view the same way.
+  const params: Params = {
+    ...preferencesFrom((await cookies()).get(SHELF_VIEW_COOKIE)?.value),
+    ...(await searchParams),
+  };
+  if (isShelf(params.status)) return { title: SHELF_LABELS[params.status] };
+  if (params.tag) {
+    const user = await requireUser();
+    const tag = (await tagsWithCounts(user.id)).find((option) => option.slug === params.tag);
+    if (tag) return { title: tag.name };
+  }
+  if (params.show !== "all") return {};
+  return { title: params.groupBy === "shelf" ? "All shelves" : "All books" };
 }
 
 export default async function ShelfPage({ searchParams }: { searchParams: Promise<Params> }) {

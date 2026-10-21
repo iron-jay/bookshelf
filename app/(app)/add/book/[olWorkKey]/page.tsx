@@ -24,6 +24,7 @@ import {
 import { AddForm } from "../../add-form";
 import type { PickerEdition } from "../../edition-picker";
 import { FORMAT_COOKIE, isFormat, type Format } from "../../format";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ export const dynamic = "force-dynamic";
 function byYear(a: OlEditionSummary, b: OlEditionSummary): number {
   return (b.year ?? -Infinity) - (a.year ?? -Infinity);
 }
+
+export const metadata: Metadata = { title: "Add a book" };
 
 export default async function AddBookPage({
   params,
