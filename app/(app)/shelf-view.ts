@@ -19,17 +19,25 @@ const A_YEAR = 60 * 60 * 24 * 365;
 /**
  * The parts of a shelf view that are a preference rather than a question.
  *
- * How you like to sort, group and lay out the shelf is how you like to look at
- * it, and it should survive a bare "/" — a bookmark, a fresh tab, the landing
- * after adding a book. Which shelf you were filtering to is what you were
- * looking at a minute ago, and restoring that unasked would leave you staring
- * at a subset with no memory of why.
+ * How you like to sort, group and lay out is how you like to look at your shelf, and it
+ * should survive a bare "/", a fresh tab, and the nav's links to the wall.
+ * Which shelf or tag you were filtering to is what you were looking at a
+ * minute ago, and restoring that unasked would leave you staring at a subset
+ * with no memory of why.
+ *
+ * Kept in a cookie of its own, written only when you change one of them in
+ * the filter row. The view cookie above records whatever the shelf last
+ * showed, links included, so "See all by series" or "All shelves" used to
+ * overwrite the grouping you had picked (2026-10-21). A cookie rather than
+ * browser storage because the page is rendered on the server, which reads it
+ * on the first request: no flash of the default before your choice.
  */
-const PREFERENCE_KEYS = ["sort", "groupBy", "view"] as const;
+export const SHELF_PREFERENCES_COOKIE = "bookshelf-preferences";
+export const PREFERENCE_KEYS = ["sort", "groupBy", "view"] as const;
 
 export type ShelfPreferences = Partial<Record<(typeof PREFERENCE_KEYS)[number], string>>;
 
-/** Read on the server, from the same cookie the shelf writes on every render. */
+/** Read on the server. The URL still wins over anything here. */
 export function preferencesFrom(raw: string | undefined): ShelfPreferences {
   if (!raw) return {};
 
@@ -41,6 +49,23 @@ export function preferencesFrom(raw: string | undefined): ShelfPreferences {
   }
 
   return preferences;
+}
+
+/**
+ * Merges what you just changed into what was remembered. Only the changed
+ * keys, so changing the sort on one shelf does not also store whatever
+ * grouping that shelf happened to be showing.
+ */
+export function rememberPreferences(changed: ShelfPreferences): void {
+  if (Object.keys(changed).length === 0) return;
+
+  const match = document.cookie.match(new RegExp(`(?:^|; )${SHELF_PREFERENCES_COOKIE}=([^;]*)`));
+  const stored = new URLSearchParams(preferencesFrom(match?.[1]));
+  for (const [key, value] of Object.entries(changed)) {
+    if (value) stored.set(key, value);
+  }
+
+  document.cookie = `${SHELF_PREFERENCES_COOKIE}=${stored.toString()}; path=/; max-age=${A_YEAR}; samesite=lax`;
 }
 
 /** Everything the shelf page reads out of the URL. */
