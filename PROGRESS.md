@@ -1587,3 +1587,20 @@ Checked on a local database in Chromium at phone width: The Expanse renamed,
 then renamed to "discworld" (joined, four books), one taken out, the series
 removed, every book still on the shelf and in Pratchett. Two Comic Vine runs
 refused to join. tsc, lint and `check:actions` pass.
+
+## 2026-10-21 — tile text stays on the cover
+
+Jay: on a phone-width shelf, the hover text of "From a Certain Point of
+View: Return of the Jedi" (forty-odd authors) ran far off its cover, over the
+neighbouring tiles and the next shelf.
+
+- The tile overlay clips to the cover; the title is clamped to three lines and
+  the authors to two, and the shelf line never shrinks.
+- More than two authors read "Elizabeth Schaefer and 25 others"
+  (`authorLine` in `shelf-card.ts`), on tiles, list rows and the Reading now
+  band. The book's own page still names everyone.
+- The rating sticker sits above the overlay (z-index 25) instead of being
+  covered by it, and the title keeps clear of it.
+- Checked locally in Chromium at 400px and 1280px, hovering an anthology, a
+  very long title and a short one; tsc and lint pass. Same fix in gameshelf.
+  The phone app has no hover text and already clamps its placeholder covers.
