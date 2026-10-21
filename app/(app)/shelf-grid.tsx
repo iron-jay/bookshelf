@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 
@@ -49,6 +49,7 @@ export function ShelfGrid({
   seriesNames: string[];
 }) {
   const [query, setQuery] = useState("");
+  const filterBox = useRef<HTMLInputElement>(null);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -98,16 +99,40 @@ export function ShelfGrid({
   return (
     <div className={resolving ? "shelf-resolving" : undefined}>
       <div className="mb-6 flex flex-wrap items-center gap-3 font-narrow">
-        <label className="flex-1 basis-64">
-          <span className="sr-only">Filter this shelf</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter by title or author"
-            className="field max-w-md rounded-full px-4"
-          />
-        </label>
+        {/* Its own clear button, because the browser's is missing on iOS and
+            easy to miss elsewhere (Jay, 2026-10-21); the native one is hidden
+            in globals.css so there are never two. */}
+        <div className="flex-1 basis-64">
+          <div className="relative max-w-md">
+            <label>
+              <span className="sr-only">Filter this shelf</span>
+              <input
+                ref={filterBox}
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setQuery("");
+                }}
+                placeholder="Filter by title or author"
+                className="field shelf-filter w-full rounded-full pr-10 pl-4"
+              />
+            </label>
+            {query ? (
+              <button
+                type="button"
+                aria-label="Clear the filter"
+                onClick={() => {
+                  setQuery("");
+                  filterBox.current?.focus();
+                }}
+                className="absolute inset-y-0 right-1 my-auto flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-ink-dim hover:text-ink"
+              >
+                ×
+              </button>
+            ) : null}
+          </div>
+        </div>
         {/* Silent at zero, where the sentence below says it better. */}
         {needle && matching > 0 ? (
           <span className="text-ink-dim">

@@ -528,6 +528,11 @@ marked fan translations, which are gone (§1).
   every row. Filters in one sideways-scrolling row on a phone. **All
   shelves** in the nav (header and tab bar) is the wall grouped by shelf,
   each shelf in full under a heading that opens it alone.
+  The wall remembers its sort, grouping and grid or list (the `bookshelf-preferences` cookie,
+  written only when you change them in the filter row; Jay, 2026-10-21), so
+  All shelves opens grouped by shelf only until you pick another grouping.
+  A link that names a value still wins for that visit without changing what
+  is remembered. Which shelf, tag or platform you filtered to is not kept.
 - **Edition and work pages**: the whole cover standing on a plank beside the
   title; Change cover and Edit details directly beneath; the shelf as a
   segmented control; rating as ten bars climbing left to right.

@@ -356,3 +356,9 @@ body {
     animation: none;
   }
 }
+
+/* The shelf's filter box draws its own clear button (shelf-grid.tsx). */
+.shelf-filter::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
