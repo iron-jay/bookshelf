@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "drizzle/**",
+    // Written from lib/goodreads-bookmarklet.ts (npm run extension:extract).
+    "extension/extract.js",
   ]),
 ]);
 

@@ -1720,3 +1720,45 @@ Checked locally at desktop and phone width: Piranesi to Reading opened a
 read today, Guards! Guards! Reading to Did not finish from the band, The
 Fifth Season to Finished rated 8 with a read finished today. tsc, lint and
 `check:actions` pass.
+
+## 2026-10-25 — Firefox extension: add a book from its Goodreads page
+
+Jay: the bookmarklet is awkward on a phone; an extension would be easier, and
+it needs to be Firefox (desktop and Android).
+
+- **`extension/`**: a Manifest v2 Firefox extension, "bookshelf for
+  Goodreads". An "Add to bookshelf" sticker button on Goodreads book pages
+  (also the toolbar button, or menu → Extensions on a phone) reads the page
+  with the bookmarklet's own `extract` and opens `/goodreads-fill#book=…` at
+  the address saved in its options. One permission, storage. A page reached
+  by Goodreads' client-side navigation is reloaded first, since its
+  `__NEXT_DATA__` would be the first page's. README covers unlisted signing on
+  AMO (Jay's account), installing on Android (About Firefox → tap the logo
+  five times → Install extension from file) and desktop, and new versions.
+- `extension/extract.js` is written from `lib/goodreads-bookmarklet.ts`
+  (`npm run extension:extract`); the image build runs `check:extension` so
+  the copies cannot drift. `npm run extension:zip` makes the zip to sign.
+- **`extract` now also reads** authors (contributors credited as Author),
+  the edition's ISBN and Book or Audiobook (format containing "audio").
+  Optional in `checkPageData`, so bookmarks saved before still work.
+  Goodreads' "nophoto" placeholder is no longer taken as a cover.
+- **`/goodreads-fill` adds books.** When no edition has the page's Goodreads
+  id, it now offers "Add it to your shelf" first: the import's `planBook`
+  (now exported, with `placeBook` and `lookUpPlacedCovers` shared from
+  `lib/import/run.ts`) says where it goes, the page's details fill the add
+  form's `BookDraft`, and Add (`addFromGoodreads`) places it, links the
+  Goodreads id, shelves it through `shelveEdition` and puts the page's cover
+  on a new edition (`lib/books/add-from-goodreads.ts`). A book of yours with
+  the page's ISBN is offered to fill in; the picker is one link away.
+
+Checked locally at phone width with the extension's content script on saved
+Goodreads pages (Good Omens, Guards! Guards!): button, tab opened with the
+details, Add to shelf with Hardcover matches, series Discworld #8 from the
+page, Finished with a read, Goodreads cover, and a second press offering the
+fill. Open Library was unreachable from the cloud all session, so the Open
+Library match paths (the same code the import uses) went untested here, and
+the extension itself is untested in a real Firefox. tsc, lint,
+`check:actions` and `web-ext lint` pass.
+
+Next: Jay signs and installs it. Plain editions still store no ISBN (as with
+the import).

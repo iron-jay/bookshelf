@@ -47,3 +47,6 @@ next-env.d.ts
 .env
 .env*.local
 /pgdata
+
+# the Firefox extension's zips and signed files (npm run extension:zip)
+/dist-extension

@@ -176,9 +176,21 @@ export default async function SettingsPage() {
 
           <h3 className="mt-6 font-medium">One book at a time</h3>
           <p className="mb-3 font-narrow text-ink-dim">
-            For a book nothing else fills in: drag this to your bookmarks bar. Then on a book’s Goodreads page — each
-            imported book links to its own, under its details — click it, check what it found, and Apply. It reads
-            the page in your browser; bookshelf never contacts Goodreads itself. The bookmark returns to the
+            In Firefox, on a computer or Android, the bookshelf for Goodreads extension puts an “Add to bookshelf”
+            button on every Goodreads book page: it opens here with the book’s details to look over before adding, or
+            fills in a book you have already. Its setup is in the repository’s{" "}
+            <a
+              href="https://github.com/iron-jay/bookshelf/blob/main/extension/README.md"
+              className="underline hover:text-ink"
+            >
+              extension folder
+            </a>
+            .
+          </p>
+          <p className="mb-3 font-narrow text-ink-dim">
+            Or this bookmark, in any browser: drag it to your bookmarks bar. Then on a book’s Goodreads page — each
+            imported book links to its own, under its details — click it, check what it found, and Add or Apply. It
+            reads the page in your browser; bookshelf never contacts Goodreads itself. The bookmark returns to the
             address you are using now, so drag it from the address you open bookshelf at.
           </p>
           <BookmarkletLink />

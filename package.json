@@ -14,7 +14,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
     "build:migrate": "esbuild scripts/migrate.ts --bundle --platform=node --format=esm --target=node22 --external:@node-rs/argon2 --outfile=.next/standalone/migrate.mjs",
-    "check:actions": "tsx scripts/check-server-actions.ts"
+    "check:actions": "tsx scripts/check-server-actions.ts",
+    "extension:extract": "tsx scripts/build-extension.ts",
+    "check:extension": "tsx scripts/build-extension.ts --check",
+    "extension:zip": "tsx scripts/build-extension.ts --check && npx --yes web-ext@8 build --source-dir extension --artifacts-dir dist-extension --ignore-files README.md --overwrite-dest"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",

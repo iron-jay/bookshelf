@@ -27,6 +27,13 @@ import { findBook, type HardcoverBook } from "@/lib/hardcover";
 
 import type { GoodreadsRow } from "./goodreads";
 
+/**
+ * What finding a book needs from a Goodreads row. A book added from its own
+ * Goodreads page (the Firefox extension) has these too, and is found the same
+ * way.
+ */
+export type GoodreadsBook = Pick<GoodreadsRow, "bookId" | "title" | "authors" | "isbn13" | "isbn10" | "year">;
+
 export type RowOutcome = {
   line: number;
   title: string;
@@ -45,13 +52,13 @@ export type RowOutcome = {
  * shared author surname. A wrong match is worse than a local work — the local
  * work is listed for fixing, the wrong match looks right and is not.
  */
-function sameBook(result: OlWorkSummary, titles: string[], row: GoodreadsRow): boolean {
+function sameBook(result: OlWorkSummary, titles: string[], row: GoodreadsBook): boolean {
   if (!titles.some((mine) => sameTitle(result.title, result.subtitle, mine))) return false;
   return shareAnAuthor(result.authors, row.authors);
 }
 
 
-type Plan =
+export type Plan =
   | { kind: "edition"; editionId: string; workId: string; matchedBy: "previous import" | "isbn" }
   | {
       kind: "openlibrary";
@@ -70,12 +77,12 @@ type Plan =
  * row of tiles all reading "Star Wars" on the shelf. Open Library's own title
  * is kept in ol_payload.
  */
-function displayTitle(_workTitle: string, row: GoodreadsRow): string {
+function displayTitle(_workTitle: string, row: GoodreadsBook): string {
   return titleQueries(row.title).match[0] ?? row.title;
 }
 
 /** Where a row's book is — decided with the network, before any write. */
-async function plan(row: GoodreadsRow): Promise<Plan> {
+export async function planBook(row: GoodreadsBook): Promise<Plan> {
   // 1. Imported before: re-running the same export changes nothing (§5).
   const [previous] = await db
     .select({ id: editions.id, workId: editions.workId })
@@ -154,7 +161,7 @@ async function plan(row: GoodreadsRow): Promise<Plan> {
  * Hardcover's description, year, series and cover rather than bare. In Jay's
  * export Hardcover had 84 of the 100 books Open Library lacked.
  */
-async function asLocal(row: GoodreadsRow, edition: OlEditionSummary | null): Promise<Plan> {
+async function asLocal(row: GoodreadsBook, edition: OlEditionSummary | null): Promise<Plan> {
   return { kind: "local", edition, hardcover: await findBook(row.title, row.authors) };
 }
 
@@ -168,7 +175,7 @@ type WorkFor = (
  * turn. `edition` is an Open Library edition an ISBN already found, carried
  * over so its cover and details are kept on whatever work this finds.
  */
-async function byTitle(row: GoodreadsRow, workFor: WorkFor, edition: OlEditionSummary | null): Promise<Plan | null> {
+async function byTitle(row: GoodreadsBook, workFor: WorkFor, edition: OlEditionSummary | null): Promise<Plan | null> {
   const titles = titleQueries(row.title);
   for (const query of titles.search) {
     const results = await searchWorks(`${query} ${row.authors[0] ?? ""}`.trim(), 5);
@@ -179,6 +186,80 @@ async function byTitle(row: GoodreadsRow, workFor: WorkFor, edition: OlEditionSu
     }
   }
   return null;
+}
+
+export type Placed = { work: EnsuredWork; editionId: string; editionCreated: boolean; editionIsbn: string | null };
+
+/**
+ * The work and edition a plan names, made if they are not here yet. Shared
+ * with adding a book from its Goodreads page, which differs only in the entry.
+ */
+export async function placeBook(
+  tx: Tx,
+  userId: string,
+  decided: Plan,
+  row: GoodreadsBook & { format: GoodreadsRow["format"] },
+): Promise<Placed> {
+  if (decided.kind === "edition") {
+    return { work: { id: decided.workId, created: false }, editionId: decided.editionId, editionCreated: false, editionIsbn: null };
+  }
+  const work =
+    decided.kind === "local"
+      ? await insertLocalWork(tx, { title: row.title, authors: row.authors }, userId, decided.hardcover)
+      : "knownId" in decided.work
+        ? { id: decided.work.knownId, created: false }
+        : await insertOpenLibraryWork(tx, decided.work.fetch, userId);
+
+  const editionInput = {
+    userId,
+    format: row.format,
+    credit: null,
+    durationMinutes: null,
+    isbn: row.isbn13 ? { isbn13: row.isbn13, isbn10: row.isbn10 } : null,
+  };
+  const edition = decided.edition
+    ? await insertOpenLibraryEdition(tx, editionInput, work.id, decided.edition)
+    : await ensurePlainEdition(tx, editionInput, work.id);
+  return { work, editionId: edition.id, editionCreated: edition.created, editionIsbn: edition.isbn13 };
+}
+
+/**
+ * The add's cover lookup for what placeBook made. `editionCover: false` skips
+ * the edition, for a caller that has its art already (a Goodreads page's).
+ */
+export async function lookUpPlacedCovers(
+  decided: Plan,
+  row: GoodreadsBook,
+  placed: Placed,
+  { editionCover = true }: { editionCover?: boolean } = {},
+): Promise<void> {
+  const editionWanted = placed.editionCreated && editionCover;
+  if (!placed.work.created && !editionWanted) return;
+  const fetched = decided.kind === "openlibrary" && "fetch" in decided.work ? decided.work.fetch : null;
+  const workCoverId = fetched ? (fetched.record.coverId ?? fetched.summary.coverId) : null;
+  // With the edition's art in hand, the work only takes Open Library's own:
+  // anything further down the order is a guess the edition does not need.
+  const workWanted = placed.work.created && (editionCover || workCoverId !== null);
+  if (!workWanted && !editionWanted) return;
+  await lookUpCoversOnAdd({
+    work: workWanted
+      ? {
+          id: placed.work.id,
+          title: fetched?.summary.title ?? row.title,
+          firstAuthor: row.authors[0] ?? null,
+          coverId: workCoverId,
+          hardcoverImageUrl: decided.kind === "local" ? (decided.hardcover?.imageUrl ?? null) : null,
+        }
+      : null,
+    workId: placed.work.id,
+    edition: editionWanted
+      ? {
+          id: placed.editionId,
+          coverId: decided.kind === "edition" ? null : (decided.edition?.coverId ?? null),
+          isbn13: placed.editionIsbn,
+        }
+      : null,
+  });
 }
 
 /**
@@ -195,43 +276,14 @@ export async function importGoodreadsRow(userId: string, row: GoodreadsRow): Pro
 
   let decided: Plan;
   try {
-    decided = await plan(row);
+    decided = await planBook(row);
   } catch (error) {
     if (error instanceof OpenLibraryError) return { ...base, result: "failed", message: error.message };
     throw error;
   }
 
   const outcome = await db.transaction(async (tx) => {
-    let work: EnsuredWork;
-    let editionId: string;
-    let editionCreated = false;
-    let editionIsbn: string | null = null;
-
-    if (decided.kind === "edition") {
-      work = { id: decided.workId, created: false };
-      editionId = decided.editionId;
-    } else {
-      work =
-        decided.kind === "local"
-          ? await insertLocalWork(tx, { title: row.title, authors: row.authors }, userId, decided.hardcover)
-          : "knownId" in decided.work
-            ? { id: decided.work.knownId, created: false }
-            : await insertOpenLibraryWork(tx, decided.work.fetch, userId);
-
-      const editionInput = {
-        userId,
-        format: row.format,
-        credit: null,
-        durationMinutes: null,
-        isbn: row.isbn13 ? { isbn13: row.isbn13, isbn10: row.isbn10 } : null,
-      };
-      const edition = decided.edition
-        ? await insertOpenLibraryEdition(tx, editionInput, work.id, decided.edition)
-        : await ensurePlainEdition(tx, editionInput, work.id);
-      editionId = edition.id;
-      editionCreated = edition.created;
-      editionIsbn = edition.isbn13;
-    }
+    const { work, editionId, editionCreated, editionIsbn } = await placeBook(tx, userId, decided, row);
 
     // Recorded on the edition only if it has none, so the first Goodreads book
     // to reach a shared edition keeps it.
@@ -253,28 +305,7 @@ export async function importGoodreadsRow(userId: string, row: GoodreadsRow): Pro
     return { work, editionId, editionCreated, editionIsbn, added };
   });
 
-  if (outcome.work.created || outcome.editionCreated) {
-    const fetched = decided.kind === "openlibrary" && "fetch" in decided.work ? decided.work.fetch : null;
-    await lookUpCoversOnAdd({
-      work: outcome.work.created
-        ? {
-            id: outcome.work.id,
-            title: fetched?.summary.title ?? row.title,
-            firstAuthor: row.authors[0] ?? null,
-            coverId: fetched ? (fetched.record.coverId ?? fetched.summary.coverId) : null,
-            hardcoverImageUrl: decided.kind === "local" ? (decided.hardcover?.imageUrl ?? null) : null,
-          }
-        : null,
-      workId: outcome.work.id,
-      edition: outcome.editionCreated
-        ? {
-            id: outcome.editionId,
-            coverId: decided.kind === "edition" ? null : (decided.edition?.coverId ?? null),
-            isbn13: outcome.editionIsbn,
-          }
-        : null,
-    });
-  }
+  await lookUpPlacedCovers(decided, row, outcome);
 
   return {
     ...base,

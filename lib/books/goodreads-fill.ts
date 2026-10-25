@@ -4,6 +4,7 @@ import { downloadCover } from "@/lib/covers";
 import { db } from "@/lib/db";
 import { editions, entries, entryCards, works } from "@/lib/db/schema";
 import type { GoodreadsPageData } from "@/lib/goodreads-bookmarklet";
+import { parseIsbn } from "@/lib/isbn";
 
 import { setCover } from "./covers";
 import { parsePosition, setWorkSeries } from "./series";
@@ -25,14 +26,22 @@ export function checkPageData(value: unknown): GoodreadsPageData | null {
   if (!Number.isInteger(id) || id <= 0 || id > 10_000_000_000) return null;
   const cover = str(v.coverUrl, 1000);
   const year = Number(v.year);
+  const isbn = typeof v.isbn === "string" ? parseIsbn(v.isbn) : null;
+  const authors = Array.isArray(v.authors)
+    ? v.authors.map((a) => str(a, 200)).filter((a): a is string => a !== null).slice(0, 20)
+    : [];
   return {
     goodreadsId: id,
     title: str(v.title, 500),
     description: str(v.description, 20_000),
-    coverUrl: cover && COVER_HOSTS.test(cover) ? cover : null,
+    // Goodreads' "no photo" drawing is a placeholder, not the book's cover.
+    coverUrl: cover && COVER_HOSTS.test(cover) && !cover.includes("/nophoto/") ? cover : null,
     series: str(v.series, 200),
     position: str(v.position, 20),
     year: Number.isInteger(year) && year > 0 && year < 3000 ? year : null,
+    authors,
+    isbn: isbn?.kind === "isbn" ? isbn.isbn.isbn13 : null,
+    format: v.format === "audiobook" || v.format === "book" ? v.format : null,
   };
 }
 
