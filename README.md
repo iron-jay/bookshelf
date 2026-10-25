@@ -281,6 +281,13 @@ local works and listed for fixing. Keep the tab open while it runs (about two
 seconds per new book); running the same file again resumes and never
 overwrites anything you have changed.
 
+One book at a time, from its Goodreads page: the Firefox extension in
+[`extension/`](extension/README.md) (desktop and Android) puts an "Add to
+bookshelf" button on the page, which opens bookshelf with the book's details
+to look over before adding, or fills in a book already here. Mozilla signs it
+for you as an unlisted add-on; the README there has the steps. The bookmarklet
+in Settings does the same where an extension cannot go.
+
 ## Restoring from an export
 
 Settings → Export and restore takes bookshelf's own JSON download (not the

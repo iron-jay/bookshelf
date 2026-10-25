@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bookshelf for Goodreads</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 20px 16px 32px; max-width: 34rem;
+    background: #263034; color: #F1ECE2;
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 { font-size: 24px; font-weight: 800; margin: 0 0 4px; }
+  p { margin: 0 0 12px; }
+  .dim { color: #A3ADB1; font-size: 14px; }
+  label { display: flex; flex-direction: column; gap: 6px; margin: 20px 0 12px; }
+  input[type=url] {
+    font: inherit; color: #F1ECE2; background: #1E272A;
+    border: 1px solid #55636A; border-radius: 8px; padding: 10px 12px;
+  }
+  input[type=url]:focus { outline: 2px solid #C9D7B8; outline-offset: 1px; }
+  .check { flex-direction: row; align-items: center; gap: 10px; margin: 8px 0 20px; }
+  .check input { width: 20px; height: 20px; accent-color: #C9D7B8; }
+  button {
+    font: 700 15px/1 inherit; height: 40px; padding: 0 20px; border-radius: 999px; cursor: pointer;
+    color: #263034; background: #C9D7B8; border: 0;
+  }
+  a { color: #F1ECE2; }
+  #elsewhere { display: none; border-left: 2px solid #A3ADB1; padding-left: 12px; }
+  #status { min-height: 1.5em; margin-top: 12px; }
+</style>
+</head>
+<body>
+  <h1>bookshelf for Goodreads</h1>
+  <p id="elsewhere">“Add to bookshelf” works on a book’s page on Goodreads. Open one there and try again.</p>
+  <p class="dim">On a book’s Goodreads page, “Add to bookshelf” opens your bookshelf with the book’s details filled in.
+    You look them over and press Add; nothing is saved before that. A book already on your shelf is offered to fill in
+    instead.</p>
+
+  <form id="form">
+    <label>
+      <span>Your bookshelf’s address</span>
+      <input id="server" type="url" required placeholder="http://192.168.1.20:3001" autocomplete="url" inputmode="url">
+      <span class="dim">The address you open bookshelf at in this browser, as it appears in the address bar.</span>
+    </label>
+    <label class="check">
+      <input id="button" type="checkbox" checked>
+      <span>Show the button on Goodreads book pages</span>
+    </label>
+    <p class="dim">Without it, use the toolbar button, or on a phone the menu’s Extensions → bookshelf for Goodreads.</p>
+    <button type="submit">Save</button>
+    <p id="status" role="status" class="dim"></p>
+  </form>
+  <script src="options.js"></script>
+</body>
+</html>

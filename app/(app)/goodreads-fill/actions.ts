@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
+import { previewGoodreadsAdd, type GoodreadsAddPreview } from "@/lib/books/add-from-goodreads";
+import { seriesNames } from "@/lib/books/draft";
 import {
   applyGoodreadsFill,
   checkPageData,
@@ -55,4 +57,18 @@ export async function applyGoodreads(
   if ("error" in result) return result;
   revalidatePath("/", "layout");
   return { filled: result.filled, editionId: result.target.editionId };
+}
+
+/**
+ * For a page no book of yours is linked to: where adding it would put it, and
+ * its details to look over (lib/books/add-from-goodreads). Changes nothing.
+ */
+export async function previewGoodreadsAddition(
+  raw: unknown,
+): Promise<{ preview: GoodreadsAddPreview; seriesNames: string[] }> {
+  const user = await requireUser();
+  const data = checkPageData(raw);
+  if (!data) return { preview: { kind: "error", error: "That did not look like a Goodreads book page." }, seriesNames: [] };
+  const preview = await previewGoodreadsAdd(user.id, data);
+  return { preview, seriesNames: preview.kind === "add" && preview.draft ? await seriesNames() : [] };
 }

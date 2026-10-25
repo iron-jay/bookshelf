@@ -5,9 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+import type { GoodreadsAddPreview } from "@/lib/books/add-from-goodreads";
 import type { FillCandidate } from "@/lib/books/goodreads-fill";
+import type { GoodreadsPageData } from "@/lib/goodreads-bookmarklet";
 
-import { applyGoodreads, previewGoodreads, type Preview } from "./actions";
+import { addFromGoodreads } from "../add/actions";
+import { CatalogueAddForm } from "../add/catalogue-add-form";
+import type { Format } from "../add/format";
+import { applyGoodreads, previewGoodreads, previewGoodreadsAddition, type Preview } from "./actions";
 
 const GOODREADS = "https://www.goodreads.com";
 const BUTTON =
@@ -15,11 +20,13 @@ const BUTTON =
 
 /**
  * Receives a Goodreads book page's details from the bookmarklet (lib/
- * goodreads-bookmarklet) and fills in the matching book — the one with that
- * Goodreads id, or when none has it, one the person picks. Only messages from
- * Goodreads' own origin are read; nothing is written until Apply.
+ * goodreads-bookmarklet) or the Firefox extension (extension/) and fills in
+ * the matching book — the one with that Goodreads id. When none has it, the
+ * book is offered to add, its details to look over first (2026-10-25), or
+ * one already here to pick and fill. Only messages from Goodreads' own origin
+ * are read; nothing is written until Apply or Add.
  */
-export function GoodreadsFill() {
+export function GoodreadsFill({ rememberedFormat }: { rememberedFormat: Format }) {
   const [preview, setPreview] = useState<Preview | null>(null);
   // Kept once a book is picked, so "choose a different book" goes back to it.
   const [candidates, setCandidates] = useState<FillCandidate[] | null>(null);
@@ -76,8 +83,8 @@ export function GoodreadsFill() {
       <div className="flex max-w-xl flex-col gap-2 font-narrow text-ink-dim">
         <p>Nothing arrived from Goodreads.</p>
         <p>
-          This page is opened by the Goodreads bookmarklet: on a book’s Goodreads page, click the bookmark. Set
-          it up in <Link href="/settings" className="underline hover:text-ink">Settings</Link>.
+          This page is opened from a book’s Goodreads page, by the Firefox extension’s “Add to bookshelf” or by
+          the bookmarklet. Set either up in <Link href="/settings" className="underline hover:text-ink">Settings</Link>.
         </p>
       </div>
     );
@@ -135,7 +142,9 @@ export function GoodreadsFill() {
       </section>
 
       {!target ? (
-        <Picker candidates={preview.candidates} goodreadsId={data.goodreadsId} busy={busy} onPick={pick} />
+        <AddOrPick data={data} rememberedFormat={rememberedFormat} onPick={pick}>
+          <Picker candidates={preview.candidates} goodreadsId={data.goodreadsId} busy={busy} onPick={pick} />
+        </AddOrPick>
       ) : done ? (
         "error" in done ? (
           <p role="alert" className="border-l-2 border-ink-dim pl-3 font-narrow">{done.error}</p>
@@ -187,6 +196,95 @@ export function GoodreadsFill() {
           </button>
         </section>
       )}
+    </div>
+  );
+}
+
+const MATCH: Record<Extract<GoodreadsAddPreview, { kind: "add" }>["match"], string> = {
+  here: "This edition is here already, not on your shelf.",
+  isbn: "Found on Open Library by its ISBN.",
+  title: "Found on Open Library by title and author.",
+  hardcover: "Not on Open Library; Hardcover has it, so it will be a book of its own with Hardcover’s details.",
+  local: "Neither Open Library nor Hardcover has it, so it will be a book of its own.",
+};
+
+/**
+ * No book of yours has the page's Goodreads id. Most often it is a book to
+ * add, so that comes first, found as the Goodreads import finds books; the
+ * picker is there for one already here under another edition or title.
+ */
+function AddOrPick({
+  data,
+  rememberedFormat,
+  onPick,
+  children,
+}: {
+  data: GoodreadsPageData;
+  rememberedFormat: Format;
+  onPick: (editionId: string) => void;
+  children: React.ReactNode;
+}) {
+  const [found, setFound] = useState<{ preview: GoodreadsAddPreview; seriesNames: string[] } | null>(null);
+  const [picking, setPicking] = useState(false);
+
+  useEffect(() => {
+    void previewGoodreadsAddition(data).then(setFound);
+  }, [data]);
+
+  if (picking) {
+    return (
+      <div className="flex flex-col gap-3">
+        {children}
+        <button type="button" onClick={() => setPicking(false)} className="w-fit font-narrow text-ink-dim underline hover:text-ink">
+          Add it as a new book instead
+        </button>
+      </div>
+    );
+  }
+
+  const preview = found?.preview;
+  return (
+    <div className="flex flex-col gap-6">
+      {!preview ? (
+        <p className="font-narrow text-ink-dim">Looking for it on Open Library…</p>
+      ) : preview.kind === "error" ? (
+        <p role="alert" className="border-l-2 border-ink-dim pl-3 font-narrow">{preview.error}</p>
+      ) : preview.kind === "shelved" ? (
+        <section className="flex flex-col gap-3 font-narrow">
+          <p>
+            <span className="text-ink">{preview.target.workTitle}</span>
+            <span className="text-ink-dim"> — {preview.target.editionName}</span> has this page’s ISBN and is on your
+            shelf already.
+          </p>
+          <button type="button" onClick={() => onPick(preview.target.editionId)} className="w-fit btn btn-primary">
+            Fill it in from this page
+          </button>
+        </section>
+      ) : (
+        <section className="flex flex-col gap-4">
+          <div className="font-narrow">
+            <h2 className="font-display text-xl">Add it to your shelf</h2>
+            <p className="text-ink-dim">
+              {MATCH[preview.match]}
+              {preview.workTitle ? ` It goes on your shelf as ${preview.workTitle}, whose details stay as they are.` : null}
+            </p>
+          </div>
+          <CatalogueAddForm
+            action={addFromGoodreads}
+            hidden={{ goodreads: JSON.stringify(data) }}
+            withFormat
+            defaultFormat={data.format ?? rememberedFormat}
+            draft={preview.draft}
+            seriesNames={found.seriesNames}
+          />
+        </section>
+      )}
+      <p className="font-narrow text-ink-dim">
+        On your shelf already, under another edition or title?{" "}
+        <button type="button" onClick={() => setPicking(true)} className="underline hover:text-ink">
+          Choose it to fill in instead
+        </button>
+      </p>
     </div>
   );
 }

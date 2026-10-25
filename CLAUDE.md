@@ -277,6 +277,22 @@ GraphQL, beta, free plan 60/minute and 5,000/day):
     iframe was asked for and is impossible: Goodreads sends
     `X-Frame-Options: SAMEORIGIN`, and a frame's page could not be read
     across origins anyway.
+  - **The Firefox extension** (`extension/`, 2026-10-25, Jay: easier on a
+    phone than the bookmarklet), for desktop and Android: an "Add to
+    bookshelf" button on Goodreads book pages (and the toolbar or menu
+    action) that runs the bookmarklet's own `extract` — `extension/extract.js`
+    is written from `lib/goodreads-bookmarklet.ts` by `npm run
+    extension:extract` and checked in the image build — and opens
+    `/goodreads-fill#book=…` at the address set in its options. Manifest v2,
+    one permission (storage). Signed unlisted on AMO by Jay; steps in its
+    README. No AMO listing, no auto-update.
+  - **A page no book is linked to is offered to add** (2026-10-25), before
+    the picker: found as the import finds a row (`planBook`), details from
+    the page to look over (`BookDraft`, §5 Add flow), the page's cover on the
+    new edition, linked by `goodreads_book_id`
+    (`lib/books/add-from-goodreads.ts`). A book of yours with the page's ISBN
+    is offered to fill in instead. The page now also sends authors, ISBN and
+    Book or Audiobook (Goodreads' format containing "audio").
 
 ## 4c. Comic Vine (optional) — comics and graphic novels
 

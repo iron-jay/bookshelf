@@ -8,6 +8,8 @@ import { requireUser } from "@/lib/auth";
 import { addOpenLibraryBook, AddBookError } from "@/lib/books/add";
 import { addEdition, type WorkTarget } from "@/lib/books/add-edition";
 import { addFromCatalogue, comicBook, hardcoverBook } from "@/lib/books/add-from-catalogue";
+import { addGoodreadsBook } from "@/lib/books/add-from-goodreads";
+import { checkPageData } from "@/lib/books/goodreads-fill";
 import { readBookDraft } from "@/lib/books/draft";
 import { editionKind } from "@/lib/db/schema";
 import { parseIsbn } from "@/lib/isbn";
@@ -265,6 +267,41 @@ export async function addComicBook(_prev: AddState, formData: FormData): Promise
     draft: draft?.draft,
   });
 
+  revalidatePath("/");
+  redirect(landing(formData, result));
+}
+
+/**
+ * A book from its own Goodreads page (the Firefox extension or the
+ * bookmarklet, by way of /goodreads-fill). The page's details come back as a
+ * hidden field and are checked as the fill checks them; where the book goes
+ * is worked out again here.
+ */
+export async function addFromGoodreads(_prev: AddState, formData: FormData): Promise<AddState> {
+  const user = await requireUser();
+  let raw: unknown = null;
+  try {
+    raw = JSON.parse(text(formData, "goodreads"));
+  } catch {}
+  const data = checkPageData(raw);
+  const format = text(formData, "format");
+  const shelf = text(formData, "shelf");
+  if (!data) return { error: "That did not look like a Goodreads book page." };
+  if (!isFormat(format)) return { error: "Choose Book or Audiobook." };
+
+  const draft = readBookDraft(formData);
+  if (draft && !draft.ok) return { error: draft.error };
+
+  const result = await addGoodreadsBook({
+    userId: user.id,
+    data,
+    format,
+    shelf: isShelf(shelf) ? shelf : "tbr",
+    draft: draft?.draft,
+  });
+  if ("error" in result) return result;
+
+  await rememberFormat(format);
   revalidatePath("/");
   redirect(landing(formData, result));
 }

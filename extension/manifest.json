@@ -1,0 +1,48 @@
+{
+  "manifest_version": 2,
+  "name": "bookshelf for Goodreads",
+  "version": "1.0.0",
+  "description": "Adds the book on the Goodreads page you are looking at to your own bookshelf server. You look over its details there before anything is saved.",
+  "homepage_url": "https://github.com/iron-jay/bookshelf/tree/main/extension",
+  "icons": {
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["storage"],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.goodreads.com/*", "https://goodreads.com/*"],
+      "js": ["extract.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_action": {
+    "default_title": "Add to bookshelf",
+    "default_icon": {
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "browser_style": false
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "bookshelf-goodreads@iron-jay.github.io",
+      "strict_min_version": "115.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "120.0"
+    }
+  }
+}
