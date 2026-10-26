@@ -1762,3 +1762,26 @@ the extension itself is untested in a real Firefox. tsc, lint,
 
 Next: Jay signs and installs it. Plain editions still store no ISBN (as with
 the import).
+
+## 2026-10-26 — "Latest" for a series number on add
+
+Jay: when adding a book, the series number should have a "Latest" tickbox
+that puts it at the end, "otherwise you need to look it up".
+
+- **`BookDetails`** (every add form that asks for details: Open Library,
+  Hardcover, Comic Vine single issue, by hand, Goodreads page) has a Latest
+  tickbox beside Number. Ticked, the number box is disabled and shows the
+  number it will get (`latestPosition`, a server action, asked a quarter
+  second after the series name stops changing).
+- **`setWorkSeries`** takes `"latest"` as a position and works it out on
+  Add (`nextPosition`, `lib/books/series.ts`): one past the highest whole
+  number in the series, not counting the book itself (after 2.5 comes 3),
+  or 1 for a new or unnumbered series. The API's `details.series.position`
+  takes `"latest"` the same way; the phone app sends it.
+- gameshelf has no series numbers (release order), so nothing there.
+
+Checked locally at phone width: Discworld at 1, 2 and 2.5, a book added by
+hand to "discworld" with Latest ticked previewed 3 and was saved as #3. tsc,
+lint and `check:actions` pass.
+
+Next: the work page's series form could have the same tickbox (not asked).

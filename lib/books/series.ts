@@ -20,6 +20,27 @@ export function parsePosition(value: string): number | null | "invalid" {
 }
 
 /**
+ * "Latest" on the add form (Jay, 2026-10-26): the book goes at the end of
+ * its series, so nobody has to look up what number the last one was.
+ * Resolved when the book is placed, not when the form was drawn.
+ */
+export const LATEST = "latest";
+export type Position = number | null | typeof LATEST;
+
+/**
+ * One past the highest whole number in a series (after 2.5 comes 3), or 1 for
+ * a series with no numbered book. `exceptWorkId` is the book being placed,
+ * which must not count itself.
+ */
+export async function nextPosition(tx: Pick<Tx, "select">, seriesId: string, exceptWorkId?: string): Promise<number> {
+  const [row] = await tx
+    .select({ last: sql<string | null>`max(${works.seriesPosition})` })
+    .from(works)
+    .where(exceptWorkId ? and(eq(works.seriesId, seriesId), ne(works.id, exceptWorkId)) : eq(works.seriesId, seriesId));
+  return row?.last === null || row?.last === undefined ? 1 : Math.floor(Number(row.last)) + 1;
+}
+
+/**
  * The series called `name`, created if there is none. Matched without regard
  * to case, so "discworld" typed on one work joins the "Discworld" already
  * here rather than starting a second.
@@ -55,7 +76,7 @@ export async function setWorkSeries(
   tx: Tx,
   workId: string,
   name: string,
-  position: number | null,
+  position: Position,
   userId: string,
 ): Promise<void> {
   const [before] = await tx.select({ seriesId: works.seriesId }).from(works).where(eq(works.id, workId));
@@ -64,7 +85,8 @@ export async function setWorkSeries(
     await tx.update(works).set({ seriesId: null, seriesPosition: null }).where(eq(works.id, workId));
   } else {
     const seriesId = await ensureSeries(tx, name, userId);
-    await tx.update(works).set({ seriesId, seriesPosition: position }).where(eq(works.id, workId));
+    const at = position === LATEST ? await nextPosition(tx, seriesId, workId) : position;
+    await tx.update(works).set({ seriesId, seriesPosition: at }).where(eq(works.id, workId));
   }
 
   if (before?.seriesId) {
