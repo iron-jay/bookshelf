@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 
 import { authorSortFor } from "@/lib/authors";
 import { db } from "@/lib/db";
@@ -6,7 +6,7 @@ import { series, works } from "@/lib/db/schema";
 
 import type { CatalogueBook } from "./add-from-catalogue";
 import { readWorkFields } from "./edit-fields";
-import { parsePosition, setWorkSeries } from "./series";
+import { LATEST, nextPosition, parsePosition, setWorkSeries, type Position } from "./series";
 import type { Tx, WorkFetch } from "./works";
 
 /**
@@ -28,7 +28,7 @@ export type BookDraft = {
    * Null is no series. Undefined leaves the series to the add: a comic run's
    * series belongs to its Comic Vine volume and is not edited on the form.
    */
-  series?: { name: string; position: number | null } | null;
+  series?: { name: string; position: Position } | null;
 };
 
 export function draftFromOpenLibrary(fetched: WorkFetch): BookDraft {
@@ -69,7 +69,10 @@ export function readBookDraft(formData: FormData): Read | undefined {
   let seriesPart: BookDraft["series"];
   if (formData.has("series")) {
     const name = String(formData.get("series") ?? "").trim().slice(0, 200);
-    const position = parsePosition(String(formData.get("position") ?? "").trim());
+    const typed = String(formData.get("position") ?? "").trim();
+    // The tickbox on the form; the API sends `position: "latest"`.
+    const latest = formData.get("latest") === "on" || typed.toLowerCase() === LATEST;
+    const position = latest ? LATEST : parsePosition(typed);
     if (position === "invalid") return { ok: false, error: "The series number should be a number like 8 or 2.5." };
     seriesPart = name ? { name, position } : null;
   }
@@ -134,4 +137,20 @@ export async function applyBookDraft(tx: Tx, workId: string, draft: BookDraft, u
 /** The series already here, for the form's series box to suggest. */
 export async function seriesNames(): Promise<string[]> {
   return (await db.select({ name: series.name }).from(series).orderBy(asc(series.name))).map((s) => s.name);
+}
+
+/**
+ * The number "Latest" would give a book in the series called `name` (matched
+ * as `ensureSeries` matches), for the form to show before Add. A series not
+ * here yet starts at 1.
+ */
+export async function latestPositionFor(name: string): Promise<number> {
+  const trimmed = name.trim().replace(/\s+/g, " ");
+  if (!trimmed) return 1;
+  const [found] = await db
+    .select({ id: series.id })
+    .from(series)
+    .where(eq(sql`lower(${series.name})`, trimmed.toLowerCase()))
+    .limit(1);
+  return found ? nextPosition(db, found.id) : 1;
 }

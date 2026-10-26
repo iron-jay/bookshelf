@@ -437,7 +437,10 @@ adding (it lands on the edition's cover page). Only a work the add creates
 takes them (`BookDraft`, `lib/books/draft.ts`); one already here keeps its
 own. A comic run's series is its volume's and is not asked; several issues
 at once are added as Comic Vine has them, and one chosen can be looked over
-first (`/add/comic/{volumeId}?issue=`). The phone reads `details` from the
+first (`/add/comic/{volumeId}?issue=`). The number has a "Latest" tickbox
+(Jay, 2026-10-26): one past the highest whole number in that series (after
+2.5 comes 3), or 1, worked out on Add and previewed in the box; the API
+takes `position: "latest"`. The phone reads `details` from the
 catalogue routes and sends them back with `POST /entries`.
 
 **Book or audiobook** is a two-option toggle on the form, not a dropdown, and it

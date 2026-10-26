@@ -10,7 +10,7 @@ import { addEdition, type WorkTarget } from "@/lib/books/add-edition";
 import { addFromCatalogue, comicBook, hardcoverBook } from "@/lib/books/add-from-catalogue";
 import { addGoodreadsBook } from "@/lib/books/add-from-goodreads";
 import { checkPageData } from "@/lib/books/goodreads-fill";
-import { readBookDraft } from "@/lib/books/draft";
+import { latestPositionFor, readBookDraft } from "@/lib/books/draft";
 import { editionKind } from "@/lib/db/schema";
 import { parseIsbn } from "@/lib/isbn";
 import { isEditionKey, isWorkKey, OpenLibraryError } from "@/lib/openlibrary";
@@ -304,4 +304,10 @@ export async function addFromGoodreads(_prev: AddState, formData: FormData): Pro
   await rememberFormat(format);
   revalidatePath("/");
   redirect(landing(formData, result));
+}
+
+/** What "Latest" would number a new book in a series, shown beside the tickbox. */
+export async function latestPosition(name: string): Promise<number> {
+  await requireUser();
+  return latestPositionFor(String(name).slice(0, 200));
 }
