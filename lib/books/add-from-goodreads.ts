@@ -107,6 +107,8 @@ export async function addGoodreadsBook(input: {
   format: "book" | "audiobook";
   shelf: Shelf;
   draft?: BookDraft;
+  /** The day a Finished add's read is finished on (the API's `finishedOn`). */
+  on?: string;
 }): Promise<{ editionId: string; entryId: string; added: boolean } | { error: string }> {
   const book = bookFrom(input.data);
   if (!book) return { error: "That Goodreads page did not say what the book is called." };
@@ -126,7 +128,7 @@ export async function addGoodreadsBook(input: {
       .set({ goodreadsBookId: book.bookId })
       .where(and(eq(editions.id, placed.editionId), isNull(editions.goodreadsBookId)));
     if (placed.work.created && input.draft) await applyBookDraft(tx, placed.work.id, input.draft, input.userId);
-    const shelved = await shelveEdition(tx, input.userId, placed.editionId, input.shelf);
+    const shelved = await shelveEdition(tx, input.userId, placed.editionId, input.shelf, input.on);
     return { placed, ...shelved };
   });
 

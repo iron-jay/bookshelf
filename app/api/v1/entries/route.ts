@@ -3,8 +3,10 @@ import { entryJson } from "@/lib/api/cards";
 import { refreshEntryPages } from "@/lib/api/refresh";
 import { addOpenLibraryBook, AddBookError } from "@/lib/books/add";
 import { addFromCatalogue, comicBook, hardcoverBook } from "@/lib/books/add-from-catalogue";
+import { addGoodreadsBook } from "@/lib/books/add-from-goodreads";
 import { readBookDraftJson, type BookDraft } from "@/lib/books/draft";
 import { editionExists } from "@/lib/books/entries";
+import { checkPageData } from "@/lib/books/goodreads-fill";
 import { entryDetail } from "@/lib/books/read";
 import { shelveEdition } from "@/lib/books/shelving";
 import { comicvineEnabled } from "@/lib/comicvine";
@@ -114,6 +116,9 @@ async function addFromOpenLibrary(userId: string, body: Record<string, unknown>,
  *   `durationMinutes` count only for an audiobook.
  * - `{ hardcoverId, format?, shelf? }` for a book only Hardcover has.
  * - `{ comicvineIssueId, shelf? }` for a comic or graphic novel.
+ * - `{ goodreads, format?, shelf? }` for a book read off its Goodreads page on
+ *   the phone (`goodreads` is `POST /goodreads/preview`'s `book`), placed as
+ *   the import places a row, linked to the page, with the page's cover.
  *
  * Each catalogue add takes `details?` (`title`, `subtitle`, `authors`,
  * `authorSort`, `firstPublishedYear`, `summary`, `series: { name, position }`
@@ -169,13 +174,21 @@ export const POST = withUser(async (request, { user }) => {
     const book = await comicBook(id);
     if (!book) throw new ApiError("upstream", "Comic Vine did not answer, or has no such issue. Nothing was added.");
     ({ editionId, entryId, added } = await addFromCatalogue({ userId: user.id, book, format: "book", shelf, on, draft }));
+  } else if (body.goodreads !== undefined) {
+    const data = checkPageData(body.goodreads);
+    if (!data) throw new ApiError("invalid", "That did not look like a Goodreads book page.", { fields: { goodreads: "Invalid." } });
+    const format = body.format === undefined ? (data.format ?? "book") : formatFrom(body);
+    const result = await addGoodreadsBook({ userId: user.id, data, format, shelf, on, draft: draftFrom(body) });
+    if ("error" in result) throw new ApiError("upstream", result.error);
+    ({ editionId, entryId, added } = result);
   } else {
-    throw new ApiError("invalid", "Send an editionId, olWorkKey, hardcoverId or comicvineIssueId.", {
+    throw new ApiError("invalid", "Send an editionId, olWorkKey, hardcoverId, comicvineIssueId or goodreads.", {
       fields: {
         editionId: "One of these is required.",
         olWorkKey: "One of these is required.",
         hardcoverId: "One of these is required.",
         comicvineIssueId: "One of these is required.",
+        goodreads: "One of these is required.",
       },
     });
   }
