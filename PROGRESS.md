@@ -1829,3 +1829,10 @@ Checked against a local server: Finished with `on: 2026-10-25` closed the
 read that day, Read again with `on` started it then, a bad date is a 422,
 and the phone's queued changes arrived dated the day they were made. tsc and
 lint pass.
+
+## 2026-10-29 — `authorSort` on the phone's card
+
+The phone app now groups its wall as the web does, grouping included being
+the page's own business. Grouping by author orders by `author_sort`, which
+the card did not carry, so `GET /shelf` cards have `extra.authorSort`
+(README). Nothing else changes.

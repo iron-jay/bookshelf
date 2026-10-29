@@ -31,6 +31,8 @@ export type Card = {
   run: { seriesSlug: string; issueCount: number } | null;
   extra: {
     authors: string[];
+    /** "Pratchett, Terry": how the web orders an author group, which the phone does too. */
+    authorSort: string | null;
     format: "book" | "audiobook";
     editionKind: string | null;
     credit: string | null;
@@ -62,6 +64,7 @@ export function cardFrom(row: ShelfRow, run: Run | null = null): Card {
     run: null,
     extra: {
       authors,
+      authorSort: row.authorSort,
       format: row.format ?? "book",
       editionKind: row.editionKind,
       credit: row.editionCredit,
