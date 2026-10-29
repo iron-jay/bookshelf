@@ -101,10 +101,10 @@ curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
 | `POST /api/v1/goodreads/fill` | `{ book, editionId? }`: fills only empty fields of that book from the page, as the web's Apply does (without `editionId`, the edition with its Goodreads id). Answers `filled` |
 | `GET /api/v1/series/{slug}` | A series: its works in reading order, your entries on each, and its collection |
 | `POST /api/v1/series/{slug}/read` | The whole series read: `{ finishedOn? }` (default today). Every book not yet finished goes to Finished on that day; one not on your shelf goes on it. Returns `{ finished, alreadyFinished, series }` |
-| `GET /api/v1/entries/{id}` | One entry: its card plus review, flags, tags and reads |
-| `PATCH /api/v1/entries/{id}` | Any of `shelf`, `rating` (1–10 or null), `review`, `reviewHasSpoilers`, `isFavourite`, `isPrivate`. A shelf change follows the read rules |
+| `GET /api/v1/entries/{id}` | One entry: its card plus review, flags, tags, reads and `updatedAt` (when the entry itself last changed) |
+| `PATCH /api/v1/entries/{id}` | Any of `shelf`, `rating` (1–10 or null), `review`, `reviewHasSpoilers`, `isFavourite`, `isPrivate`. A shelf change follows the read rules, dated `on?` (`YYYY-MM-DD`, default today): the phone sends the day it made a change it could only send later |
 | `DELETE /api/v1/entries/{id}` | Takes it off your shelf with its rating, review, reads and tags. The book stays on the server |
-| `POST /api/v1/entries/{id}/reads` | Read again: a new read started today, back on Reading |
+| `POST /api/v1/entries/{id}/reads` | Read again: a new read started today (or `{ on }`), back on Reading |
 | `PATCH /api/v1/reads/{id}` | `startedOn`, `finishedOn` (`YYYY-MM-DD` or null) |
 | `DELETE /api/v1/reads/{id}` | Removes one read |
 | `PUT /api/v1/entries/{id}/tags/{name}` | Adds a tag, creating it if new. Returns `{ tags }` |

@@ -95,8 +95,8 @@ export async function changeShelf(tx: Tx, entryId: string, shelf: Shelf, on: str
   }
 }
 
-/** "Read again": a new read started today, and the entry back on Reading. */
-export async function readAgain(tx: Tx, entryId: string): Promise<void> {
+/** "Read again": a new read started today (or `on`), and the entry back on Reading. */
+export async function readAgain(tx: Tx, entryId: string, on: string = today()): Promise<void> {
   await tx.update(entries).set({ status: "reading" }).where(eq(entries.id, entryId));
-  await tx.insert(reads).values({ entryId, startedOn: today() });
+  await tx.insert(reads).values({ entryId, startedOn: on });
 }
