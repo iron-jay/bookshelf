@@ -286,6 +286,16 @@ GraphQL, beta, free plan 60/minute and 5,000/day):
     `/goodreads-fill#book=…` at the address set in its options. Manifest v2,
     one permission (storage). Signed unlisted on AMO by Jay; steps in its
     README. No AMO listing, no auto-update.
+  - **The phone app** (2026-10-29, Jay: "a way for the app to get something
+    from Goodreads"): Search → Browse Goodreads, a pasted Goodreads link, or
+    "Search Goodreads" under the results opens Goodreads in the app's own web
+    view, and "Add to bookshelf" on a book's page runs this same `extract`
+    there (served by `GET /api/v1/goodreads`, so it is never copied) and
+    opens the add sheet. `POST /goodreads/preview` decides as
+    `/goodreads-fill` does (`linked`, `shelved` or `add` with `details`),
+    `POST /entries { goodreads }` adds through `addGoodreadsBook`, and
+    `POST /goodreads/fill` is Apply. The phone reads the page; the server
+    still never fetches Goodreads.
   - **A page no book is linked to is offered to add** (2026-10-25), before
     the picker: found as the import finds a row (`planBook`), details from
     the page to look over (`BookDraft`, §5 Add flow), the page's cover on the

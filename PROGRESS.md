@@ -1785,3 +1785,30 @@ hand to "discworld" with Latest ticked previewed 3 and was saved as #3. tsc,
 lint and `check:actions` pass.
 
 Next: the work page's series form could have the same tickbox (not asked).
+
+## 2026-10-29 — Goodreads from the phone app
+
+Jay: "there also needs to be a way for the app to get something from
+goodreads". The phone opens Goodreads in its own web view and reads the page
+there, as the extension does in Firefox; these routes are its half.
+
+- **`GET /api/v1/goodreads`** answers the bookmarklet's `extract` as source
+  text, so the phone runs the web's own reader rather than a copy.
+- **`POST /api/v1/goodreads/preview`** (`{ book }`): `linked` (an edition of
+  yours has its Goodreads id), `shelved` (one has its ISBN), each with
+  `canFill`; or `add`, with the import's `match` and `details` to edit
+  (`previewGoodreadsAdd`). Reads only.
+- **`POST /api/v1/entries { goodreads, format?, shelf?, details?,
+  finishedOn? }`** adds through `addGoodreadsBook`, which now takes the
+  finish day; `format` defaults to the page's.
+- **`POST /api/v1/goodreads/fill`** (`{ book, editionId? }`) is the web's
+  Apply: empty fields only, no cover replaced.
+
+Checked locally against live Goodreads pages read in a browser (Guards!
+Guards!, Mort): preview `add` matched by ISBN with Discworld #8 / #4, the add
+made a Finished entry on the given day with the page's cover and series, a
+second preview answered `linked`, and a bad body is a 422. tsc and lint pass.
+
+Next: Goodreads shows a bot check (HTTP 202) before some pages; a real
+browser passes it, and the phone re-reads a page whose data is stale.
+
