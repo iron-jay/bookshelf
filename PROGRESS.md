@@ -1812,3 +1812,20 @@ second preview answered `linked`, and a bad body is a 422. tsc and lint pass.
 Next: Goodreads shows a bot check (HTTP 202) before some pages; a real
 browser passes it, and the phone re-reads a page whose data is stale.
 
+## 2026-10-29 — Dated changes, for the phone away from home
+
+Jay: the phone app should take changes while away from home and send them
+when the server is reachable again (shelf-mobile, same day). The server
+needed two things for that, with no new rules:
+
+- `PATCH /entries/{id}` takes `on` (`YYYY-MM-DD`), the day a shelf change's
+  read opens or closes (`updateEntry` passes it to `changeShelf`); `POST
+  /entries/{id}/reads` takes `{ on }` for Read again. Left out, both are
+  today as before. `POST /entries` already took `finishedOn`.
+- An entry's JSON carries `updatedAt`, so the phone can tell a change made
+  on the web after its own. `/meta` lists `dated-changes`.
+
+Checked against a local server: Finished with `on: 2026-10-25` closed the
+read that day, Read again with `on` started it then, a bad date is a 422,
+and the phone's queued changes arrived dated the day they were made. tsc and
+lint pass.

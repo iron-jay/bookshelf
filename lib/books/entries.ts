@@ -81,7 +81,12 @@ export type EntryChanges = {
  * checked is the user's. A shelf change goes through changeShelf, so the read
  * rules (§5) apply however it arrives.
  */
-export async function updateEntry(entryId: string, changes: EntryChanges): Promise<void> {
+/**
+ * `on` dates any read a shelf change opens or closes; today when left out. The
+ * phone passes the day it made a change while out of reach of the server, so a
+ * book finished on the train is not finished the day the phone gets home.
+ */
+export async function updateEntry(entryId: string, changes: EntryChanges, on?: string): Promise<void> {
   const set: Partial<typeof entries.$inferInsert> = {};
   if (changes.rating !== undefined) set.rating = changes.rating;
   if (changes.review !== undefined) set.review = reviewFrom(changes.review);
@@ -90,15 +95,15 @@ export async function updateEntry(entryId: string, changes: EntryChanges): Promi
   if (changes.isPrivate !== undefined) set.isPrivate = changes.isPrivate;
 
   await db.transaction(async (tx) => {
-    if (changes.shelf !== undefined) await changeShelf(tx, entryId, changes.shelf);
+    if (changes.shelf !== undefined) await changeShelf(tx, entryId, changes.shelf, on);
     if (Object.keys(set).length > 0) {
       await tx.update(entries).set(set).where(eq(entries.id, entryId));
     }
   });
 }
 
-export function readAgainFor(entryId: string): Promise<void> {
-  return db.transaction((tx) => readAgain(tx, entryId));
+export function readAgainFor(entryId: string, on?: string): Promise<void> {
+  return db.transaction((tx) => readAgain(tx, entryId, on));
 }
 
 export type ReadDates = { startedOn: string | null; finishedOn: string | null };

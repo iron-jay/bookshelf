@@ -395,6 +395,10 @@ Note them in `IDEAS.md` and move on.
 A companion phone app is in scope as of 2026-10-13, shared with gameshelf. It
 talks to a JSON API under `app/api/v1` (README, "JSON API"), which calls the
 same `lib/` code the server actions do and adds no rules of its own.
+It works away from home and sends changes later (2026-10-29), so the API
+takes the day a change was made (`on`, for a shelf change or Read again)
+and an entry says when it last changed (`updatedAt`); `/meta` lists
+`dated-changes`.
 
 ### Reads
 
