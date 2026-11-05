@@ -1836,3 +1836,19 @@ The phone app now groups its wall as the web does, grouping included being
 the page's own business. Grouping by author orders by `author_sort`, which
 the card did not carry, so `GET /shelf` cards have `extra.authorSort`
 (README). Nothing else changes.
+
+## 2026-11-05 — Rating a book finishes it
+
+Jay: rating a book that is not finished should move it to Finished. Done in
+`updateEntry` (`finishOnRating`, `lib/books/entries.ts`), so the edition
+page, the API and the phone's queued changes all get it: a rating given on
+To read or Reading moves it to Finished by the usual read rules (an open read
+closes, else one is recorded), dated `on` when the phone sends one. Did not
+finish keeps its shelf, clearing a rating moves nothing, and a change that
+names a shelf as well (Finished it with its rating) goes where it says. The
+same in gameshelf, and the phone shows it at once when away.
+
+Checked against a local database: To read and Reading rated went to Finished
+with today's read (or the open read closed), `on: 2026-11-01` dated it then,
+Finished and Did not finish stayed put, a cleared rating and a rating with a
+shelf moved nothing extra. tsc and lint pass.

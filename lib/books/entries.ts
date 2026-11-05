@@ -7,6 +7,7 @@ import { slugify } from "@/lib/slug";
 
 import { dateFrom } from "./edit-fields";
 import { changeShelf, readAgain } from "./shelving";
+import type { Tx } from "./works";
 import { cleanTagName, ensureTag, tagEntries, untagEntries } from "./tags";
 
 /**
@@ -96,10 +97,29 @@ export async function updateEntry(entryId: string, changes: EntryChanges, on?: s
 
   await db.transaction(async (tx) => {
     if (changes.shelf !== undefined) await changeShelf(tx, entryId, changes.shelf, on);
+    else if (typeof changes.rating === "number") await finishOnRating(tx, entryId, on);
     if (Object.keys(set).length > 0) {
       await tx.update(entries).set(set).where(eq(entries.id, entryId));
     }
   });
+}
+
+/**
+ * Rating a book says you read it (Jay, 2026-11-05; Goodreads does the same),
+ * so a rating given on To read or Reading moves it to Finished by the usual
+ * read rules, dated `on`. Did not finish keeps its shelf: a book you gave up on
+ * can still be rated. Only when the rating comes alone: a change that names a
+ * shelf (Finished it with its rating, the phone's outbox) already says where
+ * it goes. Clearing a rating moves nothing.
+ */
+async function finishOnRating(tx: Tx, entryId: string, on?: string): Promise<void> {
+  const [current] = await tx
+    .select({ status: entries.status })
+    .from(entries)
+    .where(eq(entries.id, entryId));
+  if (current && (current.status === "tbr" || current.status === "reading")) {
+    await changeShelf(tx, entryId, "finished", on);
+  }
 }
 
 export function readAgainFor(entryId: string, on?: string): Promise<void> {
