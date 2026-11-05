@@ -411,6 +411,11 @@ the Goodreads export carries it, so reads stay visible — but minimal:
   never asked for up front.
 - Marking **reading** creates an open read started today, unless one is open.
 - Choosing the shelf an entry is already on does nothing (no second finish).
+- **Rating a book finishes it** (Jay, 2026-11-05, with gameshelf): a rating
+  given on To read or Reading, on the edition page or the phone, moves it to
+  Finished by the rule above (dated `on` from the phone). Did not finish keeps
+  its shelf, and clearing a rating moves nothing. `finishOnRating` in
+  `lib/books/entries.ts`.
 - **Did not finish** and **to read** leave reads alone; an abandoned read stays
   open, which is what did-not-finish means.
 - "Read again" adds a new read. No page counts, no percentages, no hours.
