@@ -23,7 +23,8 @@ export const GET = publicRoute(async () =>
     // its removal summaries. "edit-details": the edit pages' fields
     // (`/works/{slug}/details`, `/editions/{id}/details`) and the cover pages
     // (`/covers/{work|edition}/{id}`). "add-by-hand": the by-hand form
-    // (`GET /editions/new`, `POST /editions`).
-    features: ["reads", "series", "isbn", "dated-changes", "series-pages", "page-controls", "edit-details", "add-by-hand"],
+    // (`GET /editions/new`, `POST /editions`). "bulk": the wall's select
+    // mode (`POST /entries/bulk`).
+    features: ["reads", "series", "isbn", "dated-changes", "series-pages", "page-controls", "edit-details", "add-by-hand", "bulk"],
   }),
 );

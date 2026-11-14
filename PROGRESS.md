@@ -1934,3 +1934,12 @@ and "Add edition" (Door B). What the form's action did is now
 Checked against a local database: a new book (Worm, Parahumans #1) and a
 German audiobook edition of Mort through the API, refusals in the form's
 words, and both add pages still render. tsc and `check:actions` pass.
+
+## 2026-11-14 — The wall's select mode in the API
+
+The phone's fifth batch. The select mode's rules (move to a shelf, add or
+remove a tag, put in a series) moved from `bulk-actions.ts` into
+`lib/books/bulk.ts`; the actions call it, and so does the new `POST
+/entries/bulk` (`do`: `shelf`, `tag`, `untag`, `series`). /meta lists
+`bulk`. Checked through the API: tag and untag two books, an empty series
+and an empty selection refused in the page's words.
