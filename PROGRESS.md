@@ -1852,3 +1852,24 @@ Checked against a local database: To read and Reading rated went to Finished
 with today's read (or the open read closed), `on: 2026-11-01` dated it then,
 Finished and Did not finish stayed put, a cleared rating and a rating with a
 shelf moved nothing extra. tsc and lint pass.
+
+## 2026-11-14 — Series and collections in the API, for the phone
+
+Jay wants the phone app to match the web's phone pages one to one. The
+phone's first batch is series: the Series strip, the series page and the
+collection page. The API gains what those pages do:
+
+- `GET /series`: the strip's tiles (`seriesOnShelf`, as the overview), and
+  every series and collection name for the boxes to suggest.
+- `GET /series/{slug}` now carries `finished`, `issueCount` and `comicRun`,
+  and counts an old comic run once, as the page does.
+- `PATCH /series/{slug}` (`name`, `collection`), `DELETE /series/{slug}`, and
+  `DELETE /series/{slug}/works/{workSlug}`, over the same `lib/books/series.ts`
+  the page's actions use.
+- `GET /collections/{slug}`: the collection page's query moved to
+  `collectionDetail` in `lib/books/read.ts`, which the page now uses too.
+- /meta lists `series-pages`.
+
+Checked against a local database: the strip, rename and collection by PATCH,
+take out, remove (404 after), and the web's collection page still renders
+from the moved query. tsc, lint and `check:actions` pass.
