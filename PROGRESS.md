@@ -1898,3 +1898,26 @@ Checked against a local database: a taken number then "shift" and "keep",
 the format switch, the removal summaries (a dependent audiobook edition
 listed), deleting just an edition and the edition and work pages still
 rendering. tsc, lint and `check:actions` pass.
+
+## 2026-11-14 — Edit details and covers in the API
+
+The phone's third batch is the edit pages and the cover pages. Their rules
+moved into `lib/` so the actions and the API share them:
+
+- `lib/books/edit-details.ts`: `saveWorkDetails` and `saveEditionDetails`
+  (the edition only by someone holding it, both or neither saved), the form's
+  values as strings, and `editionEditForm`. The edit pages' actions now call
+  these. The Kind select's words moved to `EDITION_KIND_OPTIONS` in
+  `edition-facts.ts`.
+- `lib/books/cover-changes.ts`: upload, an address, a candidate (the address
+  built here from source and id, as before), look up again, remove, approve.
+  `cover-actions.ts` reads the form and redirects, nothing more.
+- API: `GET`/`PUT /works/{slug}/details`, `GET`/`PUT /editions/{id}/details`,
+  `GET`/`POST /covers/{work|edition}/{id}` (JSON `do`, or multipart `cover`)
+  and `GET …/candidates` (`?q=` searches). JSON values go through the same
+  readers as the form, by way of a FormData. /meta lists `edit-details`.
+
+Checked against a local database: a bad year and a bad ISBN check digit
+refused in the page's words, both forms saved, a candidate applied, an
+upload (and a too-small image refused), and the four web pages still
+render. tsc, lint and `check:actions` pass.

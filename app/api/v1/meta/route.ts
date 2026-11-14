@@ -20,7 +20,9 @@ export const GET = publicRoute(async () =>
     // "series-pages": GET /series, PATCH and DELETE on a series, taking a book
     // out, and GET /collections/{slug}. "page-controls": PATCH /works/{slug}
     // (series, collection), PATCH /editions/{id} (format), and Delete with
-    // its removal summaries.
-    features: ["reads", "series", "isbn", "dated-changes", "series-pages", "page-controls"],
+    // its removal summaries. "edit-details": the edit pages' fields
+    // (`/works/{slug}/details`, `/editions/{id}/details`) and the cover pages
+    // (`/covers/{work|edition}/{id}`).
+    features: ["reads", "series", "isbn", "dated-changes", "series-pages", "page-controls", "edit-details"],
   }),
 );
