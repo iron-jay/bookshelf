@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
-import { readWorkFields } from "@/lib/books/edit-fields";
+import { saveWorkDetails as save } from "@/lib/books/edit-details";
 import { db } from "@/lib/db";
 import { works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
@@ -17,12 +17,9 @@ export async function saveWorkDetails(_prev: EditState, formData: FormData): Pro
   await requireUser();
   const workId = formData.get("workId");
   if (typeof workId !== "string" || !isUuid(workId)) return { error: "That book is no longer here." };
-  const [work] = await db.select({ id: works.id, slug: works.slug }).from(works).where(eq(works.id, workId));
-  if (!work) return { error: "That book is no longer here." };
-
-  const fields = readWorkFields(formData);
-  if (!fields.ok) return { error: fields.error };
-  await db.update(works).set(fields.set).where(eq(works.id, work.id));
+  const result = await save(workId, formData);
+  if (!result.ok) return { error: result.error };
+  const [work] = await db.select({ slug: works.slug }).from(works).where(eq(works.id, workId));
 
   revalidatePath("/", "layout");
   // Encoded: a slug can be Japanese, and a Location header cannot.

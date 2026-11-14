@@ -1,5 +1,15 @@
 import { languageName } from "@/lib/languages";
 
+/** The edit page's Kind select, in its words. */
+export const EDITION_KIND_OPTIONS: readonly { value: string; label: string }[] = [
+  { value: "original", label: "Edition" },
+  { value: "translation", label: "Official translation" },
+  { value: "revised", label: "Revised text" },
+  { value: "abridged", label: "Abridged" },
+  { value: "annotated", label: "Annotated" },
+  { value: "other", label: "Other" },
+];
+
 /** What an edition's kind is called on screen; an original or "other" goes unsaid. */
 export const KIND_LABELS: Readonly<Record<string, string | null>> = {
   original: null,

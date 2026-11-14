@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import Link from "next/link";
 
+import { EDITION_KIND_OPTIONS } from "@/lib/books/edition-facts";
 import { languageOptions } from "@/lib/languages";
 
 /**
@@ -109,15 +110,6 @@ export function WorkFields({ work, heading }: { work: EditableWork; heading: str
   );
 }
 
-const KINDS: { value: string; label: string }[] = [
-  { value: "original", label: "Edition" },
-  { value: "translation", label: "Official translation" },
-  { value: "revised", label: "Revised text" },
-  { value: "abridged", label: "Abridged" },
-  { value: "annotated", label: "Annotated" },
-  { value: "other", label: "Other" },
-];
-
 export type EditableEdition = {
   name: string;
   kind: string;
@@ -154,7 +146,7 @@ export function EditionFields({
         </Field>
         <Field label="Kind" className="flex-1">
           <select name="kind" defaultValue={edition.kind} className={FIELD}>
-            {KINDS.map((k) => (
+            {EDITION_KIND_OPTIONS.map((k) => (
               <option key={k.value} value={k.value}>
                 {k.label}
               </option>
