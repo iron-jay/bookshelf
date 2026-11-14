@@ -1921,3 +1921,16 @@ Checked against a local database: a bad year and a bad ISBN check digit
 refused in the page's words, both forms saved, a candidate applied, an
 upload (and a too-small image refused), and the four web pages still
 render. tsc, lint and `check:actions` pass.
+
+## 2026-11-14 — Adding by hand in the API
+
+The phone's fourth batch is the by-hand form: "Create it manually" (Door A)
+and "Add edition" (Door B). What the form's action did is now
+`lib/books/add-by-hand.ts` (`addByHand`, with `byHandWork` and
+`byHandLanguages` for what the form offers), and the action calls it. API:
+`GET /editions/new` (`?work=` for Door B) and `POST /editions`. /meta lists
+`add-by-hand`.
+
+Checked against a local database: a new book (Worm, Parahumans #1) and a
+German audiobook edition of Mort through the API, refusals in the form's
+words, and both add pages still render. tsc and `check:actions` pass.
