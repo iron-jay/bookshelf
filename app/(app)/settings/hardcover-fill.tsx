@@ -5,8 +5,10 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { fillFromHardcoverBatch, listHardcoverCandidates, type FillOutcome } from "./hardcover-actions";
-import { COVER_CHUNK } from "./import-limits";
+import type { FillOutcome } from "@/lib/books/settings-runs";
+
+import { fillFromHardcoverBatch, listHardcoverCandidates } from "./hardcover-actions";
+import { COVER_CHUNK } from "@/lib/import-limits";
 
 const BUTTON =
   "w-fit btn";

@@ -85,6 +85,16 @@ curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
 | `POST /api/v1/auth/token` | Username and password in, `{ token, user }` out |
 | `DELETE /api/v1/auth/token` | Signs the calling device out |
 | `GET /api/v1/me` | The signed-in user |
+| `PATCH /api/v1/me` | Settings → Account: `{ username, displayName }`. A refusal is `invalid` in the page's words |
+| `POST /api/v1/me/password` | Settings → Password: `{ currentPassword, newPassword, confirmPassword }`. Signs every other device out; this one stays |
+| `GET /api/v1/devices` | Signed-in devices: `{ authDisabled, items }`, each `{ id, label, createdAt, lastUsedAt, current }` |
+| `DELETE /api/v1/devices/{id}` | Signs that device out |
+| `GET /api/v1/settings` | What Settings shows: `{ hardcoverOn, hardcoverPending, offShelf, entries, flaggedCovers, placeholders, unmatched }` |
+| `GET`/`POST /api/v1/settings/missing-covers` | Find missing covers, as the page runs it: GET lists `{ items, chunk }`; POST `{ editionIds }` (a chunk at a time) answers `{ outcomes }` |
+| `GET`/`POST /api/v1/settings/hardcover` | Fill in from Hardcover: GET `{ enabled, items, chunk }`; POST `{ workIds }` answers `{ outcomes }` |
+| `GET /api/v1/art` | Covers to review (`/art`): `{ items }`, each `kind` and `id` for `/covers/{kind}/{id}` |
+| `GET /api/v1/off-shelf` | Books not on your shelf: `{ items }`; `editionId` set when one press can shelve it |
+| `POST /api/v1/off-shelf/{workId}` | `{ shelf }` puts its one edition there. `{ editionId }`; with more than one edition, `invalid` |
 | `GET /api/v1/shelf` | Shelf cards. `shelf`, `tag` (slug), `sort` (`added`, `title`, `author`, `rated`, `finished`), `limit` (1–500, default 100), `offset`, and `runs=fold` to stack each comic run read to the end into one card (its `run` is `{ seriesSlug, issueCount }`; every other card's is null; not with `tag`). Returns `{ total, limit, offset, items }`. Grouping is the phone's own: a card carries what the web groups by, `extra.authorSort` included |
 | `GET /api/v1/tags` | Your tags with how many entries carry each |
 | `GET /api/v1/search?q=` | This server, Open Library and Hardcover merged as on the search page; an ISBN answers with the one edition (`isbn.remote` carries `olWorkKey`, `olEditionKey`, `format` and `isbn`, ready for `POST /entries`). `catalogueError` says why remote results are missing |

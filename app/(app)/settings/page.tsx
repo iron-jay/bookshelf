@@ -1,13 +1,8 @@
-import { and, asc, count, countDistinct, eq, isNotNull, isNull } from "drizzle-orm";
 import Link from "next/link";
 
 import { authDisabled, requireUser } from "@/lib/auth";
 import { listDeviceSessions } from "@/lib/auth/session";
-import { db } from "@/lib/db";
-import { editions, entries, entryCards, works } from "@/lib/db/schema";
-
-import { offShelfBooks } from "@/lib/books/off-shelf";
-import { hardcoverEnabled } from "@/lib/hardcover";
+import { settingsSummary } from "@/lib/books/settings-summary";
 
 import { revokeDevice } from "./actions";
 import { AccountForm } from "./account-form";
@@ -26,53 +21,7 @@ export const metadata: Metadata = { title: "Settings" };
 export default async function SettingsPage() {
   const user = await requireUser();
   const devices = await listDeviceSessions(user.id);
-  const hardcoverOn = hardcoverEnabled();
-  const [hardcoverPending] = hardcoverOn
-    ? await db
-        .select({ n: countDistinct(works.id) })
-        .from(entries)
-        .innerJoin(editions, eq(editions.id, entries.editionId))
-        .innerJoin(works, eq(works.id, editions.workId))
-        .where(and(eq(entries.userId, user.id), eq(works.source, "local"), isNull(works.hardcoverId)))
-    : [{ n: 0 }];
-
-  const offShelf = (await offShelfBooks(user.id)).length;
-  const [entryTotal] = await db.select({ n: count() }).from(entries).where(eq(entries.userId, user.id));
-  // entry_cards already says whether the cover on screen for each entry is
-  // flagged, whichever row it belongs to.
-  const [flagged] = await db
-    .select({ n: count() })
-    .from(entryCards)
-    .where(and(eq(entryCards.userId, user.id), eq(entryCards.coverNeedsReview, true)));
-  const flaggedCovers = flagged.n;
-  const [placeholders] = await db
-    .select({ n: count() })
-    .from(entryCards)
-    .where(
-      and(eq(entryCards.userId, user.id), isNull(entryCards.coverUrl)),
-    );
-
-  // Goodreads rows that matched nothing became local works (§5). Read from the
-  // data rather than kept from the run, so the list survives a closed tab or
-  // a restart: an edition with a Goodreads id whose work is local is one.
-  const unmatched = await db
-    .select({ editionId: editions.id, title: works.title, slug: works.slug, authors: works.authors })
-    .from(entries)
-    .innerJoin(editions, eq(editions.id, entries.editionId))
-    .innerJoin(works, eq(works.id, editions.workId))
-    .where(
-      and(
-        eq(entries.userId, user.id),
-        isNotNull(editions.goodreadsBookId),
-        eq(works.source, "local"),
-        // Found by ISBN but given a work of its own (Open Library's was a
-        // catch-all): matched, so not listed.
-        isNull(editions.olEditionKey),
-        // Filled in from Hardcover: matched there, so not listed either.
-        isNull(works.hardcoverId),
-      ),
-    )
-    .orderBy(asc(works.title));
+  const { hardcoverOn, hardcoverPending, offShelf, entries: entryCount, flaggedCovers, placeholders, unmatched } = await settingsSummary(user.id);
 
   return (
     <main className="flex-1 px-4 py-6 sm:px-10">
@@ -157,11 +106,11 @@ export default async function SettingsPage() {
           {hardcoverOn ? (
             <>
               <h3 className="mt-6 font-medium">From Hardcover</h3>
-              <HardcoverFill pending={hardcoverPending.n} />
+              <HardcoverFill pending={hardcoverPending} />
               <h3 className="mt-6 font-medium">Missing covers</h3>
             </>
           ) : null}
-          <MissingCovers missing={placeholders.n} />
+          <MissingCovers missing={placeholders} />
         </section>
 
         <section>
@@ -220,7 +169,7 @@ export default async function SettingsPage() {
         <section>
           <h2 className="mb-1 font-display text-xl">Export and restore</h2>
           <p className="mb-3 font-narrow text-ink-dim">
-            {entryTotal.n} {entryTotal.n === 1 ? "entry" : "entries"}. Plain downloads you could curl
+            {entryCount} {entryCount === 1 ? "entry" : "entries"}. Plain downloads you could curl
             too. Open Library’s raw data is left out: it is theirs and can be fetched again.
           </p>
           {/* Route handlers returning attachments: next/link would navigate

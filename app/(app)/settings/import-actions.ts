@@ -9,7 +9,7 @@ import { restoreRow } from "@/lib/import/restore-run";
 import { importGoodreadsRow, type RowOutcome } from "@/lib/import/run";
 import { isShelf } from "@/lib/shelves";
 
-import { IMPORT_CHUNK } from "./import-limits";
+import { IMPORT_CHUNK } from "@/lib/import-limits";
 
 export type ParseState<R = GoodreadsRow> =
   | { ok: true; rows: R[]; skipped: { line: number; reason: string }[] }

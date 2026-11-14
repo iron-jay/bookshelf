@@ -24,7 +24,8 @@ export const GET = publicRoute(async () =>
     // (`/works/{slug}/details`, `/editions/{id}/details`) and the cover pages
     // (`/covers/{work|edition}/{id}`). "add-by-hand": the by-hand form
     // (`GET /editions/new`, `POST /editions`). "bulk": the wall's select
-    // mode (`POST /entries/bulk`).
-    features: ["reads", "series", "isbn", "dated-changes", "series-pages", "page-controls", "edit-details", "add-by-hand", "bulk"],
+    // mode (`POST /entries/bulk`). "settings": Settings' own
+    // screens (`/settings`, `/me`, `/devices`, `/art`, `/off-shelf`).
+    features: ["reads", "series", "isbn", "dated-changes", "series-pages", "page-controls", "edit-details", "add-by-hand", "bulk", "settings"],
   }),
 );

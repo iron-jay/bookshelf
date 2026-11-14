@@ -5,8 +5,10 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { COVER_CHUNK } from "./import-limits";
-import { findMissingCoversBatch, listMissingCovers, type MissingCoverOutcome } from "./missing-cover-actions";
+import { COVER_CHUNK } from "@/lib/import-limits";
+import type { MissingCoverOutcome } from "@/lib/books/settings-runs";
+
+import { findMissingCoversBatch, listMissingCovers } from "./missing-cover-actions";
 
 const BUTTON =
   "w-fit btn";

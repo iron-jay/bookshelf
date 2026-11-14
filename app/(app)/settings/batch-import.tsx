@@ -9,7 +9,7 @@ import { SHELF_LABELS, SHELVES, type Shelf } from "@/lib/shelves";
 
 import { FilePicker } from "../file-picker";
 import type { ParseState } from "./import-actions";
-import { IMPORT_CHUNK } from "./import-limits";
+import { IMPORT_CHUNK } from "@/lib/import-limits";
 
 const BUTTON =
   "w-fit btn";
