@@ -22,7 +22,8 @@ export const GET = publicRoute(async () =>
     // (series, collection), PATCH /editions/{id} (format), and Delete with
     // its removal summaries. "edit-details": the edit pages' fields
     // (`/works/{slug}/details`, `/editions/{id}/details`) and the cover pages
-    // (`/covers/{work|edition}/{id}`).
-    features: ["reads", "series", "isbn", "dated-changes", "series-pages", "page-controls", "edit-details"],
+    // (`/covers/{work|edition}/{id}`). "add-by-hand": the by-hand form
+    // (`GET /editions/new`, `POST /editions`).
+    features: ["reads", "series", "isbn", "dated-changes", "series-pages", "page-controls", "edit-details", "add-by-hand"],
   }),
 );
