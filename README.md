@@ -99,7 +99,12 @@ curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
 | `GET /api/v1/goodreads` | `extract`: the bookmarklet's function as source text, for the phone to run on a Goodreads page in its own web view. This server never fetches Goodreads |
 | `POST /api/v1/goodreads/preview` | `{ book }` as `extract` read it: `kind` `linked` (an edition of yours has its Goodreads id) or `shelved` (has its ISBN), with `editionId`, `title` and `canFill`; or `add`, with `match`, `title` when the book is here already, else `details` to edit. Reads only |
 | `POST /api/v1/goodreads/fill` | `{ book, editionId? }`: fills only empty fields of that book from the page, as the web's Apply does (without `editionId`, the edition with its Goodreads id). Answers `filled` |
-| `GET /api/v1/series/{slug}` | A series: its works in reading order, your entries on each, and its collection |
+| `GET /api/v1/series` | `items`: the series your shelf touches (`slug`, `name`, `books`, `finished`, first book's `title`, `authors`, `coverUrl`), for the Series strip; `names` and `collections`: every series and collection name here |
+| `GET /api/v1/series/{slug}` | A series: its works in reading order, your entries on each, its collection, `finished`, `issueCount` and `comicRun` |
+| `PATCH /api/v1/series/{slug}` | `{ name?, collection? }`: rename (a name already here joins the two; two Comic Vine runs never join, `invalid`), and the collection for every book in it (`""` takes them out). Returns the series |
+| `DELETE /api/v1/series/{slug}` | Removes the series; its books, entries and reads stay, and keep its collection. 204 |
+| `DELETE /api/v1/series/{slug}/works/{workSlug}` | Takes one book out. Returns `{ series }`, null once the last is out |
+| `GET /api/v1/collections/{slug}` | A collection: `series` (in the order they began, each with its `works` in order) and `works` with no series, your entries on each, `books`, `finished` |
 | `POST /api/v1/series/{slug}/read` | The whole series read: `{ finishedOn? }` (default today). Every book not yet finished goes to Finished on that day; one not on your shelf goes on it. Returns `{ finished, alreadyFinished, series }` |
 | `GET /api/v1/entries/{id}` | One entry: its card plus review, flags, tags, reads and `updatedAt` (when the entry itself last changed) |
 | `PATCH /api/v1/entries/{id}` | Any of `shelf`, `rating` (1–10 or null), `review`, `reviewHasSpoilers`, `isFavourite`, `isPrivate`. A rating sent without a shelf moves To read or Reading to Finished (Did not finish stays). A shelf change follows the read rules, dated `on?` (`YYYY-MM-DD`, default today): the phone sends the day it made a change it could only send later |

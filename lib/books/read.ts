@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { collections, editions, entries, entryCards, entryTags, series, tags, works } from "@/lib/db/schema";
@@ -187,11 +187,101 @@ export async function seriesDetail(userId: string, slug: string) {
     slug: found.slug,
     name: found.name,
     collection: inCollection ?? null,
+    /** Comic Vine's count of issues in the run, for "3 of 12 issues here"; null for a series of books. */
+    issueCount: found.issueCount,
+    /** A Comic Vine run: its numbers are the issues' own, so a taken number is never asked about. */
+    comicRun: found.comicvineVolumeId !== null,
+    /** Books, not entries: the paperback and the audiobook are one finished book. */
+    finished: new Set(mine.filter((m) => m.shelf === "finished").map((m) => m.workId)).size,
     works: members.map((work) => ({
       ...work,
       entries: mine
         .filter((m) => m.workId === work.id)
         .map((m) => ({ entryId: m.entryId, editionId: m.editionId, editionName: m.editionName, shelf: m.shelf, rating: m.rating })),
     })),
+  };
+}
+
+type EntryOnWork = { entryId: string; editionId: string; editionName: string; shelf: string; rating: number | null };
+
+/**
+ * A collection: its series, each in reading order, in the order they began
+ * (their earliest book's year), then its books with no series, by year. Your
+ * entries on each, as on a series page. The collection page and the phone's.
+ */
+export async function collectionDetail(userId: string, slug: string) {
+  const [found] = await db.select().from(collections).where(eq(collections.slug, slug));
+  if (!found) return null;
+
+  const seriesHere = await db
+    .select({ id: series.id, name: series.name, slug: series.slug })
+    .from(series)
+    .where(eq(series.collectionId, found.id));
+
+  // A work is in the collection through its series, or — with no series —
+  // directly. A work in some other series keeps that series' collection.
+  const members = await db
+    .select({
+      id: works.id,
+      slug: works.slug,
+      title: works.title,
+      authors: works.authors,
+      position: works.seriesPosition,
+      year: works.firstPublishedYear,
+      coverUrl: works.coverUrl,
+      seriesId: works.seriesId,
+    })
+    .from(works)
+    .where(
+      or(
+        seriesHere.length ? inArray(works.seriesId, seriesHere.map((s) => s.id)) : sql`false`,
+        and(isNull(works.seriesId), eq(works.collectionId, found.id)),
+      ),
+    )
+    .orderBy(sql`${works.seriesPosition} asc nulls last`, sql`${works.firstPublishedYear} asc nulls last`, asc(works.title));
+
+  const mine = members.length
+    ? await db
+        .select({
+          workId: editions.workId,
+          entryId: entries.id,
+          editionId: editions.id,
+          editionName: editions.name,
+          shelf: entries.status,
+          rating: entries.rating,
+        })
+        .from(entries)
+        .innerJoin(editions, eq(editions.id, entries.editionId))
+        .where(and(eq(entries.userId, userId), inArray(editions.workId, members.map((m) => m.id))))
+    : [];
+
+  const withEntries = (work: (typeof members)[number]) => ({
+    id: work.id,
+    slug: work.slug,
+    title: work.title,
+    authors: work.authors,
+    position: work.position,
+    year: work.year,
+    coverUrl: work.coverUrl,
+    entries: mine
+      .filter((m) => m.workId === work.id)
+      .map((m): EntryOnWork => ({ entryId: m.entryId, editionId: m.editionId, editionName: m.editionName, shelf: m.shelf, rating: m.rating })),
+  });
+
+  const began = (seriesId: string) =>
+    Math.min(...members.filter((m) => m.seriesId === seriesId).map((m) => m.year ?? Number.POSITIVE_INFINITY));
+  const orderedSeries = [...seriesHere].sort((a, b) => began(a.id) - began(b.id) || a.name.localeCompare(b.name));
+  const onTheirOwn = members
+    .filter((m) => m.seriesId === null)
+    .sort((a, b) => (a.year ?? Number.POSITIVE_INFINITY) - (b.year ?? Number.POSITIVE_INFINITY) || a.title.localeCompare(b.title));
+
+  return {
+    id: found.id,
+    slug: found.slug,
+    name: found.name,
+    books: members.length,
+    finished: new Set(mine.filter((m) => m.shelf === "finished").map((m) => m.workId)).size,
+    series: orderedSeries.map((s) => ({ ...s, works: members.filter((m) => m.seriesId === s.id).map(withEntries) })),
+    works: onTheirOwn.map(withEntries),
   };
 }

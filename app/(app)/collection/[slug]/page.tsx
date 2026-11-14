@@ -1,11 +1,9 @@
-import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { collections, editions, entries, series, works } from "@/lib/db/schema";
-import { SHELF_LABELS } from "@/lib/shelves";
+import { collectionDetail } from "@/lib/books/read";
+import { SHELF_LABELS, type Shelf } from "@/lib/shelves";
 
 import { BackToShelf } from "../../cover-page";
 import { Cover } from "../../cover";
@@ -13,17 +11,6 @@ import type { Metadata } from "next";
 import { collectionTitle } from "../../page-titles";
 
 export const dynamic = "force-dynamic";
-
-type Member = {
-  id: string;
-  slug: string;
-  title: string;
-  authors: string[];
-  position: number | null;
-  year: number | null;
-  coverUrl: string | null;
-  seriesId: string | null;
-};
 
 /**
  * A collection: its series, each in reading order, then the books in it on
@@ -40,61 +27,17 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
   const user = await requireUser();
   const { slug } = await params;
 
-  const [found] = await db
-    .select()
-    .from(collections)
-    .where(eq(collections.slug, decodeURIComponent(slug)));
+  const found = await collectionDetail(user.id, decodeURIComponent(slug));
   if (!found) notFound();
-
-  const seriesHere = await db
-    .select({ id: series.id, name: series.name, slug: series.slug })
-    .from(series)
-    .where(eq(series.collectionId, found.id));
-
-  // A work is in the collection through its series, or — with no series —
-  // directly. A work in some other series keeps that series' collection.
-  const members: Member[] = await db
-    .select({
-      id: works.id,
-      slug: works.slug,
-      title: works.title,
-      authors: works.authors,
-      position: works.seriesPosition,
-      year: works.firstPublishedYear,
-      coverUrl: works.coverUrl,
-      seriesId: works.seriesId,
-    })
-    .from(works)
-    .where(
-      or(
-        seriesHere.length ? inArray(works.seriesId, seriesHere.map((s) => s.id)) : sql`false`,
-        and(isNull(works.seriesId), eq(works.collectionId, found.id)),
-      ),
-    )
-    .orderBy(sql`${works.seriesPosition} asc nulls last`, sql`${works.firstPublishedYear} asc nulls last`, asc(works.title));
-
-  const mine = members.length
-    ? await db
-        .select({ workId: editions.workId, editionId: editions.id, editionName: editions.name, status: entries.status })
-        .from(entries)
-        .innerJoin(editions, eq(editions.id, entries.editionId))
-        .where(and(eq(entries.userId, user.id), inArray(editions.workId, members.map((m) => m.id))))
-    : [];
-
-  const began = (seriesId: string) =>
-    Math.min(...members.filter((m) => m.seriesId === seriesId).map((m) => m.year ?? Number.POSITIVE_INFINITY));
-  const orderedSeries = [...seriesHere].sort((a, b) => began(a.id) - began(b.id) || a.name.localeCompare(b.name));
-  const onTheirOwn = members
-    .filter((m) => m.seriesId === null)
-    .sort((a, b) => (a.year ?? Number.POSITIVE_INFINITY) - (b.year ?? Number.POSITIVE_INFINITY) || a.title.localeCompare(b.title));
-
-  const finished = new Set(mine.filter((m) => m.status === "finished").map((m) => m.workId)).size;
+  const { series: orderedSeries, works: onTheirOwn, finished } = found;
+  const memberCount = found.books;
+  type Member = (typeof onTheirOwn)[number];
 
   function rows(list: Member[], numbered: boolean) {
     return (
       <ol className="flex flex-col">
         {list.map((work) => {
-          const entriesHere = mine.filter((m) => m.workId === work.id);
+          const entriesHere = work.entries;
           return (
             <li key={work.id} className="flex items-center gap-4 border-b border-line py-2">
               <span className="w-10 shrink-0 text-right font-narrow text-ink-dim">
@@ -116,7 +59,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
                         <span key={e.editionId}>
                           {i > 0 ? ", " : null}
                           <Link href={`/edition/${e.editionId}`} className="hover:text-ink">
-                            {SHELF_LABELS[e.status]}
+                            {SHELF_LABELS[e.shelf as Shelf]}
                             {entriesHere.length > 1 ? ` (${e.editionName})` : ""}
                           </Link>
                         </span>
@@ -135,14 +78,14 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
       <BackToShelf />
       <h1 className="font-display text-3xl">{found.name}</h1>
       <p className="mb-6 font-narrow text-ink-dim">
-        {members.length} {members.length === 1 ? "book" : "books"}
+        {memberCount} {memberCount === 1 ? "book" : "books"}
         {orderedSeries.length > 0
           ? ` · ${orderedSeries.length} ${orderedSeries.length === 1 ? "series" : "series"}`
           : ""}
         {finished > 0 ? ` · ${finished} finished` : ""}
       </p>
 
-      {members.length === 0 ? (
+      {memberCount === 0 ? (
         <p className="font-narrow text-ink-dim">
           Nothing is in this collection now. A series joins it from its own page, a book from its work page.
         </p>
@@ -155,10 +98,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
                   {s.name}
                 </Link>
               </h2>
-              {rows(
-                members.filter((m) => m.seriesId === s.id),
-                true,
-              )}
+              {rows(s.works, true)}
             </section>
           ))}
           {onTheirOwn.length > 0 ? (

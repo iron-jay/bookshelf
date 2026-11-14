@@ -17,6 +17,8 @@ export const GET = publicRoute(async () =>
     shelves: SHELVES.map((key) => ({ key, label: SHELF_LABELS[key] })),
     // "dated-changes": PATCH /entries and Read again take the day a change was
     // made (`on`), and entries carry `updatedAt`, for changes the phone queued.
-    features: ["reads", "series", "isbn", "dated-changes"],
+    // "series-pages": GET /series, PATCH and DELETE on a series, taking a book
+    // out, and GET /collections/{slug}.
+    features: ["reads", "series", "isbn", "dated-changes", "series-pages"],
   }),
 );
