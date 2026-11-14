@@ -88,8 +88,14 @@ curl -H "authorization: Bearer $TOKEN" http://localhost:3000/api/v1/me
 | `GET /api/v1/shelf` | Shelf cards. `shelf`, `tag` (slug), `sort` (`added`, `title`, `author`, `rated`, `finished`), `limit` (1–500, default 100), `offset`, and `runs=fold` to stack each comic run read to the end into one card (its `run` is `{ seriesSlug, issueCount }`; every other card's is null; not with `tag`). Returns `{ total, limit, offset, items }`. Grouping is the phone's own: a card carries what the web groups by, `extra.authorSort` included |
 | `GET /api/v1/tags` | Your tags with how many entries carry each |
 | `GET /api/v1/search?q=` | This server, Open Library and Hardcover merged as on the search page; an ISBN answers with the one edition (`isbn.remote` carries `olWorkKey`, `olEditionKey`, `format` and `isbn`, ready for `POST /entries`). `catalogueError` says why remote results are missing |
-| `GET /api/v1/works/{slug}` | A work, its editions (with your entry on each), series and collection |
-| `GET /api/v1/editions/{id}` | An edition, its work, and your entry id if shelved |
+| `GET /api/v1/works/{slug}` | A work, its editions (with your entry on each, `kindLabel` and `languageName` in the page's words), series and collection, `olWorkKey`, `hardcoverId`, `comicVinePage` |
+| `PATCH /api/v1/works/{slug}` | `{ series?: { name, position, taken? }, collection? }`, the book page's boxes (`""` takes it out; a book in a series sets the series' collection). A number another book has is answered `{ taken: { title, series, position }, work: null }` without saving; send again with `taken: "shift"` or `"keep"`. Otherwise `{ taken: null, work }` |
+| `GET /api/v1/works/{slug}/removal` | What deleting the book would take: `{ work: { editionCount, entryCount, readCount, dependentEditions } }` |
+| `DELETE /api/v1/works/{slug}` | Deletes the book, its editions, and every entry and read on them. 204 |
+| `GET /api/v1/editions/{id}` | An edition, its work, your entry id if shelved, `facts` (the edition page's list: `label`, `text`, and `mono`, `editionId` or `href` where it applies) and `editionCount` |
+| `PATCH /api/v1/editions/{id}` | `{ format }`: `book` or `audiobook`. Only with it on your shelf (`forbidden` otherwise). Returns the edition |
+| `GET /api/v1/editions/{id}/removal` | What Delete would take: `work` (the whole book) and `edition` (just this one; null when it is the only edition) |
+| `DELETE /api/v1/editions/{id}` | `scope=work` (default) deletes the book, `scope=edition` only this edition (a last edition takes the book). Returns `{ deleted: "work" }` or `{ deleted: "edition", workSlug }` |
 | `GET /api/v1/catalogue/openlibrary/{olWorkKey}` | An Open Library work and its editions (newest first, each with `format`, language, ISBN, and your `editionId` if shelved), to pick one before adding. `details` (`title`, `subtitle`, `authors`, `authorSort`, `firstPublishedYear`, `summary`, `series`) are what a work not here yet would be saved with, to edit first; null when it is here (`workSlug`) |
 | `GET /api/v1/catalogue/hardcover/{id}` | A Hardcover book's `details` to edit before adding (null when it is here, `here: true`), and `coverUrl` |
 | `GET /api/v1/catalogue/comics/issues/{id}` | The same for one Comic Vine issue; a run's `details` leave out `series`, which is its volume's |

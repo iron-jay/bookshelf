@@ -1,8 +1,10 @@
-import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { collections, editions, entries, entryCards, entryTags, series, tags, works } from "@/lib/db/schema";
 
+import { KIND_LABELS, editionFacts } from "./edition-facts";
+import { languageName } from "@/lib/languages";
 import { readsOf } from "./entries";
 import type { ShelfRow } from "./shelf";
 
@@ -68,6 +70,10 @@ const editionColumns = {
   credit: editions.credit,
   url: editions.url,
   coverUrl: editions.coverUrl,
+  baseEditionId: editions.baseEditionId,
+  olEditionKey: editions.olEditionKey,
+  goodreadsBookId: editions.goodreadsBookId,
+  coverNeedsReview: editions.coverNeedsReview,
 };
 
 /** An edition, the work it belongs to, and your entry for it if it is on your shelf. */
@@ -75,7 +81,7 @@ export async function editionDetail(userId: string, editionId: string) {
   const [row] = await db
     .select({
       edition: editionColumns,
-      work: { slug: works.slug, title: works.title, authors: works.authors, coverUrl: works.coverUrl },
+      work: { id: works.id, slug: works.slug, title: works.title, authors: works.authors, coverUrl: works.coverUrl },
       entryId: entries.id,
     })
     .from(editions)
@@ -84,10 +90,22 @@ export async function editionDetail(userId: string, editionId: string) {
     .where(eq(editions.id, editionId));
   if (!row) return null;
 
+  const [base] = row.edition.baseEditionId
+    ? await db
+        .select({ id: editions.id, name: editions.name })
+        .from(editions)
+        .where(eq(editions.id, row.edition.baseEditionId))
+    : [];
+  // How many editions the book has: a book's last edition only goes with the book.
+  const [{ total }] = await db.select({ total: count() }).from(editions).where(eq(editions.workId, row.work.id));
+
   return {
     ...row.edition,
     // The edition's own cover where it has one, else the work's, as the shelf shows it.
     coverUrl: row.edition.coverUrl ?? row.work.coverUrl,
+    /** The edition page's facts, in its order and words (lib/books/edition-facts.ts). */
+    facts: editionFacts(row.edition, base ?? null),
+    editionCount: total,
     work: { slug: row.work.slug, title: row.work.title, authors: row.work.authors },
     entryId: row.entryId,
   };
@@ -130,12 +148,19 @@ export async function workDetail(userId: string, slug: string) {
     summary: work.summary,
     firstPublishedYear: work.firstPublishedYear,
     coverUrl: work.coverUrl,
+    coverNeedsReview: work.coverNeedsReview,
     source: work.source,
+    olWorkKey: work.olWorkKey,
+    hardcoverId: work.hardcoverId,
+    /** Comic Vine asks for a link back wherever its data is shown: the issue's page, kept on its edition. */
+    comicVinePage: work.comicvineIssueId
+      ? (editionRows.find((r) => r.url?.startsWith("https://comicvine.gamespot.com/"))?.url ?? null)
+      : null,
     series: inSeries
       ? { name: inSeries.name, slug: inSeries.slug, position: work.seriesPosition }
       : null,
     collection: inCollection ?? null,
-    editions: editionRows,
+    editions: editionRows.map((e) => ({ ...e, kindLabel: KIND_LABELS[e.kind] ?? null, languageName: languageName(e.language) })),
   };
 }
 

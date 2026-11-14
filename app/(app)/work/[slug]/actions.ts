@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
-import { parsePosition, setWorkSeries, shiftUpFrom, takenNumber, type TakenNumber } from "@/lib/books/series";
+import { parsePosition, saveWorkSeries, type TakenNumber } from "@/lib/books/series";
 import { db } from "@/lib/db";
 import { works } from "@/lib/db/schema";
 import { isUuid } from "@/lib/uuid";
@@ -38,17 +38,9 @@ export async function saveSeries(_prev: SeriesState, formData: FormData): Promis
   // A number another book has is asked about first: move it and the books
   // after it up one, or keep both there (Jay, 2026-10-21).
   const choice = text(formData, "taken");
-  const result = await db.transaction(async (tx): Promise<TakenNumber | null> => {
-    if (name && position !== null && choice !== "keep") {
-      const taken = await takenNumber(tx, name, position, work.id);
-      if (taken && choice !== "shift") return taken;
-      await setWorkSeries(tx, work.id, name, position, user.id);
-      if (taken) await shiftUpFrom(tx, work.id, position);
-      return null;
-    }
-    await setWorkSeries(tx, work.id, name, name ? position : null, user.id);
-    return null;
-  });
+  const result = await db.transaction((tx) =>
+    saveWorkSeries(tx, work.id, name, position, choice === "shift" || choice === "keep" ? choice : null, user.id),
+  );
   if (result) return { error: null, saved: false, taken: result };
 
   revalidatePath(`/work/${work.slug}`);

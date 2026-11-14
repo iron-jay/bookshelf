@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { editions, entries, entryTags, reads, series, tags, works } from "@/lib/db/schema";
 import { SHELF_LABELS, SHELVES } from "@/lib/shelves";
 import { isUuid } from "@/lib/uuid";
-import { languageName } from "@/lib/languages";
+import { editionFacts } from "@/lib/books/edition-facts";
 
 import { Cover } from "../../cover";
 import { BackToShelf, ChangeCoverLink, SideLink } from "../../cover-page";
@@ -18,30 +18,6 @@ import type { Metadata } from "next";
 import { editionTitle } from "../../page-titles";
 
 export const dynamic = "force-dynamic";
-
-const KIND_LABELS: Readonly<Record<string, string | null>> = {
-  original: null,
-  translation: "Official translation",
-  revised: "Revised text",
-  abridged: "Abridged",
-  annotated: "Annotated",
-  other: null,
-};
-
-
-function lengthLabel(minutes: number | null): string | null {
-  if (!minutes) return null;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return [h ? `${h} h` : null, m ? `${m} min` : null].filter(Boolean).join(" ");
-}
-
-/** The label the credit gets depends on what the edition is (schema comment). */
-function creditLabel(kind: string, format: string): string {
-  if (kind === "translation") return "Translated by";
-  return format === "audiobook" ? "Read by" : "Credit";
-}
-
 
 /**
  * What you actually read: your shelf, rating out of ten, review and reads for
@@ -106,36 +82,27 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
   );
 
   const author = work.authors.join(", ") || null;
-  const facts: [string, React.ReactNode][] = (
-    [
-      ["Kind", KIND_LABELS[edition.kind]],
-      [creditLabel(edition.kind, edition.format), edition.credit],
-      ["Translated from", base ? <Link href={`/edition/${base.id}`} className="underline hover:text-ink">{base.name}</Link> : null],
-      ["Language", languageName(edition.language)],
-      ["Published", edition.publishedOn],
-      ["Pages", edition.pages],
-      ["Length", lengthLabel(edition.durationMinutes)],
-      ["ISBN", edition.isbn13 ? <span className="font-mono">{edition.isbn13}</span> : null],
-      ["Open Library", edition.olEditionKey ? <span className="font-mono">{edition.olEditionKey}</span> : null],
-      // For books no catalogue has: the Goodreads page the import came from is
-      // one click away, to copy its cover address into "paste an address".
-      // Opened in the person's own browser — nothing here fetches Goodreads.
-      [
-        "Goodreads",
-        edition.goodreadsBookId ? (
-          <a
-            href={`https://www.goodreads.com/book/show/${edition.goodreadsBookId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="underline hover:text-ink"
-          >
-            View on Goodreads
-          </a>
-        ) : null,
-      ],
-      ["Link", edition.url ? <a href={edition.url} rel="noreferrer" className="break-all underline hover:text-ink">{edition.url}</a> : null],
-    ] as [string, React.ReactNode][]
-  ).filter(([, value]) => value !== null && value !== undefined && value !== "");
+  const facts: [string, React.ReactNode][] = editionFacts(edition, base ?? null).map((fact) => [
+    fact.label,
+    fact.editionId ? (
+      <Link href={`/edition/${fact.editionId}`} className="underline hover:text-ink">
+        {fact.text}
+      </Link>
+    ) : fact.href ? (
+      <a
+        href={fact.href}
+        rel="noreferrer"
+        {...(fact.label === "Goodreads" ? { target: "_blank" } : {})}
+        className={fact.label === "Link" ? "break-all underline hover:text-ink" : "underline hover:text-ink"}
+      >
+        {fact.text}
+      </a>
+    ) : fact.mono ? (
+      <span className="font-mono">{fact.text}</span>
+    ) : (
+      fact.text
+    ),
+  ]);
 
   const coverUrl = edition.coverUrl ?? work.coverUrl;
 

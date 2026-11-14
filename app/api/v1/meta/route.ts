@@ -18,7 +18,9 @@ export const GET = publicRoute(async () =>
     // "dated-changes": PATCH /entries and Read again take the day a change was
     // made (`on`), and entries carry `updatedAt`, for changes the phone queued.
     // "series-pages": GET /series, PATCH and DELETE on a series, taking a book
-    // out, and GET /collections/{slug}.
-    features: ["reads", "series", "isbn", "dated-changes", "series-pages"],
+    // out, and GET /collections/{slug}. "page-controls": PATCH /works/{slug}
+    // (series, collection), PATCH /editions/{id} (format), and Delete with
+    // its removal summaries.
+    features: ["reads", "series", "isbn", "dated-changes", "series-pages", "page-controls"],
   }),
 );
