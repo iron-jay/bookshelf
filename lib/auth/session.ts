@@ -148,6 +148,11 @@ export async function readBearerToken(): Promise<string | undefined> {
   return match?.[1];
 }
 
+/** A session's stored id, for telling the device asking from the others in a list. */
+export function sessionIdOf(token: string): string {
+  return digest(token);
+}
+
 export type DeviceSession = {
   /** The stored digest. Safe to hand to the page: it cannot be turned back into a token. */
   id: string;

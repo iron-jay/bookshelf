@@ -1,25 +1,13 @@
-import { and, asc, eq, exists } from "drizzle-orm";
 import Link from "next/link";
 
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { editions, entries, works } from "@/lib/db/schema";
+import { flaggedCovers } from "@/lib/books/art-review";
 
 import { approveCover } from "../cover-actions";
 import { Cover } from "../cover";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
-
-type Flagged = {
-  kind: "work" | "edition";
-  id: string;
-  title: string;
-  subtitle: string;
-  authors: string[];
-  coverUrl: string | null;
-  href: string;
-};
 
 /**
  * Covers applied from a match that was not exact — today, Google Books by
@@ -31,55 +19,10 @@ export const metadata: Metadata = { title: "Cover art to review" };
 export default async function ArtPage() {
   const user = await requireUser();
 
-  const onMyShelf = (workOrEditionMatch: ReturnType<typeof eq>) =>
-    exists(
-      db
-        .select({ one: entries.id })
-        .from(entries)
-        .innerJoin(editions, eq(editions.id, entries.editionId))
-        .where(and(eq(entries.userId, user.id), workOrEditionMatch)),
-    );
-
-  const flaggedWorks = await db
-    .select({ id: works.id, slug: works.slug, title: works.title, authors: works.authors, coverUrl: works.coverUrl })
-    .from(works)
-    .where(and(eq(works.coverNeedsReview, true), onMyShelf(eq(editions.workId, works.id))))
-    .orderBy(asc(works.title));
-
-  const flaggedEditions = await db
-    .select({
-      id: editions.id,
-      name: editions.name,
-      title: works.title,
-      authors: works.authors,
-      coverUrl: editions.coverUrl,
-    })
-    .from(editions)
-    .innerJoin(works, eq(works.id, editions.workId))
-    .innerJoin(entries, and(eq(entries.editionId, editions.id), eq(entries.userId, user.id)))
-    .where(eq(editions.coverNeedsReview, true))
-    .orderBy(asc(works.title));
-
-  const flagged: Flagged[] = [
-    ...flaggedWorks.map((w) => ({
-      kind: "work" as const,
-      id: w.id,
-      title: w.title,
-      subtitle: "Work cover",
-      authors: w.authors,
-      coverUrl: w.coverUrl,
-      href: `/work/${w.slug}/cover?from=art`,
-    })),
-    ...flaggedEditions.map((e) => ({
-      kind: "edition" as const,
-      id: e.id,
-      title: e.title,
-      subtitle: e.name,
-      authors: e.authors,
-      coverUrl: e.coverUrl,
-      href: `/edition/${e.id}/cover?from=art`,
-    })),
-  ];
+  const flagged = (await flaggedCovers(user.id)).map((item) => ({
+    ...item,
+    href: item.kind === "work" ? `/work/${item.workSlug}/cover?from=art` : `/edition/${item.id}/cover?from=art`,
+  }));
 
   return (
     <main className="flex-1 px-4 py-6 sm:px-10">

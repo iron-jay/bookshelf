@@ -1943,3 +1943,20 @@ remove a tag, put in a series) moved from `bulk-actions.ts` into
 /entries/bulk` (`do`: `shelf`, `tag`, `untag`, `series`). /meta lists
 `bulk`. Checked through the API: tag and untag two books, an empty series
 and an empty selection refused in the page's words.
+
+## 2026-11-14 — Settings in the API
+
+The phone's sixth batch: Settings and the pages it links to. Their rules moved
+into `lib/` so the pages and the API share them:
+
+- `lib/auth/account.ts`: renaming the account and changing the password (the
+  API keeps the bearer token's own session; `sessionIdOf` in `session.ts`).
+- `lib/books/settings-runs.ts` (Find missing covers, Fill in from Hardcover),
+  `lib/books/art-review.ts` (`/art`), `lib/books/settings-summary.ts` (the
+  counts on Settings). `import-limits.ts` moved to `lib/`.
+- API: `PATCH /me`, `POST /me/password`, `GET`/`DELETE /devices`, `GET
+  /settings`, `/settings/missing-covers`, `/settings/hardcover`, `GET /art`,
+  `GET /off-shelf`, `POST /off-shelf/{workId}`. /meta lists `settings`.
+
+Export and import stay on the web for now; the phone links to them. Settings,
+`/art` and `/off-shelf` still render; tsc and `check:actions` pass.
