@@ -1873,3 +1873,28 @@ collection page. The API gains what those pages do:
 Checked against a local database: the strip, rename and collection by PATCH,
 take out, remove (404 after), and the web's collection page still renders
 from the moved query. tsc, lint and `check:actions` pass.
+
+## 2026-11-14 — The book and edition pages' controls in the API
+
+The phone's second batch is the book and edition pages, one to one. The API
+gains what those pages do, over the same `lib/` the actions use:
+
+- `PATCH /works/{slug}` takes `series` (`name`, `position`, `taken`) and
+  `collection`. A number another book has is answered `{ taken, work: null }`
+  rather than saved, as the page asks; `saveWorkSeries` in
+  `lib/books/series.ts` is now shared by the page's action and the route.
+- `PATCH /editions/{id}` `{ format }`: Book | Audiobook, only on an edition
+  of yours, as the page disables it otherwise.
+- `GET /works/{slug}/removal`, `GET /editions/{id}/removal`, `DELETE` on both
+  (`scope=edition|work` on an edition): what the delete pages say, and do.
+- The edition page's facts moved to `lib/books/edition-facts.ts`
+  (`editionFacts`), which the page and `GET /editions/{id}` (`facts`,
+  `editionCount`) both use. A book's editions carry `kindLabel` and
+  `languageName`; the work carries `olWorkKey`, `hardcoverId` and
+  `comicVinePage`.
+- /meta lists `page-controls`.
+
+Checked against a local database: a taken number then "shift" and "keep",
+the format switch, the removal summaries (a dependent audiobook edition
+listed), deleting just an edition and the edition and work pages still
+rendering. tsc, lint and `check:actions` pass.

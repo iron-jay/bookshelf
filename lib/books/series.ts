@@ -229,3 +229,29 @@ export async function shiftUpFrom(tx: Tx, workId: string, position: number): Pro
     .set({ seriesPosition: sql`${works.seriesPosition} + 1` })
     .where(and(eq(works.seriesId, work.seriesId), gte(works.seriesPosition, position), ne(works.id, workId)));
 }
+
+/**
+ * The series box on a book's page: puts the work in `name` at `position`
+ * (a blank name takes it out). A number another book in the series already
+ * has is asked about rather than saved (Jay, 2026-10-21): the answer comes
+ * back as the taken book, until `choice` says "shift" (move it and the rest
+ * up one) or "keep" (both at that number). Comic Vine runs never ask.
+ */
+export async function saveWorkSeries(
+  tx: Tx,
+  workId: string,
+  name: string,
+  position: number | null,
+  choice: "shift" | "keep" | null,
+  userId: string,
+): Promise<TakenNumber | null> {
+  if (name && position !== null && choice !== "keep") {
+    const taken = await takenNumber(tx, name, position, workId);
+    if (taken && choice !== "shift") return taken;
+    await setWorkSeries(tx, workId, name, position, userId);
+    if (taken) await shiftUpFrom(tx, workId, position);
+    return null;
+  }
+  await setWorkSeries(tx, workId, name, name ? position : null, userId);
+  return null;
+}

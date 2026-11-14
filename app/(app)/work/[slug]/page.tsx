@@ -13,19 +13,12 @@ import { BackToShelf, ChangeCoverLink, SideLink } from "../../cover-page";
 import { ratingLabel } from "../../shelf-card";
 import { CollectionForm } from "../../collection-form";
 import { SeriesForm } from "./series-form";
+import { KIND_LABELS } from "@/lib/books/edition-facts";
 import type { Metadata } from "next";
 import { workTitle } from "../../page-titles";
 
 export const dynamic = "force-dynamic";
 
-const KIND_LABELS: Readonly<Record<string, string | null>> = {
-  original: null,
-  translation: "Official translation",
-  revised: "Revised text",
-  abridged: "Abridged",
-  annotated: "Annotated",
-  other: null,
-};
 
 
 /**
